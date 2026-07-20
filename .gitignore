@@ -42,6 +42,12 @@ dashboard/schedule.json
 dashboard/preview/
 dashboard/linkedin_review.json
 dashboard/chat_history.json
+dashboard/.cache/
+dashboard/*.log
+dashboard/errors/*.log
+dashboard/errors/*.pid
+dashboard/_srv_*.log
+dashboard/server.*.log
 
 # Local IDE / agent notes (optional publish later)
 .cursor/
