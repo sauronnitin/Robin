@@ -1,0 +1,64 @@
+{
+  "id": "software-engineer",
+  "label": "Software Engineer",
+  "version": 1,
+  "candidate": {
+    "display_name": "Jordan Lee",
+    "headline": "Software Engineer",
+    "location": "Remote (US)",
+    "links": {},
+    "summary": "Full-stack engineer comfortable with TypeScript, Python, and cloud APIs. Replace this summary with your own after onboarding."
+  },
+  "search": {
+    "titles": [
+      "Software Engineer",
+      "Full Stack Engineer",
+      "Backend Engineer",
+      "Frontend Engineer",
+      "Senior Software Engineer"
+    ],
+    "exclude_title_tokens": ["Head", "Director", "VP", "CTO"],
+    "regions_priority": ["USA", "Canada", "EMEA"],
+    "regions_defer": [],
+    "remote": "prefer_remote_or_hybrid",
+    "posted_within_hours": 24,
+    "max_listings": 12,
+    "boards": ["remoteok", "weworkremotely", "himalayas", "linkedin"],
+    "scout_urls": [
+      "https://remoteok.com/api?tags=software",
+      "https://remoteok.com/api?tags=eng",
+      "https://weworkremotely.com/categories/remote-programming-jobs",
+      "https://himalayas.app/jobs/software-engineer"
+    ],
+    "niche": "application software engineering; APIs; web and cloud products"
+  },
+  "swarm": {
+    "preset": "software-engineer",
+    "modules": [
+      "scout",
+      "screen",
+      "fit",
+      "tailor",
+      "cover",
+      "compile",
+      "apply_external",
+      "log"
+    ],
+    "optional": {
+      "linkedin_loop": true,
+      "cover_letter": true,
+      "humanizer": true,
+      "drive_publish": true,
+      "latex_compile": false
+    }
+  },
+  "fit": {
+    "pass_score": 25,
+    "skip_tailor_at_or_above": 80,
+    "role_family": "engineering"
+  },
+  "files": {
+    "resume_tex": null,
+    "resume_pdf": "resume.pdf"
+  }
+}

@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>JobCrew · Google Drive setup</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="bg" aria-hidden="true"></div>
+  <header class="top">
+    <a class="logo" href="index.html">JobCrew</a>
+    <nav>
+      <a href="install.html">Install</a>
+      <a href="onboarding.html">Onboarding</a>
+      <a href="drive-setup.html">Drive</a>
+    </nav>
+  </header>
+
+  <div class="panel">
+    <h1>Google Drive (recommended)</h1>
+    <p>
+      JobCrew can save tailored resumes, cover letters, and PDFs to a Drive folder, and log
+      applications to a Google Sheet. Use a Desktop OAuth client (not a service account).
+      Personal Google accounts give service accounts zero Drive storage quota.
+    </p>
+
+    <ol class="steps">
+      <li>Create or pick a Google Cloud project.</li>
+      <li>Enable Google Drive API and Google Sheets API.</li>
+      <li>Credentials → Create credentials → OAuth client ID → Application type: Desktop app.</li>
+      <li>Download the client JSON into <code>secrets/google-oauth-client.json</code>.</li>
+      <li>Create a normal Drive <strong>folder</strong> (not a Drive Project). Copy the folder ID from the URL.</li>
+      <li>Create a Sheet for your application tracker. Copy the spreadsheet ID from the URL.</li>
+      <li>
+        In <code>.env</code>:
+        <br /><code>GOOGLE_OAUTH_CLIENT_SECRET=./secrets/google-oauth-client.json</code>
+        <br /><code>GOOGLE_DRIVE_FOLDER_ID=...</code>
+        <br /><code>MASTER_SHEET_ID=...</code>
+      </li>
+      <li>First run opens a browser login once; the refresh token is cached locally (gitignored).</li>
+    </ol>
+
+    <p>You can skip Drive and keep outputs local. Scout / tailor still work with <code>DRY_RUN=True</code>.</p>
+
+    <div class="cta-row" style="margin-top:1.5rem">
+      <a class="btn primary" href="install.html">Back to install</a>
+    </div>
+  </div>
+</body>
+</html>

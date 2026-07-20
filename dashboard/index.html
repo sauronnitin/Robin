@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JobCrew</title>
+<link rel="icon" href="data:,">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;1,14..32,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="shell">
+  <header class="topbar glass">
+    <div class="brand">
+      <span class="brand-mark">JC</span>
+      <div>
+        <h1>JobCrew</h1>
+        <span class="brand-sub" id="modeLabel">Simulated · Infinite canvas · Editable</span>
+      </div>
+    </div>
+    <div class="topbar-spacer" aria-hidden="true"></div>
+    <div class="topbar-right">
+      <div class="stats">
+        <div class="stat"><span class="stat-v" id="statComplete">0/9</span><span class="stat-l">Done</span></div>
+        <div class="stat"><span class="stat-v" id="statStage">Idle</span><span class="stat-l">Stage</span></div>
+        <div class="stat"><span class="stat-v" id="statFlag">0</span><span class="stat-l">Flags</span></div>
+        <div class="stat"><span class="stat-v" id="statTokens">0</span><span class="stat-l">Tokens</span></div>
+        <div class="stat"><span class="stat-v clock" id="runClock">00:00.0</span><span class="stat-l">Elapsed</span></div>
+      </div>
+      <div class="controls">
+        <button type="button" id="resetLayoutBtn" class="btn">Reset Layout</button>
+        <button type="button" id="resetCardsBtn" class="btn">Reset Cards</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="workspace" id="workspace">
+    <section class="stage">
+      <div class="canvas-viewport" id="viewport" title="Pinch zooms (also over cards) · Scroll on canvas pans · Scroll inside cards/fields scrolls content">
+        <div class="canvas-toolbar glass" id="canvasToolbar">
+          <button type="button" class="toolbar-btn" id="addElementBtn" aria-expanded="false" aria-haspopup="true">
+            <span class="toolbar-plus" aria-hidden="true">+</span>
+            Add element
+          </button>
+          <div class="add-menu glass" id="addMenu" hidden role="menu">
+            <button type="button" class="add-menu-item" data-add="trigger" role="menuitem">Trigger</button>
+            <button type="button" class="add-menu-item" data-add="card" role="menuitem">Card</button>
+            <button type="button" class="add-menu-item" data-add="preview" role="menuitem">Preview</button>
+          </div>
+        </div>
+        <div class="canvas-world" id="world">
+          <div class="sections-layer" id="sectionsLayer"></div>
+          <svg class="edges-svg" id="edgesSvg" xmlns="http://www.w3.org/2000/svg"></svg>
+          <div class="cards-layer" id="cardsLayer"></div>
+          <div class="section-chromes-layer" id="sectionChromesLayer"></div>
+          <div class="section-docks-layer" id="sectionDocksLayer"></div>
+        </div>
+        <div class="canvas-marquee" id="canvasMarquee" hidden></div>
+        <div class="canvas-grid" aria-hidden="true"></div>
+      </div>
+
+      <div class="output-stage" id="outputStage" hidden>
+        <div class="output-stage-head">
+          <button type="button" class="btn" id="backToCanvasBtn">← Canvas</button>
+          <div class="output-stage-title">
+            <span class="panel-title">Output</span>
+            <span class="panel-sub" id="outputRunSummary">No run yet</span>
+          </div>
+          <div class="output-run-badge" id="outputRunBadge">Idle</div>
+        </div>
+        <div class="output-progress"><div class="output-progress-fill" id="outputProgressFill"></div></div>
+        <div class="output-steps" id="outputSteps"></div>
+      </div>
+
+      <div class="output-cluster" id="outputCluster">
+        <button type="button" class="output-cta glass" id="outputCta" title="View agent outputs">
+          <span class="output-cta-icon" aria-hidden="true">▣</span>
+          Output
+        </button>
+        <div class="status-indicators glass" id="statusIndicators" aria-label="Agent status legend">
+          <span title="Waiting"><i class="lg wait"></i><span class="status-label">Waiting</span></span>
+          <span title="Think"><i class="lg think"></i><span class="status-label">Think</span></span>
+          <span title="Running"><i class="lg run"></i><span class="status-label">Running</span></span>
+          <span title="Done"><i class="lg done"></i><span class="status-label">Done</span></span>
+          <span title="Flag"><i class="lg flag"></i><span class="status-label">Flag</span></span>
+        </div>
+      </div>
+
+      <div class="stage-footer glass">
+        <div class="chat-dock" id="chatDock">
+          <div class="chat-head">
+            <div class="chat-head-title">
+              <span class="chat-title">Chat</span>
+              <span class="chat-sub" id="chatStatus">Auto · ready</span>
+            </div>
+            <button type="button" class="chat-clear" id="chatClearBtn" title="Clear chat" aria-label="Clear chat">Clear</button>
+          </div>
+          <div class="chat-messages" id="chatMessages" role="log" aria-live="polite"></div>
+          <form class="chat-compose" id="chatForm">
+            <textarea id="chatInput" rows="1" placeholder="Ask or run: Sim Main, open errors, Stop…" autocomplete="off" spellcheck="true"></textarea>
+            <button type="submit" class="btn btn-primary chat-send" id="chatSendBtn" title="Send">Send</button>
+          </form>
+        </div>
+        <div class="tokens-dock" id="tokensDock">
+          <div class="tokens-head">
+            <span>Tokens by agent</span>
+            <span class="tokens-total" id="tokensTotalLabel">0 total</span>
+          </div>
+          <div class="tokens-chart" id="tokensChart"></div>
+        </div>
+      </div>
+
+      <div class="zoom-controls glass">
+        <button type="button" id="zoomInBtn" title="Zoom in">+</button>
+        <button type="button" id="zoomOutBtn" title="Zoom out">−</button>
+        <button type="button" id="zoomFitBtn" title="Fit all">Fit</button>
+        <button type="button" id="zoomResetBtn" title="Reset view">1:1</button>
+        <span class="zoom-label" id="zoomLabel">100%</span>
+      </div>
+    </section>
+
+    <aside class="side-rail" id="sideRail">
+      <div class="panel glass activity-panel" id="activityPanel">
+        <div class="panel-head">
+          <div>
+            <div class="rail-pills" role="tablist">
+              <button type="button" class="rail-pill is-active" id="tabActivity" role="tab" aria-selected="true">Activity</button>
+              <button type="button" class="rail-pill" id="tabTraces" role="tab" aria-selected="false">Agent Traces</button>
+              <button type="button" class="rail-pill" id="tabLiReview" role="tab" aria-selected="false">
+                LI Review
+                <span class="rail-badge" id="liReviewBadge" hidden>0</span>
+              </button>
+            </div>
+            <span class="panel-sub" id="activityAgent">Ready</span>
+          </div>
+          <div class="panel-actions">
+            <span class="console-dot" id="consoleDot"></span>
+            <button type="button" class="btn-icon" id="expandLogBtn" title="Expand activity" aria-label="Expand activity">
+              <svg class="icon-expand" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M2 2h5v1.5H3.5V7H2V2zm7 0h5v5h-1.5V3.5H9V2zM2 9h1.5v3.5H7V14H2V9zm9.5 3.5H14V9h1.5v5H9v-1.5h2.5z"/></svg>
+              <svg class="icon-collapse" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" hidden><path fill="currentColor" d="M6 2v1.5H3.5V6H2V2h4zm4 0h4v4h-1.5V3.5H10V2zM2 10h1.5v2.5H6V14H2v-4zm8.5 2.5H14V10h1.5v4h-4v-1.5h2.5z"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="activity-log" id="consoleBody"></div>
+        <div class="traces-view" id="tracesView" hidden>
+          <div class="traces-head">
+            <span class="traces-clock" aria-hidden="true">⏱</span>
+            <span class="traces-title">Timeline</span>
+            <span class="traces-meta" id="tracesMeta">No run yet</span>
+            <span class="traces-badge" id="tracesBadge">Idle</span>
+          </div>
+          <div class="traces-progress"><div class="traces-progress-fill" id="tracesProgressFill"></div></div>
+          <div class="traces-tree" id="tracesTree"></div>
+        </div>
+        <div class="li-review-view" id="liReviewView" hidden>
+          <div class="li-review-head">
+            <span class="li-review-title">Needs review</span>
+            <button type="button" class="btn btn-sm" id="liReviewRefreshBtn" title="Refresh review queue">Refresh</button>
+          </div>
+          <div class="li-review-list" id="liReviewList">
+            <div class="li-review-empty" id="liReviewEmpty">No flagged LinkedIn items.</div>
+          </div>
+        </div>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<div class="toast-stack" id="toastStack" aria-live="polite"></div>
+
+<div class="modal-backdrop" id="confirmModal" hidden>
+  <div class="modal glass" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+    <h2 class="modal-title" id="confirmTitle">Pipeline paused</h2>
+    <p class="modal-body" id="confirmBody">An agent failed. Confirm retry after reviewing the fix, or abort the run.</p>
+    <pre class="modal-detail" id="confirmDetail"></pre>
+    <div class="modal-actions">
+      <button type="button" class="btn" id="confirmAbortBtn">Abort</button>
+      <button type="button" class="btn btn-primary" id="confirmRetryBtn">Confirm fix &amp; retry</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="previewTokenModal" hidden>
+  <div class="modal glass" role="dialog" aria-modal="true" aria-labelledby="previewTokenTitle">
+    <h2 class="modal-title" id="previewTokenTitle">Confirm LLM preview</h2>
+    <p class="modal-body" id="previewTokenBody">This AI narration will use LLM tokens. Confirm to continue.</p>
+    <pre class="modal-detail" id="previewTokenDetail"></pre>
+    <div class="modal-actions">
+      <button type="button" class="btn" id="previewTokenCancel">Cancel</button>
+      <button type="button" class="btn btn-primary" id="previewTokenConfirm">Use tokens &amp; narrate</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="modelConnectModal" hidden>
+  <div class="modal glass" role="dialog" aria-modal="true" aria-labelledby="modelConnectTitle">
+    <h2 class="modal-title" id="modelConnectTitle">Load provider key</h2>
+    <p class="modal-body" id="modelConnectHint">Paste an API key to connect Groq or Gemini for this session.</p>
+    <label class="modal-field-label" for="modelConnectProvider">Provider</label>
+    <select id="modelConnectProvider" class="modal-input">
+      <option value="groq">Groq (GROQ_API_KEY)</option>
+      <option value="gemini">Gemini (GEMINI_API_KEY)</option>
+    </select>
+    <label class="modal-field-label" for="modelConnectKey">API key</label>
+    <input id="modelConnectKey" class="modal-input" type="password" autocomplete="off" spellcheck="false" placeholder="Paste key (saved to .env only)" />
+    <div class="modal-actions">
+      <button type="button" class="btn" id="modelConnectRefresh">Refresh list</button>
+      <button type="button" class="btn" id="modelConnectCancel">Cancel</button>
+      <button type="button" class="btn btn-primary" id="modelConnectSubmit">Connect</button>
+    </div>
+  </div>
+</div>
+
+<script src="pipeline-data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

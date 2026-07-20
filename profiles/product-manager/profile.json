@@ -1,0 +1,63 @@
+{
+  "id": "product-manager",
+  "label": "Product Manager",
+  "version": 1,
+  "candidate": {
+    "display_name": "Sam Okonkwo",
+    "headline": "Product Manager",
+    "location": "Remote (US)",
+    "links": {},
+    "summary": "Product manager focused on 0→1 and growth for B2B SaaS. Replace after onboarding."
+  },
+  "search": {
+    "titles": [
+      "Product Manager",
+      "Senior Product Manager",
+      "Associate Product Manager",
+      "Technical Product Manager",
+      "Product Owner"
+    ],
+    "exclude_title_tokens": ["Head", "Director", "VP", "CPO"],
+    "regions_priority": ["USA", "Canada", "EMEA"],
+    "regions_defer": [],
+    "remote": "prefer_remote_or_hybrid",
+    "posted_within_hours": 24,
+    "max_listings": 12,
+    "boards": ["remoteok", "weworkremotely", "himalayas", "linkedin"],
+    "scout_urls": [
+      "https://remoteok.com/api?tags=product",
+      "https://weworkremotely.com/remote-jobs/search?term=product+manager",
+      "https://himalayas.app/jobs/product-manager"
+    ],
+    "niche": "product discovery, roadmaps, and cross-functional delivery for software products"
+  },
+  "swarm": {
+    "preset": "product-manager",
+    "modules": [
+      "scout",
+      "screen",
+      "fit",
+      "tailor",
+      "cover",
+      "compile",
+      "apply_external",
+      "log"
+    ],
+    "optional": {
+      "linkedin_loop": true,
+      "cover_letter": true,
+      "humanizer": true,
+      "drive_publish": true,
+      "latex_compile": false
+    }
+  },
+  "fit": {
+    "pass_score": 25,
+    "skip_tailor_at_or_above": 80,
+    "role_family": "product"
+  },
+  "files": {
+    "resume_tex": null,
+    "resume_pdf": "resume.pdf"
+  }
+}

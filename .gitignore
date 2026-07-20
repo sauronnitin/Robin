@@ -1,0 +1,63 @@
+# Secrets & local runtime (never commit)
+.env
+.env.local
+*.pem
+gcp-service-account.json
+google-oauth-client.json
+google-oauth-token.json
+google-oauth-token.json.bak
+Google Auth/
+
+# Browser / sessions
+browser-session/
+
+# User-private uploads (onboarding writes here)
+user/*
+!user/README.md
+secrets/*
+!secrets/README.md
+resume/
+
+# Runtime artifacts
+logs/
+__pycache__/
+*.pyc
+.crewai/
+*.egg-info/
+.venv/
+venv/
+uv.lock
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Dashboard live state
+dashboard/events.jsonl
+dashboard/run_control.json
+dashboard/run_state.json
+dashboard/errors/latest.json
+dashboard/errors/history.jsonl
+dashboard/run_plan.json
+dashboard/schedule.json
+dashboard/preview/
+dashboard/linkedin_review.json
+dashboard/chat_history.json
+
+# Local IDE / agent notes (optional publish later)
+.cursor/
+.claude/
+Screen Recordings/
+*.mp4
+*.mov
+
+# OS junk
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Personal drafts that may contain private details
+JobHunter-AI-Case-Study*.md
+Here's the full local migration*.md
+Case Study Building*.md
+*Case Study*.md
+*migration plan*.md

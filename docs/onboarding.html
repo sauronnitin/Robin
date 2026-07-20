@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>JobCrew onboarding</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="bg" aria-hidden="true"></div>
+  <header class="top">
+    <a class="logo" href="index.html">JobCrew</a>
+    <nav>
+      <a href="install.html">Install</a>
+      <a href="onboarding.html">Onboarding</a>
+      <a href="drive-setup.html">Drive</a>
+    </nav>
+  </header>
+
+  <div class="wizard">
+    <h1>Build your swarm</h1>
+    <p class="lede" style="margin-top:0">Answer these, preview agents, download <code>profile.json</code>, then install locally.</p>
+    <div class="progress" id="progress" aria-hidden="true"></div>
+
+    <section class="step" data-step="0">
+      <div class="field">
+        <label>Role pack</label>
+        <div class="chips" id="presets"></div>
+      </div>
+      <div class="field">
+        <label for="titles">Target titles (comma-separated)</label>
+        <input id="titles" type="text" placeholder="Product Designer, UX Designer" />
+      </div>
+    </section>
+
+    <section class="step" data-step="1" hidden>
+      <div class="field">
+        <label for="regions">Priority regions</label>
+        <input id="regions" type="text" value="USA, Canada, EMEA" />
+      </div>
+      <div class="field">
+        <label for="remote">Work mode</label>
+        <select id="remote">
+          <option value="prefer_remote_or_hybrid">Prefer remote / hybrid</option>
+          <option value="remote_only">Remote only</option>
+          <option value="onsite_ok">On-site OK</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="seniority">Seniority ceiling</label>
+        <select id="seniority">
+          <option value="senior">Up to Senior (exclude Head/Director/Staff/Principal)</option>
+          <option value="staff">Include Staff / Principal</option>
+          <option value="any">Any seniority</option>
+        </select>
+      </div>
+    </section>
+
+    <section class="step" data-step="2" hidden>
+      <div class="field">
+        <label for="must">Must-have keywords</label>
+        <input id="must" type="text" placeholder="design systems, Figma, B2B" />
+      </div>
+      <div class="field">
+        <label for="avoid">Avoid keywords</label>
+        <input id="avoid" type="text" placeholder="crypto, unpaid, commission-only" />
+      </div>
+      <div class="field">
+        <label>Boards</label>
+        <div class="chips" id="boards">
+          <button type="button" class="chip on" data-board="remoteok">RemoteOK</button>
+          <button type="button" class="chip on" data-board="weworkremotely">We Work Remotely</button>
+          <button type="button" class="chip on" data-board="himalayas">Himalayas</button>
+          <button type="button" class="chip on" data-board="linkedin">LinkedIn</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="step" data-step="3" hidden>
+      <div class="field">
+        <label for="name">Display name (example or yours)</label>
+        <input id="name" type="text" placeholder="Alex Rivera" />
+      </div>
+      <div class="field">
+        <label for="headline">Headline</label>
+        <input id="headline" type="text" placeholder="Senior Product Designer" />
+      </div>
+      <div class="field">
+        <label for="summary">Short summary</label>
+        <textarea id="summary" placeholder="2-4 sentences about your niche"></textarea>
+      </div>
+      <p class="note">Resume upload happens after local install (<code>user/resume.pdf</code>). This page cannot store files on GitHub Pages.</p>
+    </section>
+
+    <section class="step" data-step="4" hidden>
+      <div class="field">
+        <label>Optional modules</label>
+        <div class="chips" id="modules">
+          <button type="button" class="chip on" data-mod="linkedin_loop">LinkedIn loop</button>
+          <button type="button" class="chip on" data-mod="cover_letter">Cover letter</button>
+          <button type="button" class="chip on" data-mod="humanizer">Humanizer</button>
+          <button type="button" class="chip on" data-mod="drive_publish">Drive publish</button>
+        </div>
+      </div>
+      <div class="field">
+        <label for="dry">Apply mode</label>
+        <select id="dry">
+          <option value="true">Dry-run only (recommended first)</option>
+          <option value="false">I will enable real apply later in .env</option>
+        </select>
+      </div>
+      <h2 style="font-family:var(--font-display);font-size:1.25rem;margin:1.5rem 0 0.5rem">Your swarm preview</h2>
+      <div class="swarm-preview" id="swarmPreview"></div>
+    </section>
+
+    <div class="nav-row">
+      <button type="button" class="btn" id="backBtn" hidden>Back</button>
+      <button type="button" class="btn primary" id="nextBtn">Next</button>
+      <button type="button" class="btn primary" id="downloadBtn" hidden>Download profile.json</button>
+    </div>
+  </div>
+
+  <script src="onboarding.js"></script>
+</body>
+</html>

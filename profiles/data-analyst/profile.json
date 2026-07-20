@@ -1,0 +1,63 @@
+{
+  "id": "data-analyst",
+  "label": "Data Analyst",
+  "version": 1,
+  "candidate": {
+    "display_name": "Casey Nguyen",
+    "headline": "Data Analyst",
+    "location": "Remote (US)",
+    "links": {},
+    "summary": "Analyst skilled in SQL, dashboards, and experiment readouts. Replace after onboarding."
+  },
+  "search": {
+    "titles": [
+      "Data Analyst",
+      "Business Analyst",
+      "Analytics Engineer",
+      "Senior Data Analyst",
+      "Product Analyst"
+    ],
+    "exclude_title_tokens": ["Head", "Director", "VP", "Chief"],
+    "regions_priority": ["USA", "Canada", "EMEA"],
+    "regions_defer": [],
+    "remote": "prefer_remote_or_hybrid",
+    "posted_within_hours": 24,
+    "max_listings": 12,
+    "boards": ["remoteok", "weworkremotely", "himalayas", "linkedin"],
+    "scout_urls": [
+      "https://remoteok.com/api?tags=data",
+      "https://weworkremotely.com/remote-jobs/search?term=data+analyst",
+      "https://himalayas.app/jobs/data-analyst"
+    ],
+    "niche": "analytics, SQL, experimentation, and stakeholder-ready insights"
+  },
+  "swarm": {
+    "preset": "data-analyst",
+    "modules": [
+      "scout",
+      "screen",
+      "fit",
+      "tailor",
+      "cover",
+      "compile",
+      "apply_external",
+      "log"
+    ],
+    "optional": {
+      "linkedin_loop": true,
+      "cover_letter": true,
+      "humanizer": false,
+      "drive_publish": true,
+      "latex_compile": false
+    }
+  },
+  "fit": {
+    "pass_score": 25,
+    "skip_tailor_at_or_above": 80,
+    "role_family": "data"
+  },
+  "files": {
+    "resume_tex": null,
+    "resume_pdf": "resume.pdf"
+  }
+}

@@ -1,0 +1,72 @@
+% Example JobCrew resume (fictional). Replace with your own after onboarding.
+\documentclass[letterpaper,11pt]{article}
+\usepackage[T1]{fontenc}
+\usepackage[empty]{fullpage}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}
+\usepackage{tabularx}
+
+\addtolength{\oddsidemargin}{-0.5in}
+\addtolength{\evensidemargin}{-0.5in}
+\addtolength{\textwidth}{1in}
+\addtolength{\topmargin}{-.5in}
+\addtolength{\textheight}{1.0in}
+
+\titleformat{\section}{\vspace{-4pt}\scshape\raggedright\large}{}{0em}{}[\titlerule\vspace{-5pt}]
+
+\newcommand{\resumeItem}[1]{\item\small{#1 \vspace{2pt}}}
+\newcommand{\resumeSubheading}[4]{
+  \vspace{-2pt}\item
+  \begin{tabular*}{0.97\textwidth}[t]{l@{\extracolsep{\fill}}r}
+    \textbf{#1} & #2 \\
+    \textit{\small#3} & \textit{\small #4} \\
+  \end{tabular*}\vspace{-7pt}
+}
+\newcommand{\resumeSubHeadingListStart}{\begin{itemize}[leftmargin=0.15in, label={}]}
+\newcommand{\resumeSubHeadingListEnd}{\end{itemize}}
+\newcommand{\resumeItemListStart}{\begin{itemize}}
+\newcommand{\resumeItemListEnd}{\end{itemize}\vspace{-5pt}}
+
+\begin{document}
+
+\begin{center}
+  \textbf{\Huge \scshape Alex Rivera} \\ \vspace{2pt}
+  \small \scshape Senior Product Designer \\ \vspace{8pt}
+  \footnotesize San Francisco Bay Area
+  \enspace$\vert$\enspace
+  \href{mailto:alex.rivera.example@email.com}{\underline{alex.rivera.example@email.com}}
+  \enspace$\vert$\enspace
+  \href{https://example.com/alex-rivera}{\underline{example.com/alex-rivera}}
+\end{center}
+
+\section{Summary}
+\small{
+Senior Product Designer with 6+ years across connected hardware, mobile, web, and SaaS.
+Specializes in design systems, micro-interactions, and multi-platform product ecosystems.
+Builds AI-assisted design-to-code workflows that shorten handoff time.
+}
+
+\section{Experience}
+\resumeSubHeadingListStart
+  \resumeSubheading
+  {Northwind Devices}{2024 -- Present}
+  {Senior Product Designer}{San Francisco, CA}
+  \resumeItemListStart
+    \resumeItem{Owned UX across a multi-product hardware + app ecosystem}
+    \resumeItem{Shipped a 200+ component design system adopted by 4 designers}
+    \resumeItem{Cut design-to-engineering handoff time by introducing Figma-to-code tooling}
+  \resumeItemListEnd
+  \resumeSubheading
+  {Cedar Health Labs}{2022 -- 2024}
+  {Product Designer}{Remote}
+  \resumeItemListStart
+    \resumeItem{Improved onboarding completion through funnel-informed UX iteration}
+    \resumeItem{Designed WCAG AA mobile flows for chronic-care patients}
+  \resumeItemListEnd
+\resumeSubHeadingListEnd
+
+\section{Skills}
+\small{Product design, UX research, design systems, prototyping, Figma, motion, design-to-code, stakeholder workshops}
+
+\end{document}

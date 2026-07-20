@@ -1,0 +1,74 @@
+{
+  "id": "product-designer",
+  "label": "Product / UX Designer",
+  "version": 1,
+  "candidate": {
+    "display_name": "Alex Rivera",
+    "headline": "Senior Product Designer",
+    "location": "San Francisco Bay Area",
+    "links": {
+      "portfolio": "https://example.com/alex-rivera",
+      "linkedin": "https://www.linkedin.com/in/example-alex-rivera"
+    },
+    "summary": "Senior Product Designer with 6+ years across hardware, mobile, web, and SaaS. Focus on design systems, micro-interactions, and physical+digital product ecosystems. Comfortable with AI-assisted design-to-code workflows."
+  },
+  "search": {
+    "titles": [
+      "Product Designer",
+      "UX Designer",
+      "UI Designer",
+      "Senior Product Designer",
+      "Design Systems Designer",
+      "Experience Designer",
+      "Digital Designer",
+      "Interaction Designer",
+      "Industrial Designer"
+    ],
+    "exclude_title_tokens": ["Head", "Director", "Staff", "Principal", "VP"],
+    "regions_priority": ["USA", "Canada", "EMEA"],
+    "regions_defer": ["Oceania", "Dubai", "Singapore", "South Korea", "Brazil", "Japan"],
+    "remote": "prefer_remote_or_hybrid",
+    "posted_within_hours": 24,
+    "max_listings": 12,
+    "boards": ["remoteok", "weworkremotely", "himalayas", "linkedin"],
+    "scout_urls": [
+      "https://remoteok.com/api?tags=product-designer",
+      "https://remoteok.com/api?tags=design",
+      "https://remoteok.com/remote-design-jobs",
+      "https://weworkremotely.com/categories/remote-design-jobs",
+      "https://weworkremotely.com/remote-jobs/search?term=product+designer",
+      "https://himalayas.app/jobs/design"
+    ],
+    "niche": "physical and digital product ecosystem design; design systems; AI-augmented product UX"
+  },
+  "swarm": {
+    "preset": "product-designer",
+    "modules": [
+      "scout",
+      "screen",
+      "fit",
+      "tailor",
+      "cover",
+      "humanize",
+      "compile",
+      "apply_external",
+      "log"
+    ],
+    "optional": {
+      "linkedin_loop": true,
+      "cover_letter": true,
+      "humanizer": true,
+      "drive_publish": true,
+      "latex_compile": true
+    }
+  },
+  "fit": {
+    "pass_score": 25,
+    "skip_tailor_at_or_above": 80,
+    "role_family": "design"
+  },
+  "files": {
+    "resume_tex": "resume.tex",
+    "resume_pdf": "resume.pdf"
+  }
+}
