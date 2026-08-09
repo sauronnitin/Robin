@@ -1,0 +1,44 @@
+{
+  "version": 1,
+  "scale": {
+    "min": 1,
+    "max": 5,
+    "labels": {
+      "1": "Strongly dislike",
+      "3": "Neutral",
+      "5": "Strongly like"
+    }
+  },
+  "items": [
+    {"id": "r1", "dimension": "R", "text": "Assembling or repairing physical equipment"},
+    {"id": "r2", "dimension": "R", "text": "Working with tools or machinery"},
+    {"id": "r3", "dimension": "R", "text": "Building a prototype with your hands"},
+    {"id": "r4", "dimension": "R", "text": "Troubleshooting a device that stopped working"},
+    {"id": "r5", "dimension": "R", "text": "Doing outdoor physical work as part of a project"},
+    {"id": "i1", "dimension": "I", "text": "Digging into data to find a pattern"},
+    {"id": "i2", "dimension": "I", "text": "Reading research to understand how something works"},
+    {"id": "i3", "dimension": "I", "text": "Running a small experiment to test a hypothesis"},
+    {"id": "i4", "dimension": "I", "text": "Mapping cause and effect in a complex system"},
+    {"id": "i5", "dimension": "I", "text": "Asking why a process keeps failing"},
+    {"id": "a1", "dimension": "A", "text": "Designing something visually from scratch"},
+    {"id": "a2", "dimension": "A", "text": "Sketching ideas before they are fully defined"},
+    {"id": "a3", "dimension": "A", "text": "Crafting a story, layout, or visual narrative"},
+    {"id": "a4", "dimension": "A", "text": "Exploring unconventional creative directions"},
+    {"id": "a5", "dimension": "A", "text": "Improving how something looks and feels"},
+    {"id": "s1", "dimension": "S", "text": "Teaching or mentoring someone one-on-one"},
+    {"id": "s2", "dimension": "S", "text": "Helping a teammate work through a hard problem"},
+    {"id": "s3", "dimension": "S", "text": "Facilitating a workshop so everyone is heard"},
+    {"id": "s4", "dimension": "S", "text": "Supporting someone through a stressful decision"},
+    {"id": "s5", "dimension": "S", "text": "Building trust across people with different goals"},
+    {"id": "e1", "dimension": "E", "text": "Pitching an idea to convince a group"},
+    {"id": "e2", "dimension": "E", "text": "Leading a project when priorities conflict"},
+    {"id": "e3", "dimension": "E", "text": "Negotiating scope, timeline, or resources"},
+    {"id": "e4", "dimension": "E", "text": "Starting something new and recruiting others"},
+    {"id": "e5", "dimension": "E", "text": "Owning a goal and driving it across teams"},
+    {"id": "c1", "dimension": "C", "text": "Organizing detailed records or schedules"},
+    {"id": "c2", "dimension": "C", "text": "Keeping a checklist accurate and up to date"},
+    {"id": "c3", "dimension": "C", "text": "Following a clear process without skipping steps"},
+    {"id": "c4", "dimension": "C", "text": "Structuring files, tags, or documentation"},
+    {"id": "c5", "dimension": "C", "text": "Checking details so nothing is missed"}
+  ]
+}

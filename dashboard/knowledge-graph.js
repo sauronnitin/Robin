@@ -1342,6 +1342,7 @@
       } else {
         renderBrief(lastBrief);
       }
+      await initRiasecQuiz();
       updateAnalyzeButton();
       if (controls) controls.enabled = true;
       if (!running) {
@@ -1732,6 +1733,47 @@
     function renderDefaultIntelligence() {
       const brief = buildDefaultBrief();
       renderBrief(brief, { storeDriven: true });
+    }
+
+    async function initRiasecQuiz() {
+      const card = document.getElementById("kgRiasec");
+      const body = document.getElementById("kgRiasecBody");
+      const submitBtn = document.getElementById("kgRiasecSubmit");
+      const skipBtn = document.getElementById("kgRiasecSkip");
+      if (!card || !body) return;
+      const res = await fetch("/api/kg/riasec").then((r) => r.json()).catch(() => null);
+      if (!res || !res.ok) return;
+      if (res.result && res.result.completed_at) return; // already done
+      card.hidden = false;
+      const items = (res.items && res.items.items) || [];
+      body.innerHTML = items.map((it) => `
+      <div class="kg-riasec-item" data-id="${it.id}">
+        <span class="kg-riasec-text">${escapeHtml(it.text)}</span>
+        <div class="kg-riasec-scale">
+          ${[1, 2, 3, 4, 5].map((v) => `<label><input type="radio" name="${escapeHtml(it.id)}" value="${v}"> ${v}</label>`).join("")}
+        </div>
+      </div>
+    `).join("");
+      if (submitBtn) {
+        submitBtn.hidden = false;
+        submitBtn.onclick = async () => {
+          const raw_answers = items.map((it) => {
+            const el = body.querySelector(`input[name="${it.id}"]:checked`);
+            return { id: it.id, value: el ? Number(el.value) : 3 };
+          });
+          await fetch("/api/kg/riasec", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ raw_answers }),
+          });
+          card.hidden = true;
+          await loadIndividualStore();
+          renderRealityBar();
+          renderDefaultIntelligence();
+          if (initialized) rebuildGraph();
+        };
+      }
+      if (skipBtn) skipBtn.onclick = () => { card.hidden = true; };
     }
 
     function nodeScopedBrief(node) {

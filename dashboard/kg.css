@@ -871,3 +871,44 @@ html:not(.dark) .kg-graph-wrap { background: #f0f0f2; }
   font-size: 12px;
   padding: 8px 10px;
 }
+
+.kg-riasec {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  border-top: 1px solid var(--hair);
+  background: var(--surface-1);
+}
+.kg-riasec-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 280px;
+  overflow: auto;
+}
+.kg-riasec-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--hair);
+}
+.kg-riasec-text {
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.35;
+}
+.kg-riasec-scale {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  font-size: 12px;
+  color: var(--dim);
+}
+.kg-riasec-scale label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+}

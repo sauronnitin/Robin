@@ -501,6 +501,7 @@ def _score_occupation(
     occ: dict[str, Any],
     *,
     title_boost: float = 0.0,
+    riasec_user: dict[str, float] | None = None,
 ) -> dict[str, Any]:
     occ_skills = occ.get("skills") or []
     total_importance = sum(float(s.get("importance") or 0) for s in occ_skills) or 1.0
@@ -527,6 +528,16 @@ def _score_occupation(
     overlap = len(matched_keys) if matched_keys else len(occ_keys & set(user_vec.keys()))
     denom = (len(occ_keys) ** 0.5) * (len(user_vec) ** 0.5) or 1.0
     adjacency_score = round(min(1.0, (overlap / denom) + title_boost), 3)
+    if riasec_user:
+        occ_riasec = occ.get("riasec") or {}
+        riasec_bonus = (
+            sum(
+                min(float(riasec_user.get(k, 0) or 0), float(occ_riasec.get(k, 0) or 0) / 7.0)
+                for k in "RIASEC"
+            )
+            / 6.0
+        )
+        adjacency_score = round(min(1.0, adjacency_score * 0.8 + riasec_bonus * 0.2), 3)
     return {
         "soc_code": occ.get("soc_code"),
         "title": occ.get("title"),
@@ -550,13 +561,21 @@ def rank_adjacent_occupations(graph: dict[str, Any], top_n: int = 8) -> list[dic
     if not user_vec:
         return []
     zone_ceiling = _inferred_job_zone(graph) + 1
+    riasec = load_riasec().get("scores") or None
     scored = []
     for occ in _load_onet().get("occupations") or []:
         jz = occ.get("job_zone")
         if isinstance(jz, (int, float)) and jz > zone_ceiling:
             continue
         boost = _title_adjacency_boost(graph, str(occ.get("title") or ""))
-        scored.append(_score_occupation(user_vec, occ, title_boost=boost))
+        scored.append(
+            _score_occupation(
+                user_vec,
+                occ,
+                title_boost=boost,
+                riasec_user=riasec if isinstance(riasec, dict) and riasec else None,
+            )
+        )
     scored.sort(
         key=lambda s: (s["adjacency_score"], s["demands_abilities_fit"]),
         reverse=True,
@@ -1092,3 +1111,32 @@ def save_share_prefs(body: dict[str, Any] | None) -> dict[str, Any]:
     prefs["updated_at"] = _utc_now()
     _write_json(_SHARE_PREFS, prefs)
     return prefs
+
+
+def load_riasec_items() -> dict[str, Any]:
+    return _read_json(_ONET_RIASEC_ITEMS) or {"items": []}
+
+
+def load_riasec() -> dict[str, Any]:
+    data = _read_json(_RIASEC_USER)
+    if isinstance(data, dict):
+        return data
+    return {"completed_at": None, "scores": {}, "raw_answers": []}
+
+
+def save_riasec(body: dict[str, Any] | None) -> dict[str, Any]:
+    answers = (body or {}).get("raw_answers") if isinstance(body, dict) else None
+    answers = answers if isinstance(answers, list) else []
+    items = {i["id"]: i["dimension"] for i in load_riasec_items().get("items") or []}
+    sums: dict[str, list[int]] = {}
+    for a in answers:
+        if not isinstance(a, dict):
+            continue
+        dim = items.get(a.get("id"))
+        val = a.get("value")
+        if dim and isinstance(val, (int, float)):
+            sums.setdefault(dim, []).append(int(val))
+    scores = {dim: round(sum(vals) / len(vals) / 5.0, 3) for dim, vals in sums.items() if vals}
+    result = {"completed_at": _utc_now(), "scores": scores, "raw_answers": answers}
+    _write_json(_RIASEC_USER, result)
+    return result
