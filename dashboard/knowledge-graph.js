@@ -1566,6 +1566,12 @@
           else deltaEl.textContent = formatMoney(d) + " vs goal";
         }
       }
+      const durabilityEl = document.getElementById("kgStatDurability");
+      if (durabilityEl) {
+        const d = stats.durability;
+        durabilityEl.textContent = d ? d.bucket : "-";
+        durabilityEl.title = d && d.note ? d.note : "";
+      }
       syncCompInputsFromStore();
     }
 
