@@ -1,0 +1,61 @@
+{
+  "version": 1,
+  "note": "Coarse, informational estimate of LLM/AI task-exposure by occupation family. Not predictive, not a job-security guarantee. Based on published exposure-research patterns (task automatability), not per-occupation modeling.",
+  "buckets": [
+    {
+      "match": [
+        "designer",
+        "writer",
+        "editor",
+        "analyst",
+        "paralegal",
+        "translator",
+        "customer service",
+        "bookkeeper",
+        "accountant"
+      ],
+      "bucket": "High",
+      "score": 0.7
+    },
+    {
+      "match": [
+        "engineer",
+        "developer",
+        "programmer",
+        "researcher",
+        "marketing",
+        "hr specialist"
+      ],
+      "bucket": "Moderate",
+      "score": 0.45
+    },
+    {
+      "match": [
+        "manager",
+        "teacher",
+        "nurse",
+        "therapist",
+        "sales representative"
+      ],
+      "bucket": "Low-Moderate",
+      "score": 0.3
+    },
+    {
+      "match": [
+        "electrician",
+        "plumber",
+        "mechanic",
+        "construction",
+        "chef",
+        "hairdresser",
+        "childcare"
+      ],
+      "bucket": "Low",
+      "score": 0.15
+    }
+  ],
+  "default": {
+    "bucket": "Moderate",
+    "score": 0.4
+  }
+}

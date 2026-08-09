@@ -67,3 +67,6 @@ Here's the full local migration*.md
 Case Study Building*.md
 *Case Study*.md
 *migration plan*.md
+
+# O*NET bulk download (raw upstream; derived bundle is under dashboard/kg/onet/)
+.onet_raw/
