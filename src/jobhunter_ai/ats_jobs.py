@@ -27,7 +27,6 @@ from jobhunter_ai.job_sources_config import (
     watchlist_slugs,
 )
 
-_DEBUG_LOG = Path(__file__).resolve().parents[2] / "debug-262709.log"
 _SCAN_LOCK = threading.Lock()
 _SCAN_LOG: deque[dict[str, Any]] = deque(maxlen=240)
 _SCAN_SEQ = 0
@@ -302,23 +301,6 @@ def _scan_note(
             }
         )
 
-
-def _dbg(hypothesis_id: str, location: str, message: str, data: dict[str, Any]) -> None:
-    # #region agent log
-    try:
-        payload = {
-            "sessionId": "262709",
-            "hypothesisId": hypothesis_id,
-            "location": location,
-            "message": message,
-            "data": data,
-            "timestamp": int(time.time() * 1000),
-        }
-        with _DEBUG_LOG.open("a", encoding="utf-8") as fh:
-            fh.write(json.dumps(payload, ensure_ascii=False) + "\n")
-    except Exception:
-        pass
-    # #endregion
 
 _UA = {
     "User-Agent": "JobHunterAI/1.0 (+https://github.com/jobcrew)",
@@ -1571,19 +1553,8 @@ def _hydrate_job_descriptions(jobs: list[dict[str, Any]]) -> None:
             job["location"] = enriched_job["location"]
 
     workers = min(8, len(todo))
-    t0 = time.time()
     with ThreadPoolExecutor(max_workers=workers) as pool:
         list(pool.map(_one, todo))
-    _dbg(
-        "C",
-        "ats_jobs.py:_hydrate_job_descriptions",
-        "hydrate_done",
-        {
-            "todo": len(todo),
-            "elapsed_ms": int((time.time() - t0) * 1000),
-            "filled": sum(1 for j in todo if not j.get("needs_detail")),
-        },
-    )
 
 
 def fetch_jobs(
@@ -1678,13 +1649,10 @@ def _fetch_jobs_inner(
     if tasks:
         workers = min(64, max(8, len(tasks)))
         deadline_s = 8.0
-        t_fetch = time.time()
         pool = ThreadPoolExecutor(max_workers=workers)
-        timed_out = 0
         try:
             futures = {pool.submit(_safe_fetch, fn): source_id for source_id, fn in tasks}
             done, not_done = wait(futures.keys(), timeout=deadline_s)
-            timed_out = len(not_done)
             for fut in done:
                 source_id = futures[fut]
                 try:
@@ -1696,19 +1664,6 @@ def _fetch_jobs_inner(
         finally:
             # Do not wait for hung hosts; leave workers to expire on their own timeouts.
             pool.shutdown(wait=False, cancel_futures=True)
-        _dbg(
-            "B",
-            "ats_jobs.py:fetch_jobs",
-            "parallel_fetch_done",
-            {
-                "tasks": len(tasks),
-                "workers": workers,
-                "elapsed_ms": int((time.time() - t_fetch) * 1000),
-                "sources_hit": sorted(by_source.keys()),
-                "timed_out": timed_out,
-                "deadline_s": deadline_s,
-            },
-        )
 
     source_order = (
         list(ats_fetchers.keys())
@@ -1754,40 +1709,7 @@ def _fetch_jobs_inner(
 
     limit = max(1, min(int(limit or 20), 120))
     clipped = unique[:limit]
-    _dbg(
-        "B",
-        "ats_jobs.py:fetch_jobs",
-        "pre_hydrate",
-        {
-            "wanted": sorted(wanted),
-            "used_sources": used_sources,
-            "unique": len(unique),
-            "clipped": len(clipped),
-            "sample": [
-                {
-                    "id": str(j.get("id") or "")[:40],
-                    "company": str(j.get("company") or "")[:40],
-                    "title": str(j.get("title") or "")[:50],
-                    "src": j.get("ats_source"),
-                    "desc_len": len(str(j.get("desc") or j.get("description") or "")),
-                    "needs_detail": bool(j.get("needs_detail")),
-                }
-                for j in clipped[:3]
-            ],
-        },
-    )
     _hydrate_job_descriptions(clipped)
-    _dbg(
-        "B",
-        "ats_jobs.py:fetch_jobs",
-        "post_hydrate",
-        {
-            "total": len(clipped),
-            "sample_desc_len": [
-                len(str(j.get("desc") or j.get("description") or "")) for j in clipped[:5]
-            ],
-        },
-    )
     return {
         "jobs": clipped,
         "total": len(clipped),

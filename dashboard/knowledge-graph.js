@@ -1001,9 +1001,6 @@
       camera.position.set(cx, cy + span * 0.15, cz + dist);
       controls.target.set(cx, cy, cz);
       controls.update();
-      // #region agent log
-      fetch('http://127.0.0.1:7732/ingest/6a8d28cb-02f3-4178-97d9-3a6cf83a0d79',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'a25fc8'},body:JSON.stringify({sessionId:'a25fc8',runId:'pre',hypothesisId:'D',location:'knowledge-graph.js:fitCameraToGraph',message:'camera framed',data:{nodes:simNodes.length,span,dist,cx,cy,cz},timestamp:Date.now()})}).catch(()=>{});
-      // #endregion
     }
 
     function updateEdgePositions() {
@@ -2372,12 +2369,6 @@
       try {
         const res = await fetch("/api/kg/individual");
         const data = await res.json().catch(() => ({}));
-        // #region agent log
-        const g0 = data && data.graph;
-        const types0 = {};
-        ((g0 && g0.nodes) || []).forEach((n) => { types0[n.type] = (types0[n.type] || 0) + 1; });
-        fetch('http://127.0.0.1:7732/ingest/6a8d28cb-02f3-4178-97d9-3a6cf83a0d79',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'a25fc8'},body:JSON.stringify({sessionId:'a25fc8',runId:'pre',hypothesisId:'A',location:'knowledge-graph.js:loadIndividualStore',message:'store loaded',data:{ok:!!(res.ok&&data.ok),nodes:(g0&&g0.nodes||[]).length,types:types0,primary:g0&&g0.targets&&g0.targets.primary_role_id,suggested:g0&&g0.targets&&g0.targets.suggested_primary_id,mergedSeed:!!(data&&data.merged_seed)},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
         if (res.ok && data.ok && data.graph) {
           window.__kgStore = data.graph;
           if (Array.isArray(data.graph.documents)) window.__kgDocs = data.graph.documents;

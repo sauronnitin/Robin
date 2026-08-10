@@ -1326,39 +1326,10 @@ def load_individual() -> dict[str, Any]:
     If the user file exists but is thin (no roles/skills), merge the seed career
     graph back in so a failed PDF upload cannot blank the reality check.
     """
-    # #region agent log
-    _dbg_path = _PROJECT_ROOT / "debug-a25fc8.log"
-    # #endregion
     user = _read_json(_INDIVIDUAL_USER)
     if user:
         normalized = normalize_graph(user, kind="individual")
         thin = _is_thin_individual(normalized)
-        # #region agent log
-        try:
-            with _dbg_path.open("a", encoding="utf-8") as f:
-                f.write(
-                    json.dumps(
-                        {
-                            "sessionId": "a25fc8",
-                            "runId": "pre",
-                            "hypothesisId": "A",
-                            "location": "kg_store.py:load_individual",
-                            "message": "user graph load",
-                            "data": {
-                                "nodes": len(normalized.get("nodes") or []),
-                                "thin": thin,
-                                "primary": (normalized.get("targets") or {}).get(
-                                    "primary_role_id"
-                                ),
-                            },
-                            "timestamp": int(datetime.now(timezone.utc).timestamp() * 1000),
-                        }
-                    )
-                    + "\n"
-                )
-        except OSError:
-            pass
-        # #endregion
         if thin:
             seed = _read_json(_INDIVIDUAL_DEFAULT) or empty_individual()
             merged = _merge_seed_into_thin(normalized, normalize_graph(seed, kind="individual"))
@@ -1367,33 +1338,6 @@ def load_individual() -> dict[str, Any]:
                 _write_json(_INDIVIDUAL_USER, merged)
             except OSError:
                 pass
-            # #region agent log
-            try:
-                with _dbg_path.open("a", encoding="utf-8") as f:
-                    f.write(
-                        json.dumps(
-                            {
-                                "sessionId": "a25fc8",
-                                "runId": "pre",
-                                "hypothesisId": "A",
-                                "location": "kg_store.py:load_individual",
-                                "message": "merged seed into thin user graph",
-                                "data": {
-                                    "nodes": len(merged.get("nodes") or []),
-                                    "primary": (merged.get("targets") or {}).get(
-                                        "primary_role_id"
-                                    ),
-                                },
-                                "timestamp": int(
-                                    datetime.now(timezone.utc).timestamp() * 1000
-                                ),
-                            }
-                        )
-                        + "\n"
-                    )
-            except OSError:
-                pass
-            # #endregion
             return merged
         return normalized
     default = _read_json(_INDIVIDUAL_DEFAULT) or empty_individual()

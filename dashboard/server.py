@@ -976,92 +976,13 @@ class DashboardHandler(SimpleHTTPRequestHandler):
                 remote = params.get("remote") or ""
                 limit = int(params.get("limit") or 20)
                 q = params.get("q") or ""
-                t0 = time.time()
                 payload = ats_jobs.fetch_jobs(q=q, sources=sources or None, remote=remote, limit=limit)
-                jobs = payload.get("jobs") if isinstance(payload, dict) else []
-                # #region agent log
-                try:
-                    log_path = PROJECT_ROOT / "debug-262709.log"
-                    sample = []
-                    if isinstance(jobs, list):
-                        for j in jobs[:3]:
-                            if not isinstance(j, dict):
-                                continue
-                            sample.append(
-                                {
-                                    "id": str(j.get("id") or "")[:40],
-                                    "company": str(j.get("company") or "")[:40],
-                                    "title": str(j.get("title") or "")[:50],
-                                    "desc_len": len(str(j.get("desc") or j.get("description") or "")),
-                                }
-                            )
-                    line = json.dumps(
-                        {
-                            "sessionId": "262709",
-                            "hypothesisId": "D",
-                            "location": "server.py:/api/jobs",
-                            "message": "jobs_ok",
-                            "data": {
-                                "q": q[:80],
-                                "limit": limit,
-                                "sources": sources[:20],
-                                "total": len(jobs) if isinstance(jobs, list) else -1,
-                                "elapsed_ms": int((time.time() - t0) * 1000),
-                                "sample": sample,
-                            },
-                            "timestamp": int(time.time() * 1000),
-                        },
-                        ensure_ascii=False,
-                    )
-                    with log_path.open("a", encoding="utf-8") as fh:
-                        fh.write(line + "\n")
-                except Exception:
-                    pass
-                # #endregion
                 try:
                     return self._json(payload)
-                except (ConnectionAbortedError, BrokenPipeError, ConnectionResetError, OSError) as send_exc:
-                    # #region agent log
-                    try:
-                        log_path = PROJECT_ROOT / "debug-262709.log"
-                        line = json.dumps(
-                            {
-                                "sessionId": "262709",
-                                "hypothesisId": "A",
-                                "location": "server.py:/api/jobs",
-                                "message": "jobs_client_gone",
-                                "data": {"error": str(send_exc)[:240], "total": len(jobs) if isinstance(jobs, list) else -1},
-                                "timestamp": int(time.time() * 1000),
-                            },
-                            ensure_ascii=False,
-                        )
-                        with log_path.open("a", encoding="utf-8") as fh:
-                            fh.write(line + "\n")
-                    except Exception:
-                        pass
-                    # #endregion
+                except (ConnectionAbortedError, BrokenPipeError, ConnectionResetError, OSError):
                     return None
             except Exception as exc:
                 print(f"[dashboard] jobs error: {exc!r}")
-                # #region agent log
-                try:
-                    log_path = PROJECT_ROOT / "debug-262709.log"
-                    line = json.dumps(
-                        {
-                            "sessionId": "262709",
-                            "hypothesisId": "D",
-                            "location": "server.py:/api/jobs",
-                            "message": "jobs_error",
-                            "data": {"error": str(exc)[:240]},
-                            "timestamp": int(time.time() * 1000),
-                        },
-                        ensure_ascii=False,
-                    )
-                    with log_path.open("a", encoding="utf-8") as fh:
-                        fh.write(line + "\n")
-                except Exception:
-                    pass
-                # #endregion
                 return self._json({"jobs": [], "total": 0, "error": str(exc)}, status=500)
         if path.startswith("/api/job-sources"):
             try:
