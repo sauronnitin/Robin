@@ -70,3 +70,9 @@ Case Study Building*.md
 
 # O*NET bulk download (raw upstream; derived bundle is under dashboard/kg/onet/)
 .onet_raw/
+
+# Ad-hoc debug session logs (root-level, timestamped/hashed names)
+debug-*.log
+
+# Vendored third-party tool build artifacts
+tools/open-resume-parser/node_modules/
