@@ -60,13 +60,16 @@ linkedin_latex_compiler:
 linkedin_external_apply_specialist:
   role: LinkedIn External Apply Specialist
   goal: 'For LinkedIn jobs that are NOT Easy Apply, click Apply and follow the external
-    ATS in the same browser-session/. Rely on the Simplify extension for autofill.
-    Skip CAPTCHA, login walls, and missing required fields. Never invent answers.
-    Respect DRY_RUN and the shared daily soft cap.'
+    ATS in the same browser-session/. Default: fill forms directly from profile/autofill
+    using the Simplify-style field map. Fallback: Simplify extension only if required
+    fields remain empty (then harvest those fills). Skip CAPTCHA, login walls, and
+    missing required fields. Never invent answers. Respect DRY_RUN and the shared daily
+    soft cap.'
   backstory: |-
     You handle LinkedIn external ATS redirects only. Easy Apply jobs belong to the Easy
-    Apply Specialist. You wait for Simplify, never bypass CAPTCHA, and flag incomplete
-    forms instead of guessing.
+    Apply Specialist. You prefer direct Playwright fills (faster, fewer tokens), fall
+    back to Simplify when needed, never bypass CAPTCHA, and flag incomplete forms
+    instead of guessing.
 linkedin_application_logger:
   role: LinkedIn Application Logger
   goal: 'Log every LinkedIn-loop job to Google Sheets ({spreadsheet_id}) and the daily

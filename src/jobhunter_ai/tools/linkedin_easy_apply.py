@@ -24,6 +24,10 @@ from playwright.sync_api import sync_playwright
 from pydantic import BaseModel, Field
 
 from jobhunter_ai import browser_preview
+from jobhunter_ai.browser_session import (
+    detect_linkedin_login_wall,
+    wait_for_linkedin_login,
+)
 from jobhunter_ai.tools.google_sheets import GoogleSheetsSearchTool
 from jobhunter_ai.tools.playwright_apply import (
     DAILY_APPLY_SOFT_CAP,
@@ -147,6 +151,8 @@ class LinkedInEasyApplyTool(BaseTool):
             browser_preview.emit_note(
                 f"DRY_RUN: would LinkedIn Easy Apply to {job_title} @ {company_name}",
                 action="dry_run",
+                agent_id="linkedin_easy_apply_specialist",
+                task_key="submit_linkedin_easy_apply",
                 detail={"url": job_url},
             )
             return f"DRY_RUN: would LinkedIn Easy Apply to {job_url}"
@@ -189,6 +195,8 @@ class LinkedInEasyApplyTool(BaseTool):
                     f"Opened Easy Apply · {job_title} @ {company_name}",
                     page=page,
                     url=job_url,
+                    agent_id="linkedin_easy_apply_specialist",
+                    task_key="submit_linkedin_easy_apply",
                 )
                 _human_pause((2.0, 4.0))
                 try:
@@ -209,13 +217,27 @@ class LinkedInEasyApplyTool(BaseTool):
                 except Exception:
                     pass
                 lower = body.lower()
-                if "sign in" in lower and "join now" in lower and "easy apply" not in lower:
+                if detect_linkedin_login_wall(page) or (
+                    "sign in" in lower and "join now" in lower and "easy apply" not in lower
+                ):
                     browser_preview.emit_action(
                         "login_wall",
-                        "LinkedIn login required",
+                        "LinkedIn login required. Keeping Chrome open so you can sign in.",
                         page=page,
+                        agent_id="linkedin_easy_apply_specialist",
+                        task_key="submit_linkedin_easy_apply",
                     )
-                    return "SKIPPED - LinkedIn login required (open browser-session and sign in once)"
+                    logged_in = wait_for_linkedin_login(
+                        page,
+                        agent_id="linkedin_easy_apply_specialist",
+                        task_key="submit_linkedin_easy_apply",
+                        resume_url=job_url,
+                    )
+                    if not logged_in:
+                        return (
+                            "SKIPPED - LinkedIn login wait timed out "
+                            "(Chrome stayed open for JH_LOGIN_WAIT_SECONDS; sign in and retry)"
+                        )
 
                 captcha_count = page.locator(
                     '[id*="captcha"],[class*="captcha"],[id*="challenge"],iframe[src*="captcha"]'

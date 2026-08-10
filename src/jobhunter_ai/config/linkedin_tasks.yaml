@@ -118,10 +118,14 @@ linkedin_external_simplify_apply:
 
     For each such job with compiled resume PDF (and optional cover):
     1. Call LinkedIn External Simplify Apply with the same args shape as Easy Apply.
-    2. Rely on Simplify extension autofill in browser-session/. Never invent answers.
-    3. Skip CAPTCHA, ATS login, and missing required fields.
-    4. Respect DRY_RUN and the shared daily soft cap.
-    5. Skip jobs already Easy-Applied or marked Easy Apply.
+    2. Default: direct form fill from profile + user/apply_autofill.json (Simplify-style
+       field map: name, email, phone, location, LinkedIn, portfolio, resume upload, etc.).
+    3. Fallback: Simplify extension only if required fields remain empty; harvest filled
+       values into apply_autofill.json for next direct runs.
+    4. Never invent years of experience, work auth, salary, or EEO answers.
+    5. Skip CAPTCHA, ATS login, and still-missing required fields.
+    6. Respect DRY_RUN and the shared daily soft cap.
+    7. Skip jobs already Easy-Applied or marked Easy Apply.
 
     Status language: External Applied / SKIPPED - ... / DRY_RUN.
   expected_output: 'List of external LinkedIn jobs with Company, Title, URL, Application

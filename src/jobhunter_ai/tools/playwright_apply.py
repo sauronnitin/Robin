@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field
 from playwright.sync_api import sync_playwright
 
 from jobhunter_ai import browser_preview
+from jobhunter_ai.tools import ats_form_fill
 from jobhunter_ai.tools.google_sheets import GoogleSheetsSearchTool
 
 DELAY_BETWEEN_FIELDS = (3, 8)    # seconds
@@ -61,10 +62,11 @@ class PlaywrightApplyTool(BaseTool):
 
     name: str = "Playwright Apply Tool"
     description: str = (
-        "Navigates to a job URL and submits an application using human-like pacing and behaviour. "
-        "Respects DRY_RUN, a duplicate-application check, a daily application soft cap, and CAPTCHA detection. "
-        "Only supports non-LinkedIn flows; linkedin.com URLs are skipped (use the LinkedIn agentic loop). "
-        "External ATS / CAPTCHA / duplicates are skipped and flagged."
+        "Navigates to a job URL and submits an application using human-like pacing. "
+        "Fills ATS forms directly from profile/autofill (Simplify-style field map), "
+        "falls back to Simplify only if required fields remain empty, then submits. "
+        "Respects DRY_RUN, duplicate checks, daily soft cap, and CAPTCHA detection. "
+        "Only supports non-LinkedIn flows; linkedin.com URLs are skipped (use the LinkedIn loop)."
     )
     args_schema: Type[BaseModel] = PlaywrightApplyToolInput
 
@@ -105,6 +107,10 @@ class PlaywrightApplyTool(BaseTool):
             return "SKIPPED - Daily cap reached (15)"
 
         _SESSION_DIR.mkdir(parents=True, exist_ok=True)
+        resume_path = ats_form_fill.download_resume_pdf(resume_pdf_link)
+        import tempfile
+
+        tmp_root = tempfile.gettempdir()
 
         with sync_playwright() as playwright:
             # 4. Browser launch -- persistent context preserves login between runs.
@@ -155,40 +161,77 @@ class PlaywrightApplyTool(BaseTool):
                     )
                     time.sleep(random.uniform(*DELAY_BETWEEN_FIELDS))
 
-                    cover_textarea = page.locator(
-                        'textarea[aria-label*="cover" i], '
-                        'textarea[id*="cover" i], '
-                        'textarea[name*="cover" i], '
-                        'textarea[placeholder*="cover" i]'
+                fill_stats = ats_form_fill.fill_form_direct_then_simplify(
+                    page,
+                    cover_letter_text=cover_letter_text or "",
+                    resume_path=resume_path,
+                )
+                browser_preview.emit_action(
+                    "type",
+                    (
+                        f"Form fill mode={fill_stats.get('mode')} "
+                        f"fields={fill_stats.get('filled')}"
+                    ),
+                    page=page,
+                    detail=fill_stats,
+                )
+
+                if fill_stats.get("still_missing_required") or ats_form_fill.missing_required_fields(page):
+                    return "SKIPPED - Missing Info (direct fill + Simplify fallback incomplete)"
+
+                submit_button = page.get_by_text("Submit application", exact=False)
+                if submit_button.count() == 0:
+                    submit_button = page.get_by_text("Submit", exact=False)
+                if submit_button.count() > 0:
+                    time.sleep(random.uniform(*DELAY_BETWEEN_FIELDS))
+                    submit_button.first.click()
+                    browser_preview.emit_action(
+                        "submit",
+                        "Submitted application",
+                        page=page,
                     )
-                    if cover_letter_text and cover_textarea.count() > 0:
-                        field = cover_textarea.first
-                        time.sleep(random.uniform(*DELAY_BETWEEN_FIELDS))
-                        try:
-                            field.click(timeout=5000)
-                            page.keyboard.type(cover_letter_text, delay=random.uniform(50, 120))
-                            browser_preview.emit_action(
-                                "type",
-                                "Typed cover letter into form",
-                                page=page,
-                            )
-                        except Exception:
-                            pass
+                else:
+                    return "SKIPPED - No submit button"
 
-                    submit_button = page.get_by_text("Submit application", exact=False)
-                    if submit_button.count() > 0:
-                        time.sleep(random.uniform(*DELAY_BETWEEN_FIELDS))
-                        submit_button.first.click()
-                        browser_preview.emit_action(
-                            "submit",
-                            "Submitted application",
-                            page=page,
-                        )
-
-                # 8. After submit -- stay on confirmation page.
+                # 8. After submit -- stay on confirmation page; intercept email-verify ATS.
                 time.sleep(random.uniform(*DELAY_AFTER_SUBMIT))
+                from jobhunter_ai.email_verify import (
+                    applicant_email,
+                    detect_ats_source,
+                    emit_needs_email_verify,
+                    page_needs_email_verify,
+                    wait_for_email_verified,
+                )
+
+                if page_needs_email_verify(page):
+                    ats = detect_ats_source(page.url or job_url)
+                    job_id = f"{company_name}:{job_title}".strip(":")
+                    emit_needs_email_verify(
+                        job_id=job_id,
+                        company=company_name,
+                        ats=ats,
+                        email=applicant_email(),
+                        job_url=job_url,
+                        job_title=job_title,
+                    )
+                    browser_preview.emit_action(
+                        "wait",
+                        f"Waiting for email verification ({ats})",
+                        page=page,
+                    )
+                    verified = wait_for_email_verified(job_id=job_id, timeout_s=600.0)
+                    if not verified:
+                        return (
+                            f"SKIPPED - Email verification timeout for "
+                            f"{job_title} at {company_name}"
+                        )
             finally:
                 context.close()
+                if resume_path and resume_path.is_file() and str(resume_path).startswith(tmp_root):
+                    try:
+                        resume_path.unlink(missing_ok=True)
+                    except Exception:
+                        pass
 
         # 9. Increment counter (auto-resets if the date has changed).
         _write_daily_count(daily_count + 1)

@@ -11,9 +11,13 @@ from urllib.parse import quote_plus, urlparse, urlunparse
 from crewai.tools import BaseTool
 from playwright.sync_api import TimeoutError as PlaywrightTimeout
 from playwright.sync_api import sync_playwright
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from jobhunter_ai import browser_preview
+from jobhunter_ai.browser_session import (
+    detect_linkedin_login_wall,
+    wait_for_linkedin_login,
+)
 from jobhunter_ai.linkedin_queries import (
     LINKEDIN_ALERT_QUERIES,
     LINKEDIN_GEO_PRIORITY,
@@ -22,13 +26,6 @@ from jobhunter_ai.linkedin_queries import (
 )
 from jobhunter_ai.tools.playwright_apply import _SESSION_DIR
 
-_LOGIN_MARKERS = (
-    "sign in",
-    "join now",
-    "welcome back",
-    "session expired",
-    "authwall",
-)
 _SENIORITY_HARD_EXCLUDE = re.compile(
     r"\b(head|director|vp|vice\s*president|chief|c-level)\b",
     re.I,
@@ -37,6 +34,8 @@ _SENIORITY_HARD_EXCLUDE = re.compile(
 
 class LinkedInScoutToolInput(BaseModel):
     """Input schema for LinkedInScoutTool."""
+    model_config = ConfigDict(extra="ignore")
+
 
     max_results: int = Field(
         default=LINKEDIN_SCOUT_SOFT_CAP,
@@ -45,8 +44,7 @@ class LinkedInScoutToolInput(BaseModel):
     queries_json: str = Field(
         default="",
         description=(
-            "Optional JSON list of query strings. Empty uses the built-in "
-            "LINKEDIN_ALERT_QUERIES set."
+            "Optional JSON list of query strings. Omit or pass empty string to use built-in LINKEDIN_ALERT_QUERIES. Do NOT pass DRY_RUN or other unknown fields."
         ),
     )
 
@@ -141,32 +139,7 @@ def _build_search_url(keywords: str, geo: dict[str, str]) -> str:
 
 
 def _detect_login_wall(page) -> bool:
-    try:
-        url = (page.url or "").lower()
-    except Exception:
-        url = ""
-    if "login" in url or "authwall" in url or "checkpoint" in url:
-        return True
-    try:
-        body = (page.locator("body").inner_text(timeout=4000) or "")[:3000].lower()
-    except Exception:
-        body = ""
-    has_easy_or_jobs = "easy apply" in body or "jobs" in body or "results" in body
-    if any(m in body for m in _LOGIN_MARKERS) and not has_easy_or_jobs:
-        return True
-    # Sign-in form without job cards
-    try:
-        cards = page.locator(
-            "li.jobs-search-results__list-item, "
-            "div.job-card-container, "
-            "div.base-card, "
-            "ul.jobs-search__results-list li"
-        ).count()
-    except Exception:
-        cards = 0
-    if cards == 0 and ("sign in" in body and "join now" in body):
-        return True
-    return False
+    return detect_linkedin_login_wall(page)
 
 
 def _parse_cards(page) -> list[dict[str, Any]]:
@@ -340,16 +313,28 @@ class LinkedInScoutTool(BaseTool):
                             f"LinkedIn search · {query} · {geo.get('key', 'geo')}",
                             page=page,
                             url=url,
+                            agent_id="linkedin_job_scout",
+                            task_key="linkedin_scout_jobs",
                         )
                         time.sleep(1.8)
                         if _detect_login_wall(page):
                             browser_preview.emit_action(
                                 "login_wall",
-                                "LinkedIn login wall detected",
+                                "LinkedIn login wall detected. Keeping Chrome open so you can sign in.",
                                 page=page,
+                                agent_id="linkedin_job_scout",
+                                task_key="linkedin_scout_jobs",
                             )
-                            login_required = True
-                            break
+                            logged_in = wait_for_linkedin_login(
+                                page,
+                                agent_id="linkedin_job_scout",
+                                task_key="linkedin_scout_jobs",
+                                resume_url=url,
+                            )
+                            if not logged_in:
+                                login_required = True
+                                break
+                            # Login cleared; continue this query from the resume URL.
                         try:
                             page.evaluate(
                                 "window.scrollTo(0, document.body.scrollHeight * 0.55)"
@@ -359,6 +344,8 @@ class LinkedInScoutTool(BaseTool):
                                 "Scrolled results for cards",
                                 page=page,
                                 screenshot=False,
+                                agent_id="linkedin_job_scout",
+                                task_key="linkedin_scout_jobs",
                             )
                         except Exception:
                             pass
@@ -385,8 +372,9 @@ class LinkedInScoutTool(BaseTool):
                 {
                     "status": "LOGIN_REQUIRED",
                     "message": (
-                        "LinkedIn login wall detected. Open browser-session/ via Playwright, "
-                        "sign in once, then re-run LinkedIn Scout."
+                        "LinkedIn login wait timed out. Chrome was kept open for "
+                        "JH_LOGIN_WAIT_SECONDS (default 600). Sign in in browser-session/, "
+                        "then re-run LinkedIn Scout."
                     ),
                     "jobs": [],
                 }
