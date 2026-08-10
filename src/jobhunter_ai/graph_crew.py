@@ -135,7 +135,12 @@ def _llm_for_custom(model: str | None):
 
 
 def _apply_llm_override(agent: Agent, node: dict[str, Any]) -> None:
-    """If the canvas card selected a model, honor it on the live agent."""
+    """If the canvas card selected a model, honor it on the live agent.
+
+    Uses primary ``llm`` only. ``fallback_llm`` is promoted into ``llm`` by
+    AutoFix (or a user Swap) in run_plan.json before an exit-75 restart; this
+    helper then applies the new primary on crew rebuild.
+    """
     override = str(node.get("llm") or "").strip()
     if not override:
         return
@@ -144,6 +149,9 @@ def _apply_llm_override(agent: Agent, node: dict[str, Any]) -> None:
         return
     agent.llm = _resolve_llm(override, default=str(current or _GROQ_8B))
     print(f"[jobhunter] llm override {node.get('id')}: {current} -> {agent.llm.model}")
+    fallback = str(node.get("fallback_llm") or "").strip()
+    if fallback and fallback != override:
+        print(f"[jobhunter] fallback_llm recorded for {node.get('id')}: {fallback}")
 
 
 def _build_custom_agent(node: dict[str, Any]) -> Agent:

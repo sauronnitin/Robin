@@ -6,9 +6,12 @@ if Gemini is missing. Returns structured actions the dashboard can execute.
 
 from __future__ import annotations
 
+import base64
+import binascii
 import json
 import os
 import re
+import uuid
 from pathlib import Path
 from typing import Any
 
@@ -20,9 +23,9 @@ _PLANNING = _PROJECT_ROOT / ".planning"
 _DASHBOARD = _PROJECT_ROOT / "dashboard"
 _CONFIG = _PROJECT_ROOT / "src" / "jobhunter_ai" / "config"
 
-_SYSTEM = """You are Auto, the JobHunter AI canvas assistant embedded in the local dashboard.
+_SYSTEM = """You are the JobHunter assistant embedded in the local dashboard.
 
-Identity: If asked who you are, say you are Auto in the JobHunter canvas chat.
+Identity: If asked who you are, say you are the JobHunter assistant for this project.
 
 Domain: CrewAI job-application pipeline with Main loop (Scout → Screen → Fit →
 Tailor → Cover → Humanizer → Compile → Apply → Logger) and a separate LinkedIn
@@ -58,8 +61,13 @@ Supported action types:
 - {"type":"retry"}
 - {"type":"abort"}
 - {"type":"resolve_errors","ids":["optional id list; omit to resolve all open"]}
+- {"type":"autofix_enable"}
+- {"type":"autofix_disable"}
+- {"type":"autofix_once"}
 
 section defaults: "main" if omitted for sim/start_live. LinkedIn is section_linkedin.
+AutoFix is always on while the JobHunter dashboard server is up (no canvas card).
+autofix_disable is a no-op that explains it stays on. Prefer autofix_once to force a tick.
 """
 
 _PREVIEW_SYSTEM = """You narrate JobHunter Preview Card frames for a human watching the canvas.
@@ -71,8 +79,22 @@ Do not use em dashes or en dashes."""
 _MAX_HISTORY = 24
 _MAX_REPLY_CHARS = 4000
 _CTX_CHAR_BUDGET = 14000
+_MAX_IMAGE_BYTES = 8 * 1024 * 1024
+_MAX_VIDEO_BYTES = 12 * 1024 * 1024
+_MAX_ATTACHMENTS = 4
+_INLINE_VIDEO_BYTES = 4 * 1024 * 1024
+_IMAGE_MIMES = frozenset({"image/jpeg", "image/png", "image/gif", "image/webp"})
+_VIDEO_MIMES = frozenset({"video/mp4", "video/webm", "video/quicktime", "video/x-msvideo"})
+_CHAT_UPLOADS = _PROJECT_ROOT / "user" / "chat_uploads"
 
-_SERVER_ACTION_TYPES = frozenset({"retry", "abort", "resolve_errors"})
+_SERVER_ACTION_TYPES = frozenset({
+    "retry",
+    "abort",
+    "resolve_errors",
+    "autofix_enable",
+    "autofix_disable",
+    "autofix_once",
+})
 _CLIENT_ACTION_TYPES = frozenset({
     "sim",
     "start_live",
@@ -298,6 +320,10 @@ def _normalize_action(raw: Any) -> dict[str, Any] | None:
         "linkedin_review": "open_li_review",
         "confirm_retry": "retry",
         "fix_retry": "retry",
+        "enable_autofix": "autofix_enable",
+        "disable_autofix": "autofix_disable",
+        "run_autofix": "autofix_once",
+        "autofix": "autofix_once",
     }
     atype = aliases.get(atype, atype)
     if atype not in _ALL_ACTION_TYPES:
@@ -388,7 +414,130 @@ def execute_resolve_errors(action: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _completion(model: str, messages: list[dict[str, str]]) -> tuple[str, Any]:
+def _decode_attachment_payload(raw: str) -> tuple[str, bytes] | None:
+    """Parse base64 or data-URL attachment payload."""
+    text = (raw or "").strip()
+    if not text:
+        return None
+    if text.startswith("data:"):
+        header, _, body = text.partition(",")
+        if not body:
+            return None
+        mime = "application/octet-stream"
+        if ";" in header:
+            mime = header[5:].split(";", 1)[0].strip().lower() or mime
+        try:
+            return mime, base64.b64decode(body, validate=False)
+        except (ValueError, binascii.Error):
+            return None
+    try:
+        return "application/octet-stream", base64.b64decode(text, validate=False)
+    except (ValueError, binascii.Error):
+        return None
+
+
+def _normalize_attachments(raw: Any) -> tuple[list[dict[str, Any]], list[str]]:
+    """Validate attachments from POST body. Returns (attachments, warnings)."""
+    if not isinstance(raw, list) or not raw:
+        return [], []
+    out: list[dict[str, Any]] = []
+    warnings: list[str] = []
+    for item in raw[:_MAX_ATTACHMENTS]:
+        if not isinstance(item, dict):
+            continue
+        name = str(item.get("name") or item.get("filename") or "attachment").strip()[:180]
+        mime = str(item.get("mime") or item.get("type") or "").strip().lower()
+        payload = item.get("data") or item.get("data_url") or item.get("base64")
+        if payload is None:
+            warnings.append(f"Skipped {name}: missing data")
+            continue
+        parsed = _decode_attachment_payload(str(payload))
+        if not parsed:
+            warnings.append(f"Skipped {name}: invalid base64")
+            continue
+        detected_mime, blob = parsed
+        if not mime or mime == "application/octet-stream":
+            mime = detected_mime
+        if mime.startswith("image/") and mime not in _IMAGE_MIMES:
+            mime = "image/jpeg"
+        if mime.startswith("video/") and mime not in _VIDEO_MIMES:
+            mime = "video/mp4"
+        if mime in _IMAGE_MIMES:
+            if len(blob) > _MAX_IMAGE_BYTES:
+                warnings.append(f"Skipped {name}: image exceeds 8 MB limit")
+                continue
+            data_url = f"data:{mime};base64,{base64.b64encode(blob).decode('ascii')}"
+            out.append({"kind": "image", "name": name, "mime": mime, "data_url": data_url, "bytes": len(blob)})
+            continue
+        if mime in _VIDEO_MIMES or mime.startswith("video/"):
+            if len(blob) > _MAX_VIDEO_BYTES:
+                warnings.append(f"Skipped {name}: video exceeds 12 MB limit")
+                continue
+            stored_path = None
+            inline_ok = len(blob) <= _INLINE_VIDEO_BYTES
+            data_url = f"data:{mime};base64,{base64.b64encode(blob).decode('ascii')}"
+            if not inline_ok:
+                try:
+                    _CHAT_UPLOADS.mkdir(parents=True, exist_ok=True)
+                    ext = {
+                        "video/mp4": ".mp4",
+                        "video/webm": ".webm",
+                        "video/quicktime": ".mov",
+                    }.get(mime, ".mp4")
+                    stored_path = _CHAT_UPLOADS / f"{uuid.uuid4().hex}{ext}"
+                    stored_path.write_bytes(blob)
+                except OSError as exc:
+                    warnings.append(f"Stored {name} locally only: {exc}")
+            out.append(
+                {
+                    "kind": "video",
+                    "name": name,
+                    "mime": mime,
+                    "data_url": data_url if inline_ok else None,
+                    "inline_ok": inline_ok,
+                    "stored_path": str(stored_path) if stored_path else None,
+                    "bytes": len(blob),
+                }
+            )
+            continue
+        warnings.append(f"Skipped {name}: unsupported type {mime}")
+    return out, warnings
+
+
+def _build_user_content(message: str, attachments: list[dict[str, Any]]) -> str | list[dict[str, Any]]:
+    """Build litellm user content with optional image/video parts."""
+    if not attachments:
+        return message
+    parts: list[dict[str, Any]] = []
+    if message:
+        parts.append({"type": "text", "text": message})
+    for att in attachments:
+        if att.get("kind") == "image" and att.get("data_url"):
+            parts.append({"type": "image_url", "image_url": {"url": att["data_url"]}})
+            continue
+        if att.get("kind") == "video":
+            if att.get("inline_ok") and att.get("data_url"):
+                parts.append({"type": "file", "file": {"file_data": att["data_url"]}})
+            else:
+                note = (
+                    f"[Video attachment: {att.get('name') or 'video'} "
+                    f"({att.get('bytes', 0)} bytes)"
+                )
+                if att.get("stored_path"):
+                    note += f" saved at {att['stored_path']}"
+                note += ". Inline video analysis was skipped because the file is large. "
+                note += "Ask the user for a shorter clip or key screenshots if needed.]"
+                parts.append({"type": "text", "text": note})
+    if not parts:
+        return message or "Please review the attached reference."
+    if len(parts) == 1 and parts[0].get("type") == "text":
+        return str(parts[0].get("text") or message)
+    if not message and not any(p.get("type") == "text" for p in parts):
+        parts.insert(0, {"type": "text", "text": "Please review the attached reference."})
+    return parts
+
+
+def _completion(model: str, messages: list[dict[str, Any]], *, has_media: bool = False) -> tuple[str, Any]:
     """Call litellm; prefer JSON mode on Gemini, fall back if unsupported."""
     import litellm
 
@@ -398,7 +547,8 @@ def _completion(model: str, messages: list[dict[str, str]]) -> tuple[str, Any]:
         "temperature": 0.35,
         "max_tokens": 1200,
     }
-    if model.startswith("gemini/"):
+    use_json_mode = model.startswith("gemini/") and not has_media
+    if use_json_mode:
         try:
             resp = litellm.completion(**kwargs, response_format={"type": "json_object"})
         except Exception:
@@ -417,37 +567,57 @@ def _completion(model: str, messages: list[dict[str, str]]) -> tuple[str, Any]:
 
 
 def chat(body: dict[str, Any] | None) -> dict[str, Any]:
-    """Handle POST /api/chat body: { message, history?, context? }.
+    """Handle POST /api/chat body: { message, history?, context?, attachments? }.
 
+    attachments: [{ name, mime?, data|data_url|base64 }]
     Returns reply plus client_actions / server_actions. The dashboard server
     executes retry/abort/resolve_errors; the browser applies canvas actions.
     """
     data = body if isinstance(body, dict) else {}
     message = str(data.get("message") or "").strip()
-    if not message:
-        return {"ok": False, "error": "message is required"}
+    attachments, attach_warnings = _normalize_attachments(data.get("attachments"))
+    if not message and not attachments:
+        return {"ok": False, "error": "message or attachments required"}
 
     model, err = _pick_model()
     if err:
         return {"ok": False, "error": err}
+    if attachments and not model.startswith("gemini/"):
+        return {
+            "ok": False,
+            "error": "Image and video attachments require GEMINI_API_KEY in .env",
+        }
 
     history = _normalize_messages(data.get("history"))
     client_ctx = data.get("context") if isinstance(data.get("context"), dict) else {}
     project_ctx = build_project_context(client_context=client_ctx)
 
-    messages: list[dict[str, str]] = [
-        {"role": "system", "content": _SYSTEM},
+    user_content = _build_user_content(message[:8000], attachments)
+    media_note = ""
+    if attachments:
+        media_note = (
+            "\n\nThe user attached reference media in this turn. Describe what you can see "
+            "or note limits honestly when video was stored locally instead of analyzed inline."
+        )
+
+    messages: list[dict[str, Any]] = [
+        {"role": "system", "content": _SYSTEM + media_note},
         {"role": "system", "content": project_ctx},
     ]
     messages.extend(history)
-    messages.append({"role": "user", "content": message[:8000]})
+    messages.append({"role": "user", "content": user_content})
 
     try:
-        text, resp = _completion(model, messages)
+        text, resp = _completion(model, messages, has_media=bool(attachments))
         if not text:
             return {"ok": False, "error": "Empty model reply", "model": model}
 
         reply, actions = parse_model_reply(text)
+        if attach_warnings and reply:
+            warn_line = "Attachment notes: " + "; ".join(attach_warnings[:4])
+            reply = warn_line + "\n\n" + reply
+        elif attach_warnings:
+            reply = "Attachment notes: " + "; ".join(attach_warnings[:4])
         if len(reply) > _MAX_REPLY_CHARS:
             reply = reply[:_MAX_REPLY_CHARS].rstrip() + "…"
 
@@ -470,6 +640,8 @@ def chat(body: dict[str, Any] | None) -> dict[str, Any]:
             "client_actions": client_actions,
             "server_actions": server_actions,
             "context_chars": len(project_ctx),
+            "attachments_received": len(attachments),
+            "attachment_warnings": attach_warnings,
         }
     except Exception as exc:
         return {"ok": False, "error": str(exc), "model": model}

@@ -164,18 +164,100 @@ def _write_json(path: Path, payload: dict[str, Any]) -> None:
 
 
 def write_control(action: str = "none", **extra: Any) -> None:
-    payload = {"action": action, "ts": time.time(), **extra}
+    """Write run_control.json. Preserves user_paused unless explicitly passed."""
+    existing: dict[str, Any] = {}
+    if CONTROL_FILE.exists():
+        try:
+            existing = json.loads(CONTROL_FILE.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            existing = {}
+    payload: dict[str, Any] = {
+        "action": action,
+        "ts": time.time(),
+        "user_paused": bool(existing.get("user_paused")),
+    }
+    if "user_paused" in extra:
+        payload["user_paused"] = bool(extra.pop("user_paused"))
+    payload.update(extra)
     with _lock:
         _write_json(CONTROL_FILE, payload)
 
 
 def read_control() -> dict[str, Any]:
     if not CONTROL_FILE.exists():
-        return {"action": "none"}
+        return {"action": "none", "user_paused": False}
     try:
-        return json.loads(CONTROL_FILE.read_text(encoding="utf-8"))
+        data = json.loads(CONTROL_FILE.read_text(encoding="utf-8"))
+        if not isinstance(data, dict):
+            return {"action": "none", "user_paused": False}
+        data.setdefault("action", "none")
+        data.setdefault("user_paused", False)
+        return data
     except (OSError, json.JSONDecodeError):
-        return {"action": "none"}
+        return {"action": "none", "user_paused": False}
+
+
+def is_user_paused() -> bool:
+    return bool(read_control().get("user_paused"))
+
+
+def set_user_paused(paused: bool, *, reason: str | None = None) -> None:
+    """Sticky pause gate: blocks LLM calls and AutoFix retries until cleared."""
+    if paused:
+        write_control("none", user_paused=True)
+        st = read_state()
+        status = str(st.get("status") or "").lower()
+        # Keep awaiting_retry so confirm/retry UI still applies; otherwise mark paused.
+        if status not in ("awaiting_retry", "aborted", "done", "failed"):
+            write_state(status="paused")
+        emit(
+            "run",
+            status="paused",
+            detail={"message": reason or "Pipeline paused. Resume to continue."},
+        )
+    else:
+        write_control("none", user_paused=False)
+        st = read_state()
+        if str(st.get("status") or "").lower() == "paused":
+            write_state(status="running")
+        emit(
+            "run",
+            status="running",
+            detail={"message": reason or "Pipeline resumed."},
+        )
+
+
+def wait_if_paused(*, poll_s: float = 0.4) -> str:
+    """Block while user_paused is set. Returns \"ok\" or \"abort\"."""
+    notified = False
+    while is_user_paused():
+        ctrl = read_control()
+        action = (ctrl.get("action") or "none").lower()
+        if action == "abort":
+            write_control("none", user_paused=False)
+            write_state(status="aborted")
+            emit("run", status="aborted", detail={"message": "User aborted while paused"})
+            return "abort"
+        if action in ("resume", "retry"):
+            # Resume clears pause; retry also unblocks (await_user_decision handles it).
+            write_control(
+                "retry" if action == "retry" else "none",
+                user_paused=False,
+            )
+            st = read_state()
+            if str(st.get("status") or "").lower() == "paused":
+                write_state(status="running")
+            emit("run", status="running", detail={"message": "User resumed"})
+            return "ok"
+        if not notified:
+            emit(
+                "step",
+                status="paused",
+                detail={"message": "Waiting on pause (no LLM calls until Resume)."},
+            )
+            notified = True
+        time.sleep(poll_s)
+    return "ok"
 
 
 def write_state(**fields: Any) -> None:
@@ -211,7 +293,7 @@ def begin_run(run_id: str | None = None) -> str:
         _run_started_monotonic = time.monotonic()
         _current_agent_id = None
         _current_task_key = None
-    write_control("none")
+    write_control("none", user_paused=False)
     write_state(run_id=rid, status="running", pid=None, error=None)
     emit("run", status="started", detail={"message": "crew.kickoff() started"})
     return rid
@@ -220,7 +302,7 @@ def begin_run(run_id: str | None = None) -> str:
 def end_run(status: str = "done", detail: dict[str, Any] | None = None) -> None:
     emit("run", status=status, detail=detail or {})
     write_state(status=status)
-    write_control("none")
+    write_control("none", user_paused=False)
     try:
         from jobhunter_ai import error_bus
 
@@ -260,11 +342,15 @@ def emit(
     detail: dict[str, Any] | None = None,
 ) -> None:
     """Append one JSONL event. Safe to call from any thread."""
-    global _run_id
+    global _run_id, _run_started_monotonic
     rid = _run_id
     if not rid:
-        # Allow late binding if main forgot begin_run
-        rid = begin_run()
+        # Soft bind a run id without truncating events or clearing pause/control.
+        # (Calling begin_run() here used to wipe user_paused and the event log.)
+        rid = uuid.uuid4().hex[:12]
+        _run_id = rid
+        if _run_started_monotonic is None:
+            _run_started_monotonic = time.monotonic()
 
     aid = resolve_agent_id(agent_id) if agent_id else _current_agent_id
     tid = resolve_task_key(task_key) if task_key else _current_task_key
@@ -296,12 +382,15 @@ def await_user_decision(
     suggestion: str,
     poll_s: float = 0.5,
 ) -> str:
-    """Emit awaiting_retry, then block until control says retry or abort.
+    """Emit awaiting_retry, then block until control says retry/resume or abort.
 
     Returns \"retry\" or \"abort\".
+    AutoFix may signal retry unless user_paused is set (manual Pause).
     """
     set_context(agent_id=agent_id, task_key=task_key)
-    write_control("none")
+    # Clear stale retry/abort but keep an explicit user pause if already set.
+    paused = is_user_paused()
+    write_control("none", user_paused=paused)
     write_state(status="awaiting_retry", error=error, suggestion=suggestion)
     emit(
         "awaiting_retry",
@@ -309,7 +398,7 @@ def await_user_decision(
         detail={
             "error": error,
             "suggestion": suggestion,
-            "message": "Pipeline paused for user confirmation before retry or abort.",
+            "message": "Pipeline paused for user confirmation or AutoFix before retry.",
         },
     )
     try:
@@ -327,13 +416,23 @@ def await_user_decision(
     while True:
         ctrl = read_control()
         action = (ctrl.get("action") or "none").lower()
-        if action == "retry":
-            write_control("none")
+        user_paused = bool(ctrl.get("user_paused"))
+        # Manual Pause swallows AutoFix retries until the user hits Resume/Play.
+        if user_paused and action == "retry":
+            write_control("none", user_paused=True)
+            time.sleep(poll_s)
+            continue
+        if action in ("retry", "resume"):
+            write_control("none", user_paused=False)
             write_state(status="running", error=None)
-            emit("step", status="retrying", detail={"message": "User confirmed retry"})
+            emit(
+                "step",
+                status="retrying",
+                detail={"message": "Retry after pause (user or AutoFix)"},
+            )
             return "retry"
         if action == "abort":
-            write_control("none")
+            write_control("none", user_paused=False)
             write_state(status="aborted")
             emit("run", status="aborted", detail={"message": "User aborted run"})
             return "abort"

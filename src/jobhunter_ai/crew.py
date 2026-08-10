@@ -15,6 +15,7 @@ from crewai import Agent, Crew, Process, Task
 from crewai.project import CrewBase, agent, crew, task
 from crewai.llms.cache import CACHE_BREAKPOINT_KEY
 from jobhunter_ai.tools.scrape_website_truncated import TruncatedScrapeWebsiteTool
+from jobhunter_ai.tools.job_apis import JobApisTool
 from jobhunter_ai import events_bus
 from jobhunter_ai.screening import screen_listings
 
@@ -471,9 +472,15 @@ class GroqLLM(LLM):
             raise RuntimeError(f"Run aborted by user after: {error}") from None
         # retry: caller loops again
 
+    def _gate_pause(self) -> None:
+        decision = events_bus.wait_if_paused()
+        if decision == "abort":
+            raise RuntimeError("Run aborted while paused") from None
+
     def call(self, *args, **kwargs):
         max_attempts = 6
         for attempt in range(1, max_attempts + 1):
+            self._gate_pause()
             t0 = time.monotonic()
             before = _usage_snapshot(self)
             events_bus.emit(
@@ -616,9 +623,15 @@ class GeminiLLM(LLM):
         if decision == "abort":
             raise RuntimeError(f"Run aborted by user after: {error}") from None
 
+    def _gate_pause(self) -> None:
+        decision = events_bus.wait_if_paused()
+        if decision == "abort":
+            raise RuntimeError("Run aborted while paused") from None
+
     def call(self, *args, **kwargs):
         max_attempts = 4
         for attempt in range(1, max_attempts + 1):
+            self._gate_pause()
             t0 = time.monotonic()
             before = _usage_snapshot(self)
             events_bus.emit(
@@ -810,8 +823,8 @@ class JobhunterAiCrew:
     def global_product_design_job_scout(self) -> Agent:
         return Agent(
             config=self.agents_config["global_product_design_job_scout"],
-            tools=[TruncatedScrapeWebsiteTool()],
-            max_iter=2,
+            tools=[JobApisTool(), TruncatedScrapeWebsiteTool()],
+            max_iter=3,
             llm=_groq_8b,
             **_SHARED_AGENT_KWARGS,
         )
@@ -841,7 +854,7 @@ class JobhunterAiCrew:
         return Agent(
             config=self.agents_config["resume_tailor"],
             tools=[GoogleDocsCreateTool()],
-            max_iter=1,
+            max_iter=3,
             llm=_gemini_flash,
             **_SHARED_AGENT_KWARGS,
         )
@@ -851,7 +864,7 @@ class JobhunterAiCrew:
         return Agent(
             config=self.agents_config["cover_letter_writer"],
             tools=[GoogleDocsCreateTool(), GoogleDocsGetTool(), GoogleDocsReplaceTool()],
-            max_iter=1,
+            max_iter=3,
             llm=_gemini_flash,
             **_SHARED_AGENT_KWARGS,
         )
@@ -861,7 +874,7 @@ class JobhunterAiCrew:
         return Agent(
             config=self.agents_config["content_humanizer_ai_detection_specialist"],
             tools=[GoogleDocsGetTool(), GoogleDocsReplaceTool()],
-            max_iter=1,
+            max_iter=3,
             llm=_gemini_flash,
             **_SHARED_AGENT_KWARGS,
         )
@@ -901,7 +914,7 @@ class JobhunterAiCrew:
         return Agent(
             config=self.agents_config["linkedin_bot_check_specialist"],
             tools=[LinkedInBotCheckTool()],
-            max_iter=1,
+            max_iter=3,
             llm=_groq_8b,
             **_SHARED_AGENT_KWARGS,
         )
@@ -921,7 +934,7 @@ class JobhunterAiCrew:
         return Agent(
             config=self.agents_config["linkedin_resume_tailor"],
             tools=[GoogleDocsCreateTool()],
-            max_iter=1,
+            max_iter=3,
             llm=_gemini_flash,
             **_SHARED_AGENT_KWARGS,
         )
@@ -931,7 +944,7 @@ class JobhunterAiCrew:
         return Agent(
             config=self.agents_config["linkedin_cover_letter_writer"],
             tools=[GoogleDocsCreateTool(), GoogleDocsGetTool(), GoogleDocsReplaceTool()],
-            max_iter=1,
+            max_iter=3,
             llm=_gemini_flash,
             **_SHARED_AGENT_KWARGS,
         )
@@ -978,7 +991,7 @@ class JobhunterAiCrew:
         return Agent(
             config=self.agents_config["human_like_application_specialist"],
             tools=[GoogleSheetsSearchTool(), PlaywrightApplyTool()],
-            max_iter=1,
+            max_iter=3,
             llm=_groq_8b,
             **_SHARED_AGENT_KWARGS,
         )

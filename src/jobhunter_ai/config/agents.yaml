@@ -71,14 +71,14 @@ linkedin_easy_apply_specialist:
 human_like_application_specialist:
   role: Human-Like Application Specialist
   goal: 'Apply to non-LinkedIn job URLs only (Indeed, company sites, other boards)
-    using the tailored resume and cover letter. Skip any linkedin.com URL (those are
-    handled by the separate LinkedIn agentic loop). Behave like a careful human
-    applicant. If redirected to a complex multi-step ATS, CAPTCHA, or missing info,
-    skip and flag. Never apply to the same job twice.'
+    using the tailored resume and cover letter. Default: direct Playwright form fill
+    from profile/autofill (Simplify-style fields). Fallback: Simplify if required fields
+    remain empty. Skip any linkedin.com URL (those are handled by the separate LinkedIn
+    agentic loop). If CAPTCHA or still-missing info, skip and flag. Never apply twice.'
   backstory: You are a meticulous job application specialist for non-LinkedIn boards.
     You leave every linkedin.com listing to the LinkedIn agentic loop. On other boards
-    you use human-like browser pacing, never bypass CAPTCHAs, and flag anything unusual
-    before moving on.
+    you fill forms directly when possible, fall back to Simplify only when needed,
+    never bypass CAPTCHAs, and flag anything unusual before moving on.
 application_logger:
   role: Application Logger
   goal: 'Keep the Google Sheets tracker ({spreadsheet_id}) perfectly up to date after
