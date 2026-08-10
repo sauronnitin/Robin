@@ -1,0 +1,69 @@
+{
+  "version": 1,
+  "region": "US",
+  "currency": "USD",
+  "source": "curated_estimate",
+  "note": "USA-first salary estimates for design roles. Not quotes or offers. User current/target compensation is entered separately.",
+  "bands": [
+    {
+      "id": "band:product-designer-us",
+      "role_id": "role:product-designer",
+      "label": "Product Designer",
+      "low": 95000,
+      "mid": 130000,
+      "high": 165000,
+      "market": "US",
+      "note": "Mid-level Product Designer estimate (USA)."
+    },
+    {
+      "id": "band:ux-designer-us",
+      "role_id": "role:ux-designer",
+      "label": "UX Designer",
+      "low": 90000,
+      "mid": 120000,
+      "high": 155000,
+      "market": "US",
+      "note": "Mid-level UX Designer estimate (USA)."
+    },
+    {
+      "id": "band:senior-pd-us",
+      "role_id": "opp:senior-pd",
+      "label": "Senior Product Designer",
+      "low": 130000,
+      "mid": 165000,
+      "high": 200000,
+      "market": "US",
+      "note": "Senior Product Designer estimate (USA)."
+    },
+    {
+      "id": "band:design-ops-us",
+      "role_id": "opp:design-ops",
+      "label": "Design Ops",
+      "low": 110000,
+      "mid": 145000,
+      "high": 180000,
+      "market": "US",
+      "note": "Design Ops / Design Program estimate (USA)."
+    },
+    {
+      "id": "band:ui-designer-us",
+      "role_id": "role:ui-designer",
+      "label": "UI Designer",
+      "low": 85000,
+      "mid": 115000,
+      "high": 145000,
+      "market": "US",
+      "note": "Mid-level UI Designer estimate (USA)."
+    },
+    {
+      "id": "band:design-lead-us",
+      "role_id": "role:design-lead",
+      "label": "Design Lead",
+      "low": 145000,
+      "mid": 180000,
+      "high": 220000,
+      "market": "US",
+      "note": "Design Lead estimate (USA)."
+    }
+  ]
+}

@@ -1,0 +1,146 @@
+{
+  "version": 1,
+  "kind": "all",
+  "updated_at": "2026-08-06T00:00:00+00:00",
+  "hubs_primary": "skill",
+  "hubs_secondary": "role_family",
+  "privacy": {
+    "mode": "opt_in_anonymized",
+    "never": ["raw_resume", "chat", "email", "name", "exact_employer_dates"],
+    "copy": "Shared signals help improve JobHunter for everyone. We do not sell this data."
+  },
+  "nodes": [
+    {
+      "id": "skill:figma",
+      "label": "Figma",
+      "type": "skill",
+      "weight": 5,
+      "count": 128,
+      "provenance": "stated",
+      "importance": "potential",
+      "meta": { "hub": true }
+    },
+    {
+      "id": "skill:design-systems",
+      "label": "Design Systems",
+      "type": "skill",
+      "weight": 4,
+      "count": 74,
+      "provenance": "stated",
+      "importance": "potential",
+      "meta": { "hub": true }
+    },
+    {
+      "id": "skill:user-research",
+      "label": "User Research",
+      "type": "skill",
+      "weight": 4,
+      "count": 61,
+      "provenance": "stated",
+      "importance": "risk",
+      "meta": { "hub": true }
+    },
+    {
+      "id": "skill:prototyping",
+      "label": "Prototyping",
+      "type": "skill",
+      "weight": 3,
+      "count": 90,
+      "provenance": "stated",
+      "importance": "normal",
+      "meta": { "hub": true }
+    },
+    {
+      "id": "rolefam:product-designer",
+      "label": "Product Designer",
+      "type": "role",
+      "weight": 5,
+      "count": 96,
+      "provenance": "stated",
+      "importance": "normal",
+      "meta": { "hub": true, "family": true }
+    },
+    {
+      "id": "rolefam:ux-designer",
+      "label": "UX Designer",
+      "type": "role",
+      "weight": 3,
+      "count": 55,
+      "provenance": "stated",
+      "importance": "normal",
+      "meta": { "hub": true, "family": true }
+    },
+    {
+      "id": "rolefam:design-ops",
+      "label": "Design Ops",
+      "type": "opp",
+      "weight": 2,
+      "count": 18,
+      "provenance": "inferred",
+      "importance": "potential",
+      "meta": { "hub": true, "family": true }
+    },
+    {
+      "id": "region:us",
+      "label": "US",
+      "type": "concept",
+      "weight": 2,
+      "count": 140,
+      "provenance": "stated",
+      "importance": "normal",
+      "meta": { "bucket": "region" }
+    }
+  ],
+  "edges": [
+    {
+      "source": "skill:figma",
+      "target": "rolefam:product-designer",
+      "label": "common with",
+      "provenance": "stated",
+      "weight": 4,
+      "count": 88
+    },
+    {
+      "source": "skill:design-systems",
+      "target": "rolefam:product-designer",
+      "label": "common with",
+      "provenance": "stated",
+      "weight": 3,
+      "count": 52
+    },
+    {
+      "source": "skill:user-research",
+      "target": "rolefam:ux-designer",
+      "label": "common with",
+      "provenance": "stated",
+      "weight": 3,
+      "count": 41
+    },
+    {
+      "source": "skill:design-systems",
+      "target": "rolefam:design-ops",
+      "label": "bridge",
+      "provenance": "inferred",
+      "weight": 2,
+      "count": 14
+    },
+    {
+      "source": "skill:prototyping",
+      "target": "rolefam:product-designer",
+      "label": "common with",
+      "provenance": "stated",
+      "weight": 3,
+      "count": 70
+    },
+    {
+      "source": "rolefam:product-designer",
+      "target": "region:us",
+      "label": "in",
+      "provenance": "stated",
+      "weight": 2,
+      "count": 80
+    }
+  ],
+  "documents": [],
+  "insights": null
+}

@@ -2797,7 +2797,7 @@ html.dark .jh-asst-send { background: var(--st-peach); color: var(--st-sienna); 
       </div>
       <div class="flex-1 min-h-0 flex flex-col overflow-hidden p-4">
         <div class="kg-view flex-1 min-h-0 rounded-2xl border border-slate-800 bg-slate-950/40 overflow-hidden" id="kgView">
-          <div class="kg-split">
+          <div class="kg-split" id="kgSplit">
             <aside class="kg-pane-left" aria-label="Career controls and intelligence">
               <div class="kg-doc-drop" id="kgDocDrop">
                 <div class="kg-doc-drop-main">
@@ -2809,22 +2809,6 @@ html.dark .jh-asst-send { background: var(--st-peach); color: var(--st-sienna); 
                   <button type="button" class="st-btn-primary text-[12px]" id="kgDocUploadBtn">Add files</button>
                 </div>
                 <div class="kg-doc-list" id="kgDocList" hidden></div>
-              </div>
-
-              <div class="kg-ob-upload-actions" id="kgObUploadActions" hidden>
-                <p class="kg-ob-upload-note">Upload a resume or docs to seed your graph, or skip and answer a few questions instead.</p>
-                <div class="kg-ob-upload-btns">
-                  <button type="button" class="st-btn-primary text-[12px]" id="kgObUploadContinue">Continue</button>
-                  <button type="button" class="st-btn-ghost text-[12px]" id="kgObUploadSkip">Skip for now</button>
-                </div>
-              </div>
-
-              <div class="kg-ob-chat" id="kgObChat" hidden>
-                <div class="kg-ob-messages" id="kgObMessages"></div>
-                <form class="kg-ob-form" id="kgObForm">
-                  <input type="text" id="kgObInput" class="kg-ob-input" placeholder="Type your answer..." autocomplete="off">
-                  <button type="submit" class="st-btn-primary text-[12px]">Send</button>
-                </form>
               </div>
 
               <div class="kg-sources" id="kgSources">
@@ -2907,6 +2891,14 @@ html.dark .jh-asst-send { background: var(--st-peach); color: var(--st-sienna); 
                 <div class="kg-riasec-body" id="kgRiasecBody"></div>
                 <button type="button" class="st-btn-primary text-[12px]" id="kgRiasecSubmit" hidden>Submit</button>
               </div>
+              <div class="kg-riasec" id="kgWorkStyle" hidden>
+                <div class="kg-insights-head">
+                  <span class="kg-insights-title">Work style check (2 min)</span>
+                  <button type="button" class="st-btn-ghost text-[12px]" id="kgWorkStyleSkip">Not now</button>
+                </div>
+                <div class="kg-riasec-body" id="kgWorkStyleBody"></div>
+                <button type="button" class="st-btn-primary text-[12px]" id="kgWorkStyleSubmit" hidden>Submit</button>
+              </div>
             </aside>
 
             <section class="kg-pane-right" aria-label="Interactive knowledge graph">
@@ -2931,6 +2923,35 @@ html.dark .jh-asst-send { background: var(--st-peach); color: var(--st-sienna); 
                 </div>
               </div>
             </section>
+          </div>
+
+          <div class="kg-onboard-overlay" id="kgOnboardOverlay" hidden>
+            <div class="kg-tf" role="dialog" aria-modal="true" aria-labelledby="kgTfTitle">
+              <button type="button" class="kg-tf-close" id="kgTfClose" aria-label="Close onboarding">×</button>
+              <div class="kg-tf-stage" id="kgTfStage">
+                <div class="kg-tf-slide" id="kgTfSlide">
+                  <h2 class="kg-tf-title" id="kgTfTitle"></h2>
+                  <p class="kg-tf-sub" id="kgTfSub"></p>
+                  <div class="kg-tf-body" id="kgTfBody"></div>
+                  <div class="kg-tf-actions" id="kgTfActions">
+                    <button type="button" class="kg-tf-ok" id="kgTfOk">OK</button>
+                    <span class="kg-tf-enter" id="kgTfEnterHint">press Enter ↵</span>
+                  </div>
+                </div>
+              </div>
+              <div class="kg-tf-footer">
+                <div class="kg-tf-progress-wrap">
+                  <span class="kg-tf-progress-label" id="kgTfProgressLabel">0% completed</span>
+                  <div class="kg-tf-progress-track">
+                    <div class="kg-tf-progress-bar" id="kgTfProgressBar"></div>
+                  </div>
+                </div>
+                <div class="kg-tf-nav" role="group" aria-label="Onboarding navigation">
+                  <button type="button" class="kg-tf-nav-btn" id="kgTfPrev" aria-label="Previous question">⌃</button>
+                  <button type="button" class="kg-tf-nav-btn" id="kgTfNext" aria-label="Next question">⌄</button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -2985,7 +3006,7 @@ html.dark .jh-asst-send { background: var(--st-peach); color: var(--st-sienna); 
             </div>
             <div class="st-field-wrap">
               <label class="st-field-label" for="setKeySerp">SerpAPI key</label>
-              <input id="setKeySerp" type="password" autocomplete="off" placeholder="Optional Google Jobs" class="st-field">
+              <input id="setKeySerp" type="password" autocomplete="off" placeholder="Optional Google Jobs + Market Pulse" class="st-field">
               <span id="setKeySerpStatus" class="text-[11px] text-slate-500">…</span>
             </div>
             <div class="st-field-wrap">

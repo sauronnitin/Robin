@@ -7,14 +7,30 @@
 <link rel="icon" href="data:,">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;1,14..32,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;1,8..60,300&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
+
+<script>
+(function(){
+  const KEY = 'jh-steep-theme';
+  function apply(mode){
+    document.documentElement.classList.toggle('dark', mode === 'dark');
+  }
+  try { apply(localStorage.getItem(KEY) === 'dark' ? 'dark' : 'light'); } catch(e){ apply('light'); }
+  window.addEventListener('message', function(ev){
+    if(ev.data && ev.data.type === 'jh-steep-theme') apply(ev.data.theme === 'dark' ? 'dark' : 'light');
+  });
+  window.addEventListener('storage', function(ev){
+    if(ev.key === KEY) apply(ev.newValue === 'dark' ? 'dark' : 'light');
+  });
+})();
+</script>
 </head>
 <body>
 <div class="shell">
   <header class="topbar glass">
     <div class="brand">
-      <span class="brand-mark">JC</span>
+      <span class="brand-mark">JH</span>
       <div>
         <h1>JobCrew</h1>
         <span class="brand-sub" id="modeLabel">Simulated · Infinite canvas · Editable</span>
@@ -30,6 +46,13 @@
         <div class="stat"><span class="stat-v clock" id="runClock">00:00.0</span><span class="stat-l">Elapsed</span></div>
       </div>
       <div class="controls">
+        <label class="autofix-toggle is-locked" id="autofixToggle" title="AutoFix is always on while JobHunter is in use">
+          <input type="checkbox" id="autofixEnabled" checked disabled>
+          <span class="autofix-track" aria-hidden="true"></span>
+          <span class="autofix-label">AutoFix</span>
+          <span class="autofix-status" id="autofixStatus">on</span>
+        </label>
+        <button type="button" id="clearErrorsBtn" class="btn" title="Resolve all open errors from previous runs">Clear Errors</button>
         <button type="button" id="resetLayoutBtn" class="btn">Reset Layout</button>
         <button type="button" id="resetCardsBtn" class="btn">Reset Cards</button>
       </div>
@@ -92,8 +115,8 @@
         <div class="chat-dock" id="chatDock">
           <div class="chat-head">
             <div class="chat-head-title">
-              <span class="chat-title">Chat</span>
-              <span class="chat-sub" id="chatStatus">Auto · ready</span>
+              <span class="chat-title">JobHunter assistant</span>
+              <span class="chat-sub" id="chatStatus">JobHunter assistant · ready</span>
             </div>
             <button type="button" class="chat-clear" id="chatClearBtn" title="Clear chat" aria-label="Clear chat">Clear</button>
           </div>
@@ -173,10 +196,11 @@
 <div class="modal-backdrop" id="confirmModal" hidden>
   <div class="modal glass" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
     <h2 class="modal-title" id="confirmTitle">Pipeline paused</h2>
-    <p class="modal-body" id="confirmBody">An agent failed. Confirm retry after reviewing the fix, or abort the run.</p>
+    <p class="modal-body" id="confirmBody">An agent failed. Confirm retry after a fix, abort, or dismiss to edit the canvas then Play to resume.</p>
     <pre class="modal-detail" id="confirmDetail"></pre>
     <div class="modal-actions">
       <button type="button" class="btn" id="confirmAbortBtn">Abort</button>
+      <button type="button" class="btn" id="confirmDismissBtn" title="Close dialog, edit canvas, then hit Play to resume">Dismiss</button>
       <button type="button" class="btn btn-primary" id="confirmRetryBtn">Confirm fix &amp; retry</button>
     </div>
   </div>

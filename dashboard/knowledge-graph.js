@@ -339,21 +339,151 @@
     let chatBannerShown = false;
     let focusTarget = null;
     let resizeObs = null;
-    let obStepIndex = 0;
-    let obFollowupCount = 0;
-    let obBusy = false;
-    let obCurrentEntry = null;
-    let obPendingFollowup = "";
+    let obSlideIndex = 0;
+    let obSlides = [];
+    let obDraft = {};
+    let obSelected = {};
+    let obSpeech = null;
+    let obListening = false;
+    let obKeySet = false;
+    let obWired = false;
 
     const ONBOARDING_BACKBONE = [
-      { id: "current_role", question: "What's your current role, and how many years of experience do you have?" },
-      { id: "top_skills", question: "What are the 3-5 skills you're strongest in right now?" },
-      { id: "energy", question: "What part of your work energizes you most, and what drains you?" },
-      { id: "current_pay", question: "What's your current compensation? (Optional, feel free to skip a specific number.)" },
-      { id: "target_pay", question: "What's your target compensation, and by when would you like to hit it?" },
-      { id: "constraints", question: "Any location or remote/onsite constraints I should know about?" },
-      { id: "curiosity", question: "What's holding you back right now, or what adjacent roles or industries are you curious about?" },
+      {
+        id: "current_role",
+        question: "What's your current role, and how many years of experience do you have?",
+        choices: [
+          { id: "ic_3_5", label: "IC designer, 3-5 years" },
+          { id: "ic_6_10", label: "IC designer, 6-10 years" },
+          { id: "senior_plus", label: "Senior / Staff, 8+ years" },
+          { id: "lead_manager", label: "Lead or manager" },
+          { id: "career_break", label: "Between roles / career break" },
+        ],
+      },
+      {
+        id: "top_skills",
+        question: "What are the 3-5 skills you're strongest in right now?",
+        multi: true,
+        choices: [
+          { id: "figma", label: "Figma / UI craft" },
+          { id: "research", label: "User research" },
+          { id: "systems", label: "Design systems" },
+          { id: "proto", label: "Prototyping" },
+          { id: "strategy", label: "Product strategy" },
+          { id: "facilitation", label: "Workshop facilitation" },
+        ],
+      },
+      {
+        id: "energy",
+        question: "What part of your work energizes you most, and what drains you?",
+        choices: [
+          { id: "craft", label: "Craft and polish energize me" },
+          { id: "discovery", label: "Discovery and research energize me" },
+          { id: "collab", label: "Cross-functional collaboration energizes me" },
+          { id: "systems_energy", label: "Systems and scale energize me" },
+          { id: "mixed", label: "It depends on the week" },
+        ],
+      },
+      {
+        id: "current_pay",
+        question: "What's your current compensation? (Optional)",
+        choices: [
+          { id: "under_100", label: "Under $100k" },
+          { id: "100_140", label: "$100k-$140k" },
+          { id: "140_180", label: "$140k-$180k" },
+          { id: "180_220", label: "$180k-$220k" },
+          { id: "220_plus", label: "$220k+" },
+          { id: "skip_pay", label: "Prefer not to say" },
+        ],
+      },
+      {
+        id: "target_pay",
+        question: "What's your target compensation, and by when?",
+        choices: [
+          { id: "plus_10", label: "About +10% within a year" },
+          { id: "plus_20", label: "About +20% within a year" },
+          { id: "band_up", label: "Move up a full band" },
+          { id: "asap_stable", label: "Stable income ASAP" },
+          { id: "explore_pay", label: "Still figuring target pay out" },
+        ],
+      },
+      {
+        id: "constraints",
+        question: "Any location or remote/onsite constraints I should know about?",
+        choices: [
+          { id: "remote_us", label: "Remote, USA preferred" },
+          { id: "hybrid", label: "Hybrid near me" },
+          { id: "onsite", label: "Onsite is fine" },
+          { id: "visa", label: "Visa / work-auth sensitive" },
+          { id: "flexible", label: "Flexible on location" },
+        ],
+      },
+      {
+        id: "curiosity",
+        question: "What's holding you back, or what adjacent roles are you curious about?",
+        choices: [
+          { id: "title_stuck", label: "Stuck on title or level" },
+          { id: "ai_shift", label: "Curious about AI-adjacent product work" },
+          { id: "pm_move", label: "Considering PM or strategy" },
+          { id: "industry", label: "Want a new industry" },
+          { id: "unsure", label: "Not sure yet" },
+        ],
+      },
     ];
+
+    const PERSONA_ORDER = {
+      climb: ["top_skills", "current_pay", "target_pay", "current_role", "energy", "constraints", "curiosity"],
+      pivot: ["curiosity", "top_skills", "constraints", "current_role", "energy", "current_pay", "target_pay"],
+      urgent: ["target_pay", "constraints", "current_role", "top_skills", "current_pay", "energy", "curiosity"],
+      explore: ["curiosity", "energy", "top_skills", "current_role", "constraints", "current_pay", "target_pay"],
+    };
+
+    const PERSONA_TONE = {
+      climb: {
+        top_skills: "What are you already great at that you want more of?",
+        current_pay: "Where are you on pay today, roughly?",
+        target_pay: "What pay jump would make this climb feel real, and by when?",
+      },
+      pivot: {
+        curiosity: "What's pulling you toward something different?",
+        top_skills: "Which strengths travel with you into a new direction?",
+        constraints: "What must stay true in the next chapter?",
+      },
+      urgent: {
+        target_pay: "What do you need to land, and by when?",
+        constraints: "Any hard location or remote limits for the next role?",
+        current_role: "What was your most recent role, and for how long?",
+      },
+      explore: {
+        curiosity: "No pressure. What's on your mind?",
+        energy: "What work feels good even when it's hard?",
+        top_skills: "What do people already come to you for?",
+      },
+    };
+
+    const WHY_ASK = {
+      current_role: "Anchors your experience so adjacent roles stay realistic.",
+      top_skills: "Skills are the graph backbone for fit and gap scoring.",
+      energy: "Energy tells us what you will actually stick with.",
+      current_pay: "Lets us compare your number to curated USA band estimates.",
+      target_pay: "Sets the pay path we optimize toward.",
+      constraints: "Keeps suggestions inside your real location and work-mode limits.",
+      curiosity: "Surfaces adjacent roles and industries worth exploring.",
+    };
+
+    const PERSONA_CHOICES = [
+      { id: "climb", label: "Climb", sub: "Grow in my current path" },
+      { id: "pivot", label: "Pivot", sub: "Change direction" },
+      { id: "urgent", label: "Urgent", sub: "Job loss or income gap" },
+      { id: "explore", label: "Explore", sub: "Not sure yet" },
+    ];
+
+    const URGENCY_CHOICES = [
+      { id: "now", label: "Now", sub: "Weeks matter" },
+      { id: "soon", label: "Soon", sub: "This quarter" },
+      { id: "later", label: "Later", sub: "Just exploring" },
+    ];
+
     let activeLens = "fit";
     let pickerTarget = null;
     let salaryBandsCache = null;
@@ -367,6 +497,28 @@
 
     function storeGraph() {
       return window.__kgStore || null;
+    }
+
+    function emptyOnboarding() {
+      return {
+        completed: false,
+        started_at: null,
+        completed_at: null,
+        answers: [],
+        transcript: [],
+        persona: null,
+        urgency: null,
+      };
+    }
+
+    function emptyMarketPulse() {
+      return {
+        enabled: false,
+        query: null,
+        fetched_at: null,
+        stale_after_hours: 72,
+        items: [],
+      };
     }
 
     function ensureStoreShape() {
@@ -387,7 +539,8 @@
           edges: [],
           documents: [],
           insights: { summary: null, node_briefs: {}, last_analyze: null },
-          onboarding: { completed: false, started_at: null, completed_at: null, answers: [], transcript: [] },
+          onboarding: emptyOnboarding(),
+          market_pulse: emptyMarketPulse(),
         };
       }
       const g = window.__kgStore;
@@ -408,7 +561,19 @@
         g.insights = { summary: null, node_briefs: {}, last_analyze: null };
       }
       if (!g.onboarding || typeof g.onboarding !== "object") {
-        g.onboarding = { completed: false, started_at: null, completed_at: null, answers: [], transcript: [] };
+        g.onboarding = emptyOnboarding();
+      } else {
+        if (!("persona" in g.onboarding)) g.onboarding.persona = null;
+        if (!("urgency" in g.onboarding)) g.onboarding.urgency = null;
+        if (!Array.isArray(g.onboarding.answers)) g.onboarding.answers = [];
+        if (!Array.isArray(g.onboarding.transcript)) g.onboarding.transcript = [];
+      }
+      if (!g.market_pulse || typeof g.market_pulse !== "object") {
+        g.market_pulse = emptyMarketPulse();
+      } else {
+        if (typeof g.market_pulse.enabled !== "boolean") g.market_pulse.enabled = false;
+        if (!Array.isArray(g.market_pulse.items)) g.market_pulse.items = [];
+        if (!g.market_pulse.stale_after_hours) g.market_pulse.stale_after_hours = 72;
       }
       return g;
     }
@@ -979,136 +1144,907 @@
       if (el) el.hidden = true;
     }
 
-    function appendObBubble(role, text) {
-      const list = document.getElementById("kgObMessages");
-      if (list) {
-        const div = document.createElement("div");
-        div.className = "kg-ob-msg " + (role === "user" ? "is-user" : "is-assistant");
-        div.textContent = text;
-        list.appendChild(div);
-        list.scrollTop = list.scrollHeight;
+    function setBackgroundDimmed(dimmed) {
+      const view = document.getElementById("kgView");
+      if (view) view.classList.toggle("is-onboarding", !!dimmed);
+      const overlay = document.getElementById("kgOnboardOverlay");
+      if (overlay) overlay.hidden = !dimmed;
+    }
+
+    function setDocDropVisible(visible) {
+      const drop = document.getElementById("kgDocDrop");
+      if (drop) drop.hidden = !visible;
+    }
+
+    function micSvg() {
+      return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3Z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><path d="M12 18v3"/><path d="M8 21h8"/></svg>';
+    }
+
+    function choiceLabelMap(choices) {
+      const map = {};
+      (choices || []).forEach((c) => { map[c.id] = c.label; });
+      return map;
+    }
+
+    function gatherDocIntel() {
+      const docs = window.__kgDocs || [];
+      const parsed = (window.__kgResumeData && window.__kgResumeData.parsed) || {};
+      const skills = [];
+      const roles = [];
+      const companies = [];
+      const education = [];
+      let years = Number(parsed.years) || 0;
+      let text = "";
+
+      function pushUnique(list, value) {
+        const v = String(value || "").trim();
+        if (!v) return;
+        if (!list.some((x) => x.toLowerCase() === v.toLowerCase())) list.push(v);
       }
-      const g = ensureStoreShape();
-      g.onboarding.transcript.push({ role, content: text, ts: new Date().toISOString() });
-    }
 
-    function beginBackboneQuestions() {
-      setDocDropVisible(false);
-      setOnboardingUploadStepVisible(false);
-      setOnboardingChatVisible(true);
-      obStepIndex = 0;
-      obFollowupCount = 0;
-      obCurrentEntry = null;
-      obPendingFollowup = "";
-      const g = ensureStoreShape();
-      g.onboarding.completed = false;
-      g.onboarding.answers = [];
-      g.onboarding.transcript = [];
-      g.onboarding.completed_at = null;
-      const list = document.getElementById("kgObMessages");
-      if (list) list.innerHTML = "";
-      appendObBubble("assistant", ONBOARDING_BACKBONE[0].question);
-    }
+      (parsed.skills || []).forEach((s) => pushUnique(skills, s));
+      (parsed.roles || []).forEach((r) => pushUnique(roles, r));
+      (parsed.companies || []).forEach((c) => pushUnique(companies, c));
+      (parsed.education || []).forEach((e) => pushUnique(education, e));
 
-    function buildOnboardingFollowupPrompt(question, answer, transcriptText) {
-      return [
-        "CAREER_ONBOARDING_REQUEST: You are a friendly career coach running a short structured onboarding interview.",
-        "Goal: surface adjacent skills and adjacent roles that could pay this person more.",
-        'Ignore canvas actions. actions must be []. Respond with JSON only: {"reply": "...", "actions": [], "continue": true|false}.',
-        "If the answer below is vague or you need one more concrete detail to plan adjacent-role suggestions later, set continue=false and reply with ONE short, specific follow-up question and nothing else.",
-        "If the answer is already clear and specific, set continue=true and reply with a brief (under 12 words) acknowledgment and no question.",
-        "Never ask more than one question. Do not repeat the backbone question already asked. Do not use em dashes or en dashes.",
-        "",
-        "== BACKBONE QUESTION ==",
-        question,
-        "== USER ANSWER ==",
-        answer,
-        "== PRIOR TRANSCRIPT (this onboarding session) ==",
-        transcriptText || "(none yet)",
-      ].join("\n");
-    }
+      docs.forEach((d) => {
+        (d.skills || []).forEach((s) => pushUnique(skills, s));
+        (d.roles || []).forEach((r) => pushUnique(roles, r));
+        (d.companies || []).forEach((c) => pushUnique(companies, c));
+        (d.education || []).forEach((e) => pushUnique(education, e));
+        if (Number(d.years) > years) years = Number(d.years);
+        if (d.excerpt) text += "\n" + d.excerpt;
+      });
 
-    async function askFollowup(question, answer) {
-      const g = ensureStoreShape();
-      const transcriptText = (g.onboarding.transcript || [])
-        .slice(-10)
-        .map((m) => (m.role === "user" ? "User: " : "Coach: ") + m.content)
-        .join("\n");
-      const prompt = buildOnboardingFollowupPrompt(question, answer, transcriptText);
-      try {
-        const res = await fetch("/api/chat", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            message: prompt,
-            history: [],
-            context: { source: "knowledge_graph", panel: "kg_onboarding" },
-          }),
-        });
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok || !data.ok) return { continue: true };
-        const parsed = extractJsonObject(data.reply);
-        if (!parsed || typeof parsed !== "object") return { continue: true };
-        return { continue: parsed.continue !== false, reply: String(parsed.reply || "").trim() };
-      } catch (_) {
-        return { continue: true };
+      let workplace = null;
+      if (/\bremote\b/i.test(text)) workplace = "remote";
+      else if (/\bhybrid\b/i.test(text)) workplace = "hybrid";
+      else if (/\b(on[\s-]?site|onsite)\b/i.test(text)) workplace = "onsite";
+
+      let locationHint = "";
+      const loc = text.match(
+        /\b((?:San Francisco|New York|Seattle|Austin|Chicago|Los Angeles|Boston|Denver|Portland|Remote|USA|United States)[^,\n]{0,40})/i
+      );
+      if (loc) locationHint = loc[1].trim();
+
+      let salaryHint = null;
+      const sal =
+        text.match(/\$\s*(\d{2,3})(?:,(\d{3}))(?:\s*(?:per\s*year|\/\s*yr|annually))?/i) ||
+        text.match(/\b(\d{2,3})\s*k\b/i);
+      if (sal) {
+        if (sal[2]) salaryHint = Number(sal[1] + sal[2]);
+        else salaryHint = Number(sal[1]) * (String(sal[0]).toLowerCase().includes("k") || Number(sal[1]) < 1000 ? 1000 : 1);
+        if (salaryHint && salaryHint < 1000) salaryHint *= 1000;
       }
+
+      const bits = [];
+      if (roles[0]) bits.push(roles[0] + (years ? " (~" + years + " yrs)" : ""));
+      if (skills.length) bits.push(skills.slice(0, 4).join(", "));
+      if (companies[0]) bits.push("at " + companies[0]);
+      if (workplace) bits.push(workplace);
+
+      const covered = {
+        current_role: !!(roles[0] && (years >= 1 || companies[0])),
+        top_skills: skills.length >= 3,
+        constraints: !!(workplace || locationHint),
+        current_pay: salaryHint != null && salaryHint >= 40000,
+        // Subjective / forward-looking: never fully skip
+        energy: false,
+        target_pay: false,
+        curiosity: false,
+      };
+
+      const partial = {
+        current_role: !covered.current_role && !!(roles[0] || years),
+        top_skills: !covered.top_skills && skills.length > 0,
+        constraints: !covered.constraints && false,
+        current_pay: !covered.current_pay && false,
+        energy: !!(roles[0] || skills.length),
+        curiosity: !!(roles[0] || companies[0] || skills.length),
+        target_pay: salaryHint != null,
+      };
+
+      const prefills = {};
+      if (roles[0] || years) {
+        prefills.current_role =
+          "From docs: " +
+          (roles[0] || "role unclear") +
+          (years ? ", about " + years + " years experience" : "") +
+          (companies[0] ? " at " + companies[0] : "");
+      }
+      if (skills.length) prefills.top_skills = "From docs: " + skills.slice(0, 6).join(", ");
+      if (workplace || locationHint) {
+        prefills.constraints =
+          "From docs: " +
+          [workplace, locationHint].filter(Boolean).join(", ");
+      }
+      if (salaryHint) {
+        prefills.current_pay = "From docs: about $" + Math.round(salaryHint).toLocaleString("en-US");
+      }
+      if (roles[0] || companies[0]) {
+        prefills.curiosity =
+          "Context from docs: " +
+          [roles[0], companies[0] ? "worked at " + companies[0] : ""].filter(Boolean).join("; ");
+      }
+
+      return {
+        skills: skills.slice(0, 20),
+        roles: roles.slice(0, 8),
+        companies: companies.slice(0, 8),
+        education: education.slice(0, 6),
+        years,
+        workplace,
+        locationHint,
+        salaryHint,
+        hasContent: !!(skills.length || roles.length || companies.length || years),
+        summaryLine: bits.join(" · "),
+        covered,
+        partial,
+        prefills,
+        skip: covered,
+      };
     }
 
-    async function submitOnboardingAnswer(text) {
-      if (obBusy) return;
-      const answer = String(text || "").trim();
+    function upsertInferredAnswer(id, question, answer) {
+      const g = ensureStoreShape();
       if (!answer) return;
-      const step = ONBOARDING_BACKBONE[obStepIndex];
-      if (!step) return;
-      appendObBubble("user", answer);
-      const g = ensureStoreShape();
-      if (!obCurrentEntry) {
-        obCurrentEntry = { id: step.id, question: step.question, answer, followups: [] };
-        g.onboarding.answers.push(obCurrentEntry);
-      } else {
-        obCurrentEntry.followups.push({ question: obPendingFollowup, answer });
-      }
-      obBusy = true;
-      if (obFollowupCount >= 2) {
-        obBusy = false;
-        advanceStep();
+      const existing = (g.onboarding.answers || []).find((a) => a.id === id);
+      if (existing) {
+        existing.question = question;
+        existing.answer = answer;
+        existing.inferred = true;
+        existing.from_docs = true;
         return;
       }
-      const result = await askFollowup(step.question, answer);
-      obBusy = false;
-      if (!result.continue && result.reply) {
-        obFollowupCount += 1;
-        obPendingFollowup = result.reply;
-        appendObBubble("assistant", result.reply);
-        return;
-      }
-      advanceStep();
+      g.onboarding.answers.push({
+        id,
+        question,
+        answer,
+        followups: [],
+        inferred: true,
+        from_docs: true,
+      });
     }
 
-    function advanceStep() {
-      obStepIndex += 1;
-      obFollowupCount = 0;
-      obCurrentEntry = null;
-      obPendingFollowup = "";
-      if (obStepIndex < ONBOARDING_BACKBONE.length) {
-        appendObBubble("assistant", ONBOARDING_BACKBONE[obStepIndex].question);
+    function applyDocIntelToAnswers(intel) {
+      if (!intel || !intel.hasContent) return;
+      if (intel.skip.current_role && intel.prefills.current_role) {
+        upsertInferredAnswer("current_role", "Current role (from docs)", intel.prefills.current_role);
+      }
+      if (intel.skip.top_skills && intel.prefills.top_skills) {
+        upsertInferredAnswer("top_skills", "Top skills (from docs)", intel.prefills.top_skills);
+      }
+      if (intel.skip.constraints && intel.prefills.constraints) {
+        upsertInferredAnswer("constraints", "Constraints (from docs)", intel.prefills.constraints);
+      }
+      if (intel.skip.current_pay && intel.prefills.current_pay) {
+        upsertInferredAnswer("current_pay", "Current pay (from docs)", intel.prefills.current_pay);
+        const g = ensureStoreShape();
+        if (intel.salaryHint && (g.compensation.current == null || g.compensation.current === "")) {
+          g.compensation.current = Math.round(intel.salaryHint);
+        }
+      }
+      Object.keys(intel.prefills || {}).forEach((id) => {
+        if (!obDraft[id] && intel.partial[id] && !intel.skip[id]) {
+          obDraft[id] = intel.prefills[id];
+        }
+      });
+    }
+
+    function additiveCopy(id, baseTitle, intel) {
+      const known = intel.prefills[id] || "";
+      const map = {
+        current_role: {
+          title: "Anything to add about your role or tenure?",
+          sub: known
+            ? known + ". Confirm or fill gaps (level, years, career break)."
+            : baseTitle,
+        },
+        top_skills: {
+          title: "Any strengths missing from what we found?",
+          sub: known
+            ? known + ". Pick extras or type skills we missed."
+            : baseTitle,
+        },
+        energy: {
+          title: "What energizes you vs drains you?",
+          sub: intel.roles[0]
+            ? "Docs show " + intel.roles[0] + ". Tell us what you want more (or less) of."
+            : "This is not on a resume. It shapes better-fit adjacent roles.",
+        },
+        current_pay: {
+          title: "Where are you on pay today?",
+          sub: known
+            ? known + ". Adjust if that number is outdated."
+            : "Optional. Helps compare to curated USA band estimates.",
+        },
+        target_pay: {
+          title: "What pay outcome are you aiming for, and by when?",
+          sub: intel.salaryHint
+            ? "We saw roughly $" +
+              Math.round(intel.salaryHint).toLocaleString("en-US") +
+              " in your docs. What is the target from here?"
+            : "Sets the pay path we optimize toward.",
+        },
+        constraints: {
+          title: "Any location or work-mode limits we should respect?",
+          sub: known
+            ? known + ". Add visa, city, or travel constraints if needed."
+            : "Keeps suggestions inside real constraints.",
+        },
+        curiosity: {
+          title: "What else should we explore beyond your docs?",
+          sub: known
+            ? known + ". What is holding you back, or which adjacent paths are interesting?"
+            : "Surfaces adjacent roles and industries worth exploring.",
+        },
+      };
+      return map[id] || { title: baseTitle, sub: WHY_ASK[id] || "" };
+    }
+
+    function buildBackboneForPersona(persona) {
+      const order = PERSONA_ORDER[persona] || PERSONA_ORDER.explore;
+      const byId = Object.fromEntries(ONBOARDING_BACKBONE.map((q) => [q.id, q]));
+      const tones = PERSONA_TONE[persona] || {};
+      const intel = gatherDocIntel();
+      return order
+        .map((id) => {
+          const base = byId[id];
+          if (!base) return null;
+          if (intel.skip[id]) return null;
+          const baseTitle = tones[id] || base.question;
+          const additive = intel.hasContent ? additiveCopy(id, baseTitle, intel) : null;
+          return {
+            type: "question",
+            id: base.id,
+            title: (additive && additive.title) || baseTitle,
+            sub: (additive && additive.sub) || WHY_ASK[id] || "",
+            choices: base.choices || [],
+            multi: !!base.multi,
+            allowText: true,
+            okLabel: "OK",
+            fromDocs: !!(intel.partial[id] || intel.prefills[id]),
+          };
+        })
+        .filter(Boolean);
+    }
+
+    function rebuildSlides() {
+      const g = ensureStoreShape();
+      const persona = g.onboarding.persona || "explore";
+      const intel = gatherDocIntel();
+      const slides = [
+        {
+          type: "upload",
+          id: "upload",
+          title: "Upload any docs you want us to use",
+          sub: intel.hasContent
+            ? "Found: " + intel.summaryLine + ". Add more files or continue."
+            : "Resume, portfolio notes, or nothing yet. We read what we can, then only ask for gaps.",
+          okLabel: "Continue",
+        },
+      ];
+      if (intel.hasContent) {
+        slides.push({
+          type: "summary",
+          id: "doc_summary",
+          title: "Here's what we already understand",
+          sub: "We will skip covered topics and only ask what still helps.",
+          okLabel: "Continue",
+          intel,
+        });
+      }
+      slides.push(
+        {
+          type: "mcq",
+          id: "persona",
+          title: "What are you here to do?",
+          sub: intel.hasContent
+            ? "Using your docs as the base. This just sets tone and question order."
+            : "This shapes which questions we ask first.",
+          choices: PERSONA_CHOICES,
+          okLabel: "OK",
+        },
+        {
+          type: "mcq",
+          id: "urgency",
+          title: "How soon does this matter?",
+          sub: "Pacing only. You can still explore calmly.",
+          choices: URGENCY_CHOICES,
+          okLabel: "OK",
+        },
+        ...buildBackboneForPersona(persona),
+        {
+          type: "market",
+          id: "market",
+          title: "Factor in live market signals?",
+          sub: "Optional. Off by default. Uses SerpAPI Google News, cached 72 hours.",
+          choices: [
+            { id: "off", label: "No thanks", sub: "Keep the brief on my answers only" },
+            { id: "on", label: "Yes, include market pulse", sub: "Layoffs, freezes, demand shifts" },
+          ],
+          okLabel: "Build my graph",
+        }
+      );
+      obSlides = slides;
+    }
+
+    function updateTfProgress() {
+      const total = Math.max(1, obSlides.length);
+      const pct = Math.round((obSlideIndex / total) * 100);
+      const bar = document.getElementById("kgTfProgressBar");
+      const label = document.getElementById("kgTfProgressLabel");
+      if (bar) bar.style.width = pct + "%";
+      if (label) label.textContent = pct + "% completed";
+      const prev = document.getElementById("kgTfPrev");
+      const next = document.getElementById("kgTfNext");
+      if (prev) prev.disabled = obSlideIndex <= 0;
+      if (next) next.disabled = obSlideIndex >= obSlides.length - 1 && !canAdvanceCurrent();
+    }
+
+    function stopDictation() {
+      if (obSpeech && obListening) {
+        try { obSpeech.stop(); } catch (_) {}
+      }
+      obListening = false;
+      const btn = document.getElementById("kgTfDictate");
+      if (btn) {
+        btn.classList.remove("is-listening");
+        btn.setAttribute("aria-pressed", "false");
+      }
+    }
+
+    function startDictation() {
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const input = document.getElementById("kgTfAnswer");
+      const btn = document.getElementById("kgTfDictate");
+      if (!SR || !input) {
+        if (btn) btn.title = "Dictation not supported in this browser";
         return;
       }
-      finishOnboarding();
+      if (obListening) {
+        stopDictation();
+        return;
+      }
+      if (!obSpeech) {
+        obSpeech = new SR();
+        obSpeech.continuous = false;
+        obSpeech.interimResults = true;
+        obSpeech.lang = "en-US";
+        obSpeech.onresult = (event) => {
+          let text = "";
+          for (let i = 0; i < event.results.length; i += 1) {
+            text += event.results[i][0].transcript;
+          }
+          input.value = text.trim();
+          const slide = obSlides[obSlideIndex];
+          if (slide) obDraft[slide.id] = input.value;
+        };
+        obSpeech.onend = () => {
+          obListening = false;
+          if (btn) {
+            btn.classList.remove("is-listening");
+            btn.setAttribute("aria-pressed", "false");
+          }
+        };
+        obSpeech.onerror = () => stopDictation();
+      }
+      obListening = true;
+      if (btn) {
+        btn.classList.add("is-listening");
+        btn.setAttribute("aria-pressed", "true");
+      }
+      try { obSpeech.start(); } catch (_) { stopDictation(); }
+    }
+
+    function selectedFor(slideId) {
+      const val = obSelected[slideId];
+      if (Array.isArray(val)) return val;
+      if (val) return [val];
+      return [];
+    }
+
+    function setChoice(slide, choiceId) {
+      if (slide.type === "market" && choiceId === "on" && !obKeySet) return;
+      if (slide.multi) {
+        const cur = new Set(selectedFor(slide.id));
+        if (cur.has(choiceId)) cur.delete(choiceId);
+        else cur.add(choiceId);
+        obSelected[slide.id] = Array.from(cur);
+      } else {
+        obSelected[slide.id] = choiceId;
+      }
+      renderTfSlide(false);
+    }
+
+    function canAdvanceCurrent() {
+      const slide = obSlides[obSlideIndex];
+      if (!slide) return false;
+      if (slide.type === "upload" || slide.type === "summary") return true;
+      if (slide.type === "market") return !!obSelected.market;
+      if (slide.type === "mcq") return !!obSelected[slide.id];
+      if (slide.type === "question") {
+        const picks = selectedFor(slide.id);
+        const text = String(obDraft[slide.id] || "").trim();
+        return picks.length > 0 || !!text;
+      }
+      return false;
+    }
+
+    function composeAnswer(slide) {
+      const picks = selectedFor(slide.id);
+      const labels = choiceLabelMap(slide.choices);
+      const pickText = picks.map((id) => labels[id] || id).join("; ");
+      const free = String(obDraft[slide.id] || "").trim();
+      if (pickText && free) return pickText + ". " + free;
+      return pickText || free || "";
+    }
+
+    function persistCurrentSlide() {
+      const slide = obSlides[obSlideIndex];
+      if (!slide) return;
+      const g = ensureStoreShape();
+      if (slide.id === "persona" && obSelected.persona) {
+        g.onboarding.persona = obSelected.persona;
+        rebuildSlides();
+      }
+      if (slide.id === "urgency" && obSelected.urgency) {
+        g.onboarding.urgency = obSelected.urgency;
+      }
+      if (slide.type === "question") {
+        const answer = composeAnswer(slide);
+        if (!answer) return;
+        const existing = (g.onboarding.answers || []).find((a) => a.id === slide.id);
+        if (existing) {
+          existing.question = slide.title;
+          existing.answer = answer;
+          existing.choices = selectedFor(slide.id);
+        } else {
+          g.onboarding.answers.push({
+            id: slide.id,
+            question: slide.title,
+            answer,
+            choices: selectedFor(slide.id),
+            followups: [],
+          });
+        }
+        g.onboarding.transcript.push({
+          role: "user",
+          content: answer,
+          ts: new Date().toISOString(),
+          question_id: slide.id,
+        });
+      }
+      if (slide.type === "market") {
+        g.market_pulse.enabled = obSelected.market === "on" && obKeySet;
+      }
+    }
+
+    function renderUploadBody(body) {
+      const docs = window.__kgDocs || [];
+      body.innerHTML =
+        '<div class="kg-tf-upload" id="kgTfUploadDrop">' +
+        '<input type="file" id="kgTfUploadInput" class="kg-file-input" multiple accept=".pdf,.txt,.doc,.docx,.md,.tex,.png,.jpg,.jpeg">' +
+        '<button type="button" class="kg-tf-ok" id="kgTfUploadPick" style="align-self:flex-start">Choose files</button>' +
+        '<span class="kg-tf-note" id="kgTfUploadHint">PDF, DOCX, TXT, Markdown, or images</span>' +
+        '<div class="kg-tf-upload-files" id="kgTfUploadFiles"></div>' +
+        "</div>";
+      const filesEl = document.getElementById("kgTfUploadFiles");
+      if (filesEl) {
+        filesEl.innerHTML = docs.length
+          ? docs.map((d) => '<span class="kg-tf-upload-chip">' + escapeHtml(d.name || "file") + "</span>").join("")
+          : '<span class="kg-tf-note">No files yet</span>';
+      }
+      const pick = document.getElementById("kgTfUploadPick");
+      const input = document.getElementById("kgTfUploadInput");
+      const drop = document.getElementById("kgTfUploadDrop");
+      if (pick && input) pick.addEventListener("click", () => input.click());
+      if (input) {
+        input.addEventListener("change", async () => {
+          if (!input.files || !input.files.length) return;
+          const hint = document.getElementById("kgTfUploadHint");
+          if (hint) hint.textContent = "Uploading...";
+          await handleDocFiles(input.files);
+          input.value = "";
+          const keep = obSlideIndex;
+          rebuildSlides();
+          obSlideIndex = Math.min(keep, obSlides.length - 1);
+          renderTfSlide(false);
+        });
+      }
+      if (drop) {
+        drop.addEventListener("dragover", (e) => { e.preventDefault(); e.stopPropagation(); });
+        drop.addEventListener("drop", async (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          if (e.dataTransfer && e.dataTransfer.files) {
+            await handleDocFiles(e.dataTransfer.files);
+            const keep = obSlideIndex;
+            rebuildSlides();
+            obSlideIndex = Math.min(keep, obSlides.length - 1);
+            renderTfSlide(false);
+          }
+        });
+      }
+    }
+
+    function renderChoices(body, slide) {
+      const box = document.createElement("div");
+      box.className = "kg-tf-choices";
+      const selected = new Set(selectedFor(slide.id));
+      (slide.choices || []).forEach((c, idx) => {
+        const key = String.fromCharCode(65 + idx);
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "kg-tf-choice" + (selected.has(c.id) ? " is-selected" : "");
+        btn.innerHTML =
+          '<span class="kg-tf-choice-key">' + key + "</span>" +
+          '<span class="kg-tf-choice-copy">' +
+          '<span class="kg-tf-choice-label">' + escapeHtml(c.label) + "</span>" +
+          (c.sub ? '<span class="kg-tf-choice-sub">' + escapeHtml(c.sub) + "</span>" : "") +
+          "</span>";
+        btn.addEventListener("click", () => setChoice(slide, c.id));
+        box.appendChild(btn);
+      });
+      body.appendChild(box);
+    }
+
+    function renderAnswerField(body, slide) {
+      const wrapEl = document.createElement("div");
+      wrapEl.className = "kg-tf-answer-wrap";
+      wrapEl.innerHTML =
+        '<textarea id="kgTfAnswer" class="kg-tf-answer" rows="1" placeholder="' +
+        (slide.fromDocs ? "Add anything the docs missed..." : "Type an answer, or add detail...") +
+        '"></textarea>' +
+        '<button type="button" class="kg-tf-dictate" id="kgTfDictate" aria-label="Dictate answer" aria-pressed="false" title="Dictate">' +
+        micSvg() +
+        "</button>";
+      body.appendChild(wrapEl);
+      const input = document.getElementById("kgTfAnswer");
+      const dictate = document.getElementById("kgTfDictate");
+      if (input) {
+        input.value = obDraft[slide.id] || "";
+        input.addEventListener("input", () => {
+          obDraft[slide.id] = input.value;
+          updateTfProgress();
+          const ok = document.getElementById("kgTfOk");
+          if (ok) ok.disabled = !canAdvanceCurrent();
+        });
+        input.addEventListener("keydown", (e) => {
+          if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault();
+            advanceTf();
+          }
+        });
+      }
+      if (dictate) dictate.addEventListener("click", () => startDictation());
+    }
+
+    function renderDocSummaryBody(body, intel) {
+      const box = document.createElement("div");
+      box.className = "kg-tf-choices";
+      const rows = [];
+      if (intel.roles && intel.roles.length) {
+        rows.push({
+          label: "Role",
+          sub:
+            intel.roles.slice(0, 2).join(", ") +
+            (intel.years ? " · ~" + intel.years + " yrs" : ""),
+        });
+      }
+      if (intel.skills && intel.skills.length) {
+        rows.push({ label: "Skills", sub: intel.skills.slice(0, 6).join(", ") });
+      }
+      if (intel.companies && intel.companies.length) {
+        rows.push({ label: "Companies", sub: intel.companies.slice(0, 4).join(", ") });
+      }
+      if (intel.education && intel.education.length) {
+        rows.push({ label: "Education", sub: intel.education.slice(0, 3).join("; ") });
+      }
+      if (intel.workplace || intel.locationHint) {
+        rows.push({
+          label: "Location / mode",
+          sub: [intel.workplace, intel.locationHint].filter(Boolean).join(", "),
+        });
+      }
+      if (intel.salaryHint) {
+        rows.push({
+          label: "Pay signal",
+          sub: "About $" + Math.round(intel.salaryHint).toLocaleString("en-US") + " (from docs)",
+        });
+      }
+      const skipped = Object.keys(intel.skip || {}).filter((k) => intel.skip[k]);
+      if (skipped.length) {
+        const pretty = {
+          current_role: "current role",
+          top_skills: "top skills",
+          constraints: "location constraints",
+          current_pay: "current pay",
+        };
+        rows.push({
+          label: "We can skip",
+          sub: skipped.map((k) => pretty[k] || k).join(", "),
+        });
+      }
+      if (!rows.length) {
+        const note = document.createElement("p");
+        note.className = "kg-tf-note";
+        note.textContent = "Not much structured signal yet. A few short questions will help.";
+        body.appendChild(note);
+        return;
+      }
+      rows.forEach((row) => {
+        const el = document.createElement("div");
+        el.className = "kg-tf-choice";
+        el.style.cursor = "default";
+        el.innerHTML =
+          '<span class="kg-tf-choice-copy">' +
+          '<span class="kg-tf-choice-label">' + escapeHtml(row.label) + "</span>" +
+          '<span class="kg-tf-choice-sub">' + escapeHtml(row.sub) + "</span>" +
+          "</span>";
+        box.appendChild(el);
+      });
+      body.appendChild(box);
+    }
+
+    async function ensureMarketKeyStatus() {
+      try {
+        const res = await fetch("/api/kg/market-pulse");
+        const data = await res.json().catch(() => ({}));
+        obKeySet = !!(data.key && data.key.set);
+      } catch (_) {
+        obKeySet = false;
+      }
+    }
+
+    function renderTfSlide(animate) {
+      stopDictation();
+      const slide = obSlides[obSlideIndex];
+      if (!slide) return;
+      const slideEl = document.getElementById("kgTfSlide");
+      const title = document.getElementById("kgTfTitle");
+      const sub = document.getElementById("kgTfSub");
+      const body = document.getElementById("kgTfBody");
+      const ok = document.getElementById("kgTfOk");
+      const hint = document.getElementById("kgTfEnterHint");
+      if (!body || !title || !sub) return;
+      if (animate !== false && slideEl) {
+        slideEl.classList.remove("is-exit");
+        void slideEl.offsetWidth;
+        slideEl.style.animation = "none";
+        void slideEl.offsetWidth;
+        slideEl.style.animation = "";
+      }
+      title.textContent = slide.title || "";
+      sub.textContent = slide.sub || "";
+      body.innerHTML = "";
+      if (slide.type === "upload") {
+        renderUploadBody(body);
+      } else if (slide.type === "summary") {
+        renderDocSummaryBody(body, slide.intel || gatherDocIntel());
+      } else if (slide.type === "market") {
+        if (!obKeySet) {
+          const note = document.createElement("p");
+          note.className = "kg-tf-note";
+          note.textContent = "Connect a SerpAPI key in Settings to enable live signals.";
+          body.appendChild(note);
+        }
+        renderChoices(body, {
+          ...slide,
+          choices: (slide.choices || []).map((c) =>
+            c.id === "on" && !obKeySet
+              ? { ...c, label: "Yes (needs SerpAPI key)", sub: "Unavailable until a key is connected" }
+              : c
+          ),
+        });
+      } else if (slide.type === "mcq" || slide.type === "question") {
+        renderChoices(body, slide);
+        if (slide.allowText) renderAnswerField(body, slide);
+      }
+      if (ok) {
+        ok.textContent = slide.okLabel || "OK";
+        ok.disabled = !canAdvanceCurrent();
+      }
+      if (hint) hint.hidden = false;
+      updateTfProgress();
+      const answer = document.getElementById("kgTfAnswer");
+      if (answer) {
+        setTimeout(() => answer.focus(), 40);
+      }
+    }
+
+    function goTf(index) {
+      if (index < 0 || index >= obSlides.length) return;
+      persistCurrentSlide();
+      obSlideIndex = index;
+      renderTfSlide(true);
+    }
+
+    async function advanceTf() {
+      const slide = obSlides[obSlideIndex];
+      if (!slide || !canAdvanceCurrent()) return;
+      if (slide.type === "market" && obSelected.market === "on" && !obKeySet) {
+        obSelected.market = "off";
+      }
+      persistCurrentSlide();
+      if (obSlideIndex >= obSlides.length - 1) {
+        await finishOnboarding();
+        return;
+      }
+      if (slide.type === "upload") {
+        const intel = gatherDocIntel();
+        applyDocIntelToAnswers(intel);
+        rebuildSlides();
+        const nextId = intel.hasContent ? "doc_summary" : "persona";
+        const nextIdx = obSlides.findIndex((s) => s.id === nextId);
+        obSlideIndex = nextIdx >= 0 ? nextIdx : Math.min(1, obSlides.length - 1);
+        renderTfSlide(true);
+        return;
+      }
+      if (slide.id === "persona") {
+        applyDocIntelToAnswers(gatherDocIntel());
+        rebuildSlides();
+        const urgencyIdx = obSlides.findIndex((s) => s.id === "urgency");
+        obSlideIndex = urgencyIdx >= 0 ? urgencyIdx : obSlideIndex + 1;
+        renderTfSlide(true);
+        return;
+      }
+      obSlideIndex += 1;
+      if (obSlides[obSlideIndex] && obSlides[obSlideIndex].type === "market") {
+        await ensureMarketKeyStatus();
+      }
+      renderTfSlide(true);
+    }
+
+    function buildMarketPulseQuery() {
+      const g = ensureStoreShape();
+      const pid = primaryId();
+      const pNode = nodeById(pid);
+      const roleLabel = (pNode && pNode.label) || "product designer";
+      const skills = [];
+      const companies = [];
+      (g.nodes || []).forEach((n) => {
+        if (!n || !n.label) return;
+        if (n.type === "skill" && n.provenance === "stated" && skills.length < 2) skills.push(n.label);
+        if (n.type === "company" && n.provenance === "stated" && companies.length < 1) companies.push(n.label);
+      });
+      const extras = [...companies, ...skills].filter(Boolean).slice(0, 2);
+      const year = new Date().getFullYear();
+      return (
+        roleLabel +
+        " layoffs OR hiring freeze OR demand " +
+        year +
+        (extras.length ? " " + extras.join(" ") : "")
+      );
+    }
+
+    function marketPulseIsStale(mp) {
+      if (!mp || !mp.fetched_at) return true;
+      const fetched = Date.parse(mp.fetched_at);
+      if (!Number.isFinite(fetched)) return true;
+      const hours = Number(mp.stale_after_hours) || 72;
+      return Date.now() - fetched > hours * 3600 * 1000;
+    }
+
+    async function ensureMarketPulseFetched() {
+      const g = ensureStoreShape();
+      const mp = g.market_pulse;
+      if (!mp.enabled) return mp;
+      if (!marketPulseIsStale(mp) && (mp.items || []).length) return mp;
+      const query = buildMarketPulseQuery();
+      mp.query = query;
+      try {
+        const res = await fetch("/api/kg/market-pulse?q=" + encodeURIComponent(query));
+        const data = await res.json().catch(() => ({}));
+        if (data.key_missing) {
+          mp.enabled = false;
+          mp.items = [];
+          mp.fetched_at = null;
+          return mp;
+        }
+        if (data.ok) {
+          mp.query = data.query || query;
+          mp.fetched_at = data.fetched_at || new Date().toISOString();
+          mp.items = Array.isArray(data.items) ? data.items : [];
+        } else {
+          mp.items = [];
+          mp.fetched_at = null;
+          mp.last_error = data.error || "Market pulse fetch failed.";
+        }
+      } catch (err) {
+        mp.items = [];
+        mp.fetched_at = null;
+        mp.last_error = String(err && err.message ? err.message : err);
+      }
+      return mp;
     }
 
     async function finishOnboarding() {
+      persistCurrentSlide();
       const g = ensureStoreShape();
+      g.market_pulse.enabled = obSelected.market === "on" && obKeySet;
       g.onboarding.completed = true;
       g.onboarding.completed_at = new Date().toISOString();
-      appendObBubble("assistant", "Thanks, updating your knowledge graph now.");
       await persistIndividualStore();
-      setOnboardingChatVisible(false);
-      setMainPaneVisible(true);
+      setBackgroundDimmed(false);
       setDocDropVisible(true);
       renderRealityBar();
       await runAnalyze();
+    }
+
+    function wireTfControls() {
+      if (obWired) return;
+      obWired = true;
+      const ok = document.getElementById("kgTfOk");
+      const prev = document.getElementById("kgTfPrev");
+      const next = document.getElementById("kgTfNext");
+      const close = document.getElementById("kgTfClose");
+      if (ok) ok.addEventListener("click", () => advanceTf());
+      if (prev) prev.addEventListener("click", () => goTf(obSlideIndex - 1));
+      if (next) next.addEventListener("click", () => advanceTf());
+      if (close) {
+        close.addEventListener("click", () => {
+          stopDictation();
+          setBackgroundDimmed(false);
+        });
+      }
+      document.addEventListener("keydown", (e) => {
+        const overlay = document.getElementById("kgOnboardOverlay");
+        if (!overlay || overlay.hidden) return;
+        if (e.key === "Escape") {
+          stopDictation();
+          setBackgroundDimmed(false);
+          return;
+        }
+        if (e.target && (e.target.tagName === "TEXTAREA" || e.target.tagName === "INPUT")) return;
+        if (e.key === "Enter") {
+          e.preventDefault();
+          advanceTf();
+          return;
+        }
+        const slide = obSlides[obSlideIndex];
+        if (!slide || !slide.choices) return;
+        const code = e.key && e.key.length === 1 ? e.key.toUpperCase() : "";
+        if (code >= "A" && code <= "Z") {
+          const idx = code.charCodeAt(0) - 65;
+          if (slide.choices[idx]) {
+            e.preventDefault();
+            setChoice(slide, slide.choices[idx].id);
+          }
+        }
+      });
+    }
+
+    async function startOnboarding(force) {
+      const g = ensureStoreShape();
+      if (g.onboarding.completed && !force) {
+        setBackgroundDimmed(false);
+        setDocDropVisible(true);
+        return;
+      }
+      if (force) {
+        g.onboarding.completed = false;
+        g.onboarding.completed_at = null;
+        g.onboarding.answers = [];
+        g.onboarding.transcript = [];
+        g.onboarding.persona = null;
+        g.onboarding.urgency = null;
+        g.onboarding.started_at = new Date().toISOString();
+        g.market_pulse.enabled = false;
+      } else if (!g.onboarding.started_at) {
+        g.onboarding.started_at = new Date().toISOString();
+      }
+      obSlideIndex = 0;
+      obDraft = {};
+      obSelected = {
+        market: g.market_pulse.enabled ? "on" : "off",
+      };
+      await ensureMarketKeyStatus();
+      rebuildSlides();
+      wireTfControls();
+      setDocDropVisible(true);
+      setBackgroundDimmed(true);
+      renderTfSlide(true);
     }
 
     function escapeHtml(s) {
@@ -1280,44 +2216,6 @@
       if (animId) cancelAnimationFrame(animId);
       animId = 0;
       if (controls) controls.enabled = false;
-    }
-
-    function setMainPaneVisible(visible) {
-      ["kgSources", "kgReality", "kgInsights"].forEach((id) => {
-        const el = document.getElementById(id);
-        if (el) el.hidden = !visible;
-      });
-    }
-
-    function setDocDropVisible(visible) {
-      const drop = document.getElementById("kgDocDrop");
-      if (drop) drop.hidden = !visible;
-    }
-
-    function setOnboardingUploadStepVisible(visible) {
-      const actions = document.getElementById("kgObUploadActions");
-      if (actions) actions.hidden = !visible;
-    }
-
-    function setOnboardingChatVisible(visible) {
-      const chat = document.getElementById("kgObChat");
-      if (chat) chat.hidden = !visible;
-    }
-
-    function startOnboarding(force) {
-      const g = ensureStoreShape();
-      if (g.onboarding.completed && !force) {
-        setMainPaneVisible(true);
-        setDocDropVisible(true);
-        setOnboardingUploadStepVisible(false);
-        setOnboardingChatVisible(false);
-        return;
-      }
-      if (!g.onboarding.started_at) g.onboarding.started_at = new Date().toISOString();
-      setMainPaneVisible(false);
-      setOnboardingChatVisible(false);
-      setDocDropVisible(true);
-      setOnboardingUploadStepVisible(true);
     }
 
     async function show() {
@@ -1852,6 +2750,9 @@
           skills: parsed.skills || [],
           roles: parsed.roles || [],
           companies: parsed.companies || [],
+          education: parsed.education || [],
+          years: parsed.years || 0,
+          excerpt: String(read.text || "").slice(0, 12000),
           addedAt: new Date().toISOString(),
         });
       }
@@ -2077,6 +2978,25 @@
           })
           .join("\n\n");
       }
+      let marketBlock = "(market pulse off)";
+      const mp = g.market_pulse || {};
+      if (mp.enabled) {
+        if ((mp.items || []).length) {
+          marketBlock = [
+            "Unverified, time-sensitive. Treat as directional, not fact.",
+            "Query: " + (mp.query || "n/a"),
+            "Fetched: " + (mp.fetched_at || "n/a"),
+            ...(mp.items || []).slice(0, 8).map(
+              (it) =>
+                `- ${it.title || "untitled"} (${it.source || "?"}${it.date ? ", " + it.date : ""})${it.url ? " " + it.url : ""}`
+            ),
+          ].join("\n");
+        } else {
+          marketBlock =
+            "Enabled but no items returned." +
+            (mp.last_error ? " Error: " + mp.last_error : " Cache empty or fetch failed.");
+        }
+      }
       const comp = g.compensation || {};
       return [
         "CAREER_INTELLIGENCE_REQUEST: You are producing a career brief for the Knowledge Graph panel.",
@@ -2118,8 +3038,13 @@
         "== CHAT CONTEXT ==",
         chatBlock,
         "",
-        "== ONBOARDING ANSWERS ==",
+        "== ONBOARDING ==",
+        `Persona: ${onboarding.persona || "n/a"}`,
+        `Urgency: ${onboarding.urgency || "n/a"}`,
         obBlock,
+        "",
+        "== MARKET PULSE ==",
+        marketBlock,
         "",
         "Produce a JSON-structured brief with these exact sections:",
         "{",
@@ -2145,6 +3070,8 @@
       if (btn) btn.disabled = true;
       body.innerHTML = `<div class="kg-insights-spinner">Analyzing career graph...</div>`;
       updateChatBanner();
+      await ensureMarketPulseFetched();
+      await persistIndividualStore();
       const prompt = buildAnalyzePrompt();
       try {
         const res = await fetch("/api/chat", {
@@ -2279,23 +3206,6 @@
 
       const redoBtn = document.getElementById("kgRedoOnboarding");
       if (redoBtn) redoBtn.addEventListener("click", () => startOnboarding(true));
-
-      const obUploadContinue = document.getElementById("kgObUploadContinue");
-      if (obUploadContinue) obUploadContinue.addEventListener("click", () => beginBackboneQuestions());
-
-      const obUploadSkip = document.getElementById("kgObUploadSkip");
-      if (obUploadSkip) obUploadSkip.addEventListener("click", () => beginBackboneQuestions());
-
-      const obForm = document.getElementById("kgObForm");
-      const obInput = document.getElementById("kgObInput");
-      if (obForm && obInput) {
-        obForm.addEventListener("submit", (e) => {
-          e.preventDefault();
-          const val = obInput.value;
-          obInput.value = "";
-          submitOnboardingAnswer(val);
-        });
-      }
 
       const confirmBtn = document.getElementById("kgConfirmTargets");
       if (confirmBtn) confirmBtn.addEventListener("click", () => confirmTargets());

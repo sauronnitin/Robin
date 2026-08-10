@@ -1,5 +1,5 @@
-/*
- * JobHunter AI — Infinite canvas dashboard
+﻿/*
+ * JobHunter AI â€” Infinite canvas dashboard
  * Pan/zoom, draggable editable cards, live DAG edges, sim + tokens.
  */
 (function () {
@@ -47,23 +47,295 @@
     ok: false,
     providers: {},
     models: [],
+    fallback_models: [],
     active_ids: [],
   };
   const FALLBACK_MODELS = [
-    { id: "groq/llama-3.1-8b-instant", provider: "groq", label: "Llama 3.1 8B Instant", status: "disconnected", status_label: "Disconnected", selectable: false },
-    { id: "groq/llama-3.3-70b-versatile", provider: "groq", label: "Llama 3.3 70B Versatile", status: "disconnected", status_label: "Disconnected", selectable: false },
-    { id: "gemini/gemini-2.5-flash", provider: "gemini", label: "Gemini 2.5 Flash", status: "disconnected", status_label: "Disconnected", selectable: false },
-    { id: "gemini/gemini-2.5-flash-lite", provider: "gemini", label: "Gemini 2.5 Flash Lite", status: "disconnected", status_label: "Disconnected", selectable: false },
-    { id: "gemini/gemini-2.5-pro", provider: "gemini", label: "Gemini 2.5 Pro", status: "disconnected", status_label: "Disconnected", selectable: false },
+    { id: "groq/llama-3.1-8b-instant", provider: "groq", label: "Llama 3.1 8B Instant", status: "disconnected", status_label: "Disconnected", selectable: false, fallback: true, fallback_hint: "Fast Groq escape hatch" },
+    { id: "groq/llama-3.3-70b-versatile", provider: "groq", label: "Llama 3.3 70B Versatile", status: "disconnected", status_label: "Disconnected", selectable: false, fallback: false },
+    { id: "gemini/gemini-2.5-flash", provider: "gemini", label: "Gemini 2.5 Flash", status: "disconnected", status_label: "Disconnected", selectable: false, fallback: false },
+    { id: "gemini/gemini-2.5-flash-lite", provider: "gemini", label: "Gemini 2.5 Flash Lite", status: "disconnected", status_label: "Disconnected", selectable: false, fallback: true, fallback_hint: "Lower demand than Flash" },
+    { id: "gemini/gemini-2.5-pro", provider: "gemini", label: "Gemini 2.5 Pro", status: "disconnected", status_label: "Disconnected", selectable: false, fallback: false },
   ];
+  const HIGH_DEMAND_FLASH = new Set(["gemini-2.5-flash", "gemini-2.5-flash-001"]);
+  const HEAVY_TOKENS = ["pro", "70b", "405b", "ultra", "versatile"];
   function catalogModels() {
     return (modelCatalog.models && modelCatalog.models.length)
       ? modelCatalog.models
       : FALLBACK_MODELS;
   }
+  function shortModelId(modelId) {
+    let short = String(modelId || "").trim();
+    if (short.includes("/")) short = short.split("/", 2)[1];
+    short = short.toLowerCase();
+    if (short.startsWith("models/")) short = short.slice("models/".length);
+    return short;
+  }
+  function isHeavyOrProModel(modelId) {
+    const short = shortModelId(modelId);
+    if (!short) return true;
+    return HEAVY_TOKENS.some((tok) => short.includes(tok));
+  }
+  /** Mirrors model_catalog.is_low_demand_fallback (client safety when API omits tags). */
+  function isLowDemandFallback(modelId) {
+    const mid = String(modelId || "").trim();
+    if (!mid) return false;
+    const short = shortModelId(mid);
+    if (isHeavyOrProModel(mid)) return false;
+    if (HIGH_DEMAND_FLASH.has(short)) return false;
+    if (short.includes("flash-lite") || short.endsWith("-lite")) return true;
+    if (short.includes("flash") && short.startsWith("gemini-")) {
+      if (short.startsWith("gemini-2.5-flash")) return false;
+      return true;
+    }
+    if (short.startsWith("gemma")) return true;
+    if (short.startsWith("llama-3.1-8b") || short.startsWith("llama3.1-8b") || short.includes("8b-instant")) {
+      return true;
+    }
+    return false;
+  }
+  function fallbackHintFor(modelId) {
+    const mid = String(modelId || "").trim();
+    const hints = {
+      "gemini/gemini-2.5-flash-lite": "Lower demand than Flash",
+      "gemini/gemini-3.1-flash-lite": "Lite capacity, usually quieter",
+      "gemini/gemini-3.5-flash": "Newer Flash line if available",
+      "groq/llama-3.1-8b-instant": "Fast Groq escape hatch",
+      "groq/gemma2-9b-it": "Light Groq chat model",
+    };
+    if (hints[mid]) return hints[mid];
+    const short = shortModelId(mid);
+    if (short.includes("flash-lite") || short.endsWith("-lite")) return "Lower demand than Flash";
+    if (short.startsWith("gemma")) return "Light Gemma alternative";
+    if (short.includes("8b")) return "Fast Groq escape hatch";
+    if (short.includes("flash")) return "Quieter Flash alternative";
+    return "Lower demand alternative";
+  }
+  /** Next-best quieter rank (mirrors model_catalog.fallback_rank). Lower = better. */
+  function fallbackRank(modelId, relativeTo) {
+    const mid = String(modelId || "").trim();
+    const short = shortModelId(mid);
+    const rel = String(relativeTo || "").trim();
+    const groqPrimary = rel.startsWith("groq/");
+    const isFlashLite = short.includes("flash-lite") || (short.startsWith("gemini-") && short.endsWith("-lite"));
+    const isQuietFlash = short.startsWith("gemini-") && short.includes("flash") && !isFlashLite;
+    const isGemma = short.startsWith("gemma");
+    const isGroq8b = short.startsWith("llama-3.1-8b") || short.startsWith("llama3.1-8b") || short.includes("8b-instant");
+    let band = 60;
+    if (groqPrimary) {
+      if (isGroq8b) band = 0;
+      else if (isGemma && mid.startsWith("groq/")) band = 5;
+      else if (isFlashLite) band = 20;
+      else if (isGemma) band = 25;
+      else if (isQuietFlash) band = 30;
+      else band = 50;
+    } else {
+      if (isFlashLite) band = 0;
+      else if (isQuietFlash) band = 10;
+      else if (isGemma) band = 20;
+      else if (isGroq8b) band = 40;
+      else band = 60;
+    }
+    const verMatch = short.match(/(\d+\.\d+)/);
+    const ver = verMatch ? -parseFloat(verMatch[1]) : 0;
+    return [band, ver, mid];
+  }
+  function orderFallbackModels(list, relativeTo) {
+    const statusOrder = { active: 0, disconnected: 1 };
+    return list.slice().sort((a, b) => {
+      const sa = statusOrder[a.status] ?? 9;
+      const sb = statusOrder[b.status] ?? 9;
+      if (sa !== sb) return sa - sb;
+      const ra = fallbackRank(a.id, relativeTo);
+      const rb = fallbackRank(b.id, relativeTo);
+      for (let i = 0; i < ra.length; i++) {
+        if (ra[i] < rb[i]) return -1;
+        if (ra[i] > rb[i]) return 1;
+      }
+      return 0;
+    });
+  }
+  function enrichFallbackEntry(m) {
+    return {
+      ...m,
+      fallback: true,
+      fallback_hint: m.fallback_hint || fallbackHintFor(m.id),
+    };
+  }
+  /**
+   * Lower-demand switch targets from the Model catalog only.
+   * Excludes the card's current llm. Never empty when quieter/non-heavy
+   * alternatives exist (even if API omitted fallback_models / tags).
+   */
+  function catalogFallbackModels(relativeTo) {
+    const main = catalogModels();
+    const byId = new Map(main.map((m) => [m.id, m]));
+    const cur = String(relativeTo || "").trim();
+
+    let list = [];
+    if (modelCatalog.fallback_models && modelCatalog.fallback_models.length) {
+      list = modelCatalog.fallback_models
+        .map((m) => byId.get(m.id))
+        .filter(Boolean);
+    }
+    if (!list.length) {
+      list = main.filter((m) => m.fallback || isLowDemandFallback(m.id));
+    }
+    list = list.filter((m) => m.id !== cur).map(enrichFallbackEntry);
+
+    if (!list.length) {
+      // Safety net: any non-heavy catalog entry except current.
+      let broadened = main.filter((m) => m.id !== cur && !isHeavyOrProModel(m.id));
+      const withoutBusy = broadened.filter((m) => !HIGH_DEMAND_FLASH.has(shortModelId(m.id)));
+      if (withoutBusy.length) broadened = withoutBusy;
+      list = broadened.map(enrichFallbackEntry);
+    }
+    return orderFallbackModels(list, relativeTo);
+  }
+  function refreshAllLlmPickers() {
+    document.querySelectorAll(".llm-select").forEach((el) => {
+      if (typeof el._llmFillMenu === "function") el._llmFillMenu();
+    });
+    document.querySelectorAll(".llm-swap-row").forEach((el) => {
+      if (typeof el._syncSwap === "function") el._syncSwap();
+    });
+  }
+
+  /** Agent routing: thinking â†’ Gemini Flash; tool/mechanical â†’ Groq 8B. Never Pro. */
+  const THINKING_AGENT_IDS = new Set([
+    "job_fit_analyst",
+    "resume_tailor",
+    "cover_letter_writer",
+    "content_humanizer_ai_detection_specialist",
+    "linkedin_job_fit_analyst",
+    "linkedin_resume_tailor",
+    "linkedin_cover_letter_writer",
+  ]);
+  const TOOL_AGENT_IDS = new Set([
+    "global_product_design_job_scout",
+    "content_safety_injection_screener",
+    "latex_resume_compiler_drive_publisher",
+    "human_like_application_specialist",
+    "application_logger",
+    "linkedin_job_scout",
+    "linkedin_bot_check_specialist",
+    "linkedin_latex_compiler",
+    "linkedin_easy_apply_specialist",
+    "linkedin_external_apply_specialist",
+    "linkedin_application_logger",
+  ]);
+  const REC_FLASH = "gemini/gemini-2.5-flash";
+  const REC_FLASH_LITE = "gemini/gemini-2.5-flash-lite";
+  const REC_GROQ_8B = "groq/llama-3.1-8b-instant";
+
+  function agentRoutingKind(agentId) {
+    const id = String(agentId || "");
+    if (THINKING_AGENT_IDS.has(id)) return "thinking";
+    if (TOOL_AGENT_IDS.has(id)) return "tool";
+    if (/humanizer|fit_analyst|resume_tailor|cover_letter|_fit$|_fit_/.test(id)) return "thinking";
+    if (/scout|screener|latex|compile|apply|logger|bot_check|publisher/.test(id)) return "tool";
+    const node = agentById(id);
+    const text = `${node?.role || ""} ${node?.goal || ""} ${node?.summary || ""} ${node?.description || ""}`.toLowerCase();
+    if (/fit|score|tailor|cover letter|humaniz|writ|analy|rank|reasoning|thinking/.test(text)) return "thinking";
+    if (/scout|scrap|apply|log\b|compile|screen|browser|tool|fetch|api/.test(text)) return "tool";
+    return "thinking";
+  }
+
+  /** Prefer catalog ids that exist; preserve preferred order (do not reorder by status). */
+  function resolveCatalogIds(preferredIds) {
+    const models = catalogModels();
+    const byId = new Map(models.map((m) => [m.id, m]));
+    const byShort = new Map();
+    models.forEach((m) => {
+      const s = shortModelId(m.id);
+      if (s && !byShort.has(s)) byShort.set(s, m);
+    });
+    const out = [];
+    const seen = new Set();
+    preferredIds.forEach((want) => {
+      const mid = String(want || "").trim();
+      if (!mid || seen.has(mid)) return;
+      let hit = byId.get(mid);
+      if (!hit) hit = byShort.get(shortModelId(mid));
+      if (!hit) return;
+      if (seen.has(hit.id)) return;
+      seen.add(hit.id);
+      out.push(hit.id);
+    });
+    return out;
+  }
+
+  /** First recommended id that is selectable (active), else first that exists in catalog. */
+  function pickRecommendedDefault(preferredIds) {
+    const models = catalogModels();
+    const byId = new Map(models.map((m) => [m.id, m]));
+    const resolved = resolveCatalogIds(preferredIds);
+    for (const id of resolved) {
+      const m = byId.get(id);
+      if (m && m.status === "active") return id;
+    }
+    return resolved[0] || "";
+  }
+
+  /**
+   * Recommended models for an agent (primary + lower-tier fallback).
+   * Only ids present in the catalog. Never recommends Gemini Pro.
+   */
+  function recommendedModelsForAgent(agentId) {
+    const kind = agentRoutingKind(agentId);
+    let primaryWant = [];
+    let fallbackWant = [];
+    if (kind === "tool") {
+      primaryWant = [REC_GROQ_8B, "groq/gemma2-9b-it"];
+      fallbackWant = [REC_FLASH_LITE, "gemini/gemini-3.1-flash-lite", "groq/gemma2-9b-it"];
+    } else {
+      // Thinking: Flash first; Flash Lite secondary / quieter when Flash is busy.
+      primaryWant = [
+        REC_FLASH,
+        "gemini/gemini-3.5-flash",
+        REC_FLASH_LITE,
+        "gemini/gemini-3.1-flash-lite",
+      ];
+      fallbackWant = [
+        REC_FLASH_LITE,
+        "gemini/gemini-3.1-flash-lite",
+        "gemini/gemini-3.5-flash",
+        REC_GROQ_8B,
+      ];
+    }
+    const primaryList = resolveCatalogIds(primaryWant).filter((id) => !isHeavyOrProModel(id));
+    let fallbackList = resolveCatalogIds(fallbackWant).filter((id) => !isHeavyOrProModel(id));
+    const topPrimary = pickRecommendedDefault(primaryWant) || primaryList[0] || "";
+    fallbackList = fallbackList.filter((id) => id !== topPrimary);
+    const topFallback = pickRecommendedDefault(fallbackList) || fallbackList[0] || "";
+    const all = [];
+    const seen = new Set();
+    [...primaryList, ...fallbackList].forEach((id) => {
+      if (seen.has(id)) return;
+      seen.add(id);
+      all.push(id);
+    });
+    return {
+      kind,
+      primary: topPrimary,
+      primaryList,
+      fallback: topFallback,
+      fallbackList,
+      all,
+      ids: new Set(all),
+    };
+  }
+
+  function isRecommendedModel(agentId, modelId) {
+    const mid = String(modelId || "").trim();
+    if (!mid) return false;
+    return recommendedModelsForAgent(agentId).ids.has(mid);
+  }
   function modelEntry(id) {
     const mid = String(id || "").trim();
-    return catalogModels().find((m) => m.id === mid) || null;
+    return catalogModels().find((m) => m.id === mid)
+      || catalogFallbackModels().find((m) => m.id === mid)
+      || null;
   }
   function isAllowedLlm(model) {
     const mid = String(model || "").trim();
@@ -86,7 +358,7 @@
   const EDIT_FIELDS = [
     "role", "goal", "backstory",
     "description", "expected_output",
-    "llm", "max_iter", "max_rpm", "summary", "skills",
+    "llm", "fallback_llm", "max_iter", "max_rpm", "summary", "skills",
   ];
   const DUMMY_COPY = {
     role: "Agent role title (who this agent is)",
@@ -98,6 +370,7 @@
     max_iter: "3",
     max_rpm: "2",
     llm: "gemini/gemini-2.5-flash",
+    fallback_llm: "",
   };
   const FREQ_PRESETS = [
     { id: "15m", label: "15m", minutes: 15 },
@@ -132,6 +405,13 @@
   const chatSendBtn = document.getElementById("chatSendBtn");
   const chatClearBtn = document.getElementById("chatClearBtn");
   const chatStatus = document.getElementById("chatStatus");
+  const assistantDelegated = (() => {
+    try {
+      return window.parent !== window && window.parent.__jhAssistant;
+    } catch (_) {
+      return false;
+    }
+  })();
   const expandLogBtn = document.getElementById("expandLogBtn");
   const zoomLabel = document.getElementById("zoomLabel");
   const addElementBtn = document.getElementById("addElementBtn");
@@ -165,6 +445,7 @@
   const confirmDetail = document.getElementById("confirmDetail");
   const confirmRetryBtn = document.getElementById("confirmRetryBtn");
   const confirmAbortBtn = document.getElementById("confirmAbortBtn");
+  const confirmDismissBtn = document.getElementById("confirmDismissBtn");
   const previewTokenModal = document.getElementById("previewTokenModal");
   const previewTokenBody = document.getElementById("previewTokenBody");
   const previewTokenDetail = document.getElementById("previewTokenDetail");
@@ -178,8 +459,12 @@
   const modelConnectCancel = document.getElementById("modelConnectCancel");
   const modelConnectRefresh = document.getElementById("modelConnectRefresh");
 
+  const clearErrorsBtn = document.getElementById("clearErrorsBtn");
   const resetLayoutBtn = document.getElementById("resetLayoutBtn");
   const resetCardsBtn = document.getElementById("resetCardsBtn");
+  const autofixToggle = document.getElementById("autofixToggle");
+  const autofixEnabled = document.getElementById("autofixEnabled");
+  const autofixStatus = document.getElementById("autofixStatus");
 
   const statComplete = document.getElementById("statComplete");
   const statStage = document.getElementById("statStage");
@@ -265,6 +550,8 @@
   let pollTimer = null;
   let liReviewPollTimer = null;
   let awaitingConfirm = false;
+  let confirmDismissed = false; /* user closed pause dialog to edit canvas; Play resumes */
+  let pausedCardId = null; /* agent showing title-row Play while paused */
   let lastFailDetail = null;
   let collapsedTrace = {}; /* key -> bool */
   let openOutputSteps = {}; /* taskKey -> bool */
@@ -361,8 +648,8 @@
   function setModeLabel(live) {
     if (!modeLabel) return;
     modeLabel.textContent = live
-      ? "Live · CrewAI pipeline · Editable"
-      : "Simulated · Infinite canvas · Editable";
+      ? "Live Â· CrewAI pipeline Â· Editable"
+      : "Simulated Â· Infinite canvas Â· Editable";
   }
 
   function showToast(title, msg, kind) {
@@ -381,7 +668,7 @@
     const text = String(s == null ? "" : s).replace(/\s+/g, " ").trim();
     const limit = n || 160;
     if (text.length <= limit) return text;
-    return text.slice(0, limit - 1) + "…";
+    return text.slice(0, limit - 1) + "â€¦";
   }
 
   function liveWarnDetail(detail, code) {
@@ -411,12 +698,14 @@
   }
 
   function openConfirmModal(detail) {
+    if (confirmDismissed) return;
     awaitingConfirm = true;
     lastFailDetail = detail || {};
     if (confirmBody) {
+      const tip = " Dismiss to edit the canvas (model, fallback), then hit Play to resume.";
       confirmBody.textContent =
-        lastFailDetail.suggestion ||
-        "An agent failed. Confirm that you reviewed/fixed the issue, then retry, or abort the run.";
+        (lastFailDetail.suggestion ||
+          "An agent failed. Confirm retry after a fix, abort, or dismiss to edit the canvas.") + tip;
     }
     if (confirmDetail) {
       confirmDetail.textContent = [
@@ -431,6 +720,28 @@
   function closeConfirmModal() {
     awaitingConfirm = false;
     if (confirmModal) confirmModal.hidden = true;
+  }
+
+  function dismissConfirmModal() {
+    /* Close dialog only. Keep the run paused until Play / Confirm retry / Abort. */
+    confirmDismissed = true;
+    closeConfirmModal();
+    runPaused = true;
+    if (clockInterval) {
+      clockAccumMs += performance.now() - clockStart;
+      clearInterval(clockInterval);
+      clockInterval = null;
+    }
+    if (!pausedCardId && lastFailDetail && lastFailDetail.agent_id) {
+      setPausedCard(lastFailDetail.agent_id);
+    }
+    setRunControls("paused");
+    activityAgent.textContent = "Paused";
+    statStage.textContent = "Paused Â· edit canvas";
+    logLine(null, "pause dialog dismissed â€” edit canvas, then Play on the card to resume", "system");
+    showToast("Dismissed", "Pipeline still paused. Edit models, then hit Play on the paused card.", "info");
+    refreshAllSectionControls();
+    postControl("/api/pause").catch(() => {});
   }
 
   function clearSelection() {
@@ -516,7 +827,7 @@
       status === "failed" || runMeta.failed ? "Failed" :
       status === "done" ? "Done" :
       status === "running" ? "Running" : "Idle";
-    const summary = `${done} of ${total} steps` + (runClockEl ? ` · ${runClockEl.textContent}` : "");
+    const summary = `${done} of ${total} steps` + (runClockEl ? ` Â· ${runClockEl.textContent}` : "");
     if (tracesMeta) tracesMeta.textContent = summary;
     if (tracesBadge) {
       tracesBadge.textContent = badgeText;
@@ -558,9 +869,9 @@
       const head = document.createElement("div");
       head.className = "trace-row is-agent";
       head.innerHTML = `
-        <button type="button" class="trace-toggle" data-collapse="${key}" aria-label="Toggle">${collapsed ? "▸" : "▾"}</button>
+        <button type="button" class="trace-toggle" data-collapse="${key}" aria-label="Toggle">${collapsed ? "â–¸" : "â–¾"}</button>
         <span class="trace-label"><i class="trace-icon agent"></i> ${escapeHtml(block.role)}</span>
-        <span class="trace-timing">${block.durationMs != null ? formatDur(block.durationMs) : ""} · ${block.events.length} events</span>
+        <span class="trace-timing">${block.durationMs != null ? formatDur(block.durationMs) : ""} Â· ${block.events.length} events</span>
       `;
       wrap.appendChild(head);
 
@@ -641,7 +952,7 @@
       const tab = outputTabMode[step.taskKey] || "markdown";
       const st = step.status || "pending";
       const statusCls = st === "done" ? "done" : st === "failed" ? "failed" : st === "running" ? "running" : "pending";
-      const statusGlyph = st === "done" ? "✓" : st === "failed" ? "×" : st === "running" ? "●" : "○";
+      const statusGlyph = st === "done" ? "âœ“" : st === "failed" ? "Ã—" : st === "running" ? "â—" : "â—‹";
       const el = document.createElement("div");
       el.className = "output-step" + (open ? " is-open" : "");
       el.innerHTML = `
@@ -655,7 +966,7 @@
             </div>
           </div>
           <span></span>
-          <button type="button" class="output-expand-btn" data-toggle="${step.taskKey}" aria-label="Expand">${open ? "↖" : "↘"}</button>
+          <button type="button" class="output-expand-btn" data-toggle="${step.taskKey}" aria-label="Expand">${open ? "â†–" : "â†˜"}</button>
         </div>
         <div class="output-step-body">
           <div class="output-tabs">
@@ -730,6 +1041,19 @@
         runMeta.startedAt = Date.now();
         runMode = "live";
         setModeLabel(true);
+        if (controlState !== "paused") setRunControls("running");
+      } else if (ev.status === "paused") {
+        runPaused = true;
+        if (clockInterval) {
+          clockAccumMs += performance.now() - clockStart;
+          clearInterval(clockInterval);
+          clockInterval = null;
+        }
+        setRunControls("paused");
+        activityAgent.textContent = "Paused";
+        statStage.textContent = "Paused";
+        logLine(null, clipLogMsg(detail.message || "Pipeline paused"), "system");
+        refreshAllSectionControls();
       } else if (ev.status === "done") {
         runMeta.status = "done";
         finishLiveRun(false);
@@ -739,6 +1063,30 @@
         finishLiveRun(true);
       }
       updateRunChrome();
+      return;
+    }
+
+    if (ev.type === "autofix") {
+      const msg = clipLogMsg(detail.message || detail.action || "AutoFix");
+      const kind = ev.status === "flag" ? "flag" : "ok";
+      logLine("AutoFix", msg, kind);
+      if (autofixStatus && detail.action) {
+        autofixStatus.textContent = String(detail.action).replace(/^autofix_/, "").slice(0, 18);
+      }
+      if (autofixToggle) {
+        autofixToggle.classList.toggle("is-busy", ev.status === "ok" && /retry|patch|heal|promote/i.test(String(detail.action || "")));
+      }
+      if (detail.action === "autofix_promote_fallback") {
+        const aid = detail.agent_id || agentId;
+        const llm = String(detail.llm || "").trim();
+        const fb = String(detail.fallback_llm || "").trim();
+        if (aid && llm) {
+          persistField(aid, "llm", llm);
+          if (fb) persistField(aid, "fallback_llm", fb);
+          refreshAllLlmPickers();
+          logLine(aid, `fallback promoted â†’ ${llm}`, "system");
+        }
+      }
       return;
     }
 
@@ -759,6 +1107,17 @@
           expandLogBtn.setAttribute("aria-label", "Collapse activity");
         }
       }
+      // Hold the run in paused UI: Play/Start resumes (or AutoFix may retry once).
+      runPaused = true;
+      if (clockInterval) {
+        clockAccumMs += performance.now() - clockStart;
+        clearInterval(clockInterval);
+        clockInterval = null;
+      }
+      setPausedCard(agentId || null);
+      setRunControls("paused");
+      activityAgent.textContent = "Paused";
+      statStage.textContent = "Paused Â· break";
       showToast("Pipeline paused", clipLogMsg(errText, 120), "error");
       openConfirmModal({
         error: detail.error,
@@ -767,6 +1126,7 @@
         task_key: taskKey,
       });
       updateRunChrome();
+      refreshAllSectionControls();
       return;
     }
 
@@ -899,6 +1259,7 @@
     stopPolling();
     stopClock();
     consoleDot.classList.remove("live");
+    setPausedCard(null);
     setRunControls(failed ? "idle" : "done");
     if (failed) activeRunSectionId = null;
     setActiveHop(null, null);
@@ -920,7 +1281,7 @@
   }
 
   async function pollEvents() {
-    if (runPaused) return;
+    // Keep polling while paused so Resume / AutoFix / break events still arrive.
     try {
       const res = await fetch(`/api/events?since=${eventCursor}`);
       if (!res.ok) return;
@@ -928,7 +1289,7 @@
       if (typeof data.next === "number") eventCursor = data.next;
       (data.events || []).forEach(applyLiveEvent);
       const st = (data.run && data.run.state) || {};
-      if (st.status === "awaiting_retry" && !awaitingConfirm) {
+      if (st.status === "awaiting_retry" && !awaitingConfirm && !confirmDismissed) {
         const errText = st.error || "Pipeline paused for retry or abort.";
         logLine("Live", clipLogMsg(errText), "flag", liveWarnDetail({
           error: st.error,
@@ -939,7 +1300,37 @@
         openConfirmModal({
           error: st.error,
           suggestion: st.suggestion,
+          agent_id: st.agent_id || pausedCardId,
         });
+        runPaused = true;
+        if (clockInterval) {
+          clockAccumMs += performance.now() - clockStart;
+          clearInterval(clockInterval);
+          clockInterval = null;
+        }
+        runMeta.status = "awaiting_retry";
+        if (!pausedCardId) {
+          setPausedCard(st.agent_id || currentRunningAgentId() || null);
+        } else {
+          refreshCardPlayButtons();
+        }
+        setRunControls("paused");
+        activityAgent.textContent = "Paused";
+        statStage.textContent = "Paused Â· break";
+        refreshAllSectionControls();
+      }
+      if (st.status === "paused" && controlState !== "paused") {
+        runPaused = true;
+        if (clockInterval) {
+          clockAccumMs += performance.now() - clockStart;
+          clearInterval(clockInterval);
+          clockInterval = null;
+        }
+        if (!pausedCardId) setPausedCard(currentRunningAgentId());
+        setRunControls("paused");
+        activityAgent.textContent = "Paused";
+        statStage.textContent = "Paused";
+        refreshAllSectionControls();
       }
       if (data.run && data.run.server && data.run.server.status === "done" && runMeta.status === "running") {
         runMeta.status = "done";
@@ -954,6 +1345,8 @@
     resetLiveViews();
     runToken += 1;
     runPaused = false;
+    confirmDismissed = false;
+    setPausedCard(null);
     pauseResolvers = [];
     completeCount = 0;
     flagCount = 0;
@@ -989,7 +1382,7 @@
       : "Main";
     logLine(null, `POST /api/run - ${scopeLabel} plan (${plan.order.length} steps)`, "system");
     if (plan.order.length) {
-      logLine(null, `order: ${plan.order.map((id) => (agentById(id) || {}).short || id).join(" → ")}`, "system");
+      logLine(null, `order: ${plan.order.map((id) => (agentById(id) || {}).short || id).join(" â†’ ")}`, "system");
     }
 
     let started = false;
@@ -1011,7 +1404,7 @@
         started = true;
         runMode = "live";
         setModeLabel(true);
-        logLine(null, `live pid ${data.pid}${data.plan ? " · plan saved" : ""}`, "system");
+        logLine(null, `live pid ${data.pid}${data.plan ? " Â· plan saved" : ""}`, "system");
         if (typeof Notification !== "undefined" && Notification.permission === "default") {
           try { Notification.requestPermission(); } catch (_) {}
         }
@@ -1220,6 +1613,9 @@
   function liEdgesList() {
     return (typeof LI_EDGES !== "undefined" && Array.isArray(LI_EDGES)) ? LI_EDGES : [];
   }
+  function liPreviewMeta() {
+    return (typeof LI_PREVIEW !== "undefined" && LI_PREVIEW && LI_PREVIEW.id) ? LI_PREVIEW : null;
+  }
   function pipelineAgents() {
     return AGENTS.concat(liAgentsList());
   }
@@ -1230,10 +1626,17 @@
     return new Set(AGENTS.map((a) => a.id));
   }
   function pipelineSignature() {
-    return pipelineAgents().map((a) => a.id).join("|");
+    const preview = liPreviewMeta();
+    const ids = pipelineAgents().map((a) => a.id);
+    if (preview) ids.push(preview.id);
+    return ids.join("|");
   }
   function isLiAgentId(id) {
     return liAgentIdSet().has(id);
+  }
+  function isLiPreviewId(id) {
+    const meta = liPreviewMeta();
+    return !!(meta && id === meta.id);
   }
 
   function agentById(id) {
@@ -1384,6 +1787,7 @@
         description: field("description", ""),
         expected_output: field("expected_output", ""),
         llm: field("llm", "groq/llama-3.1-8b-instant"),
+        fallback_llm: field("fallback_llm", ""),
         max_iter: field("max_iter", 3),
         max_rpm: field("max_rpm", 2),
         summary: field("summary", ""),
@@ -1491,6 +1895,92 @@
   function setRunControls(state) {
     controlState = state;
     refreshAllSectionControls();
+    refreshCardPlayButtons();
+  }
+
+  function currentRunningAgentId() {
+    for (const id of Object.keys(statuses)) {
+      const st = statuses[id];
+      if (st === "running" || st === "thinking") return id;
+    }
+    return null;
+  }
+
+  function setPausedCard(agentId) {
+    pausedCardId = agentId || null;
+    refreshCardPlayButtons();
+  }
+
+  function refreshCardPlayButtons() {
+    const show = controlState === "paused" && !!pausedCardId;
+    document.querySelectorAll(".card").forEach((card) => {
+      const id = card.dataset.id;
+      const isTarget = show && id === pausedCardId;
+      card.classList.toggle("is-paused-card", isTarget);
+      const play = card.querySelector(".card-play-btn");
+      if (!play) return;
+      play.hidden = !isTarget;
+      play.disabled = !isTarget;
+    });
+  }
+
+  async function persistRunPlanFromCanvas() {
+    const plan = buildRunPlan(activeRunSectionId ? { sectionId: activeRunSectionId } : {});
+    if (!plan || !Array.isArray(plan.order) || !plan.order.length) {
+      throw new Error("No runnable plan to persist");
+    }
+    const res = await fetch("/api/run/plan", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ plan }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.ok) {
+      throw new Error((data && data.error) || `HTTP ${res.status}`);
+    }
+    return data;
+  }
+
+  async function confirmRetryWithPlan() {
+    confirmDismissed = false;
+    closeConfirmModal();
+    showToast("Retrying", "Persisting canvas models, then resuming pipeline.", "info");
+    logLine(null, "user confirmed retry (with current llm/fallback)", "system");
+    runMeta.status = "running";
+    runMeta.failed = false;
+    runPaused = false;
+    setPausedCard(null);
+    clockStart = performance.now();
+    if (!clockInterval) {
+      clockInterval = setInterval(() => {
+        runClockEl.textContent = formatElapsed(clockAccumMs + (performance.now() - clockStart));
+      }, 100);
+    }
+    setRunControls("running");
+    activityAgent.textContent = "Running";
+    statStage.textContent = "Running";
+    updateRunChrome();
+    try {
+      await persistRunPlanFromCanvas();
+      logLine(null, "run_plan.json updated from canvas (incl. swapped models)", "system");
+    } catch (err) {
+      showToast("Plan save failed", String(err.message || err), "warn");
+      logLine(null, `plan persist failed: ${err.message || err}`, "flag");
+    }
+    try {
+      await postControl("/api/retry");
+    } catch (err) {
+      showToast("Retry failed", String(err.message || err), "error");
+    }
+  }
+
+  async function playPausedPipeline() {
+    if (controlState !== "paused") return;
+    if (runMeta.status === "awaiting_retry") {
+      await confirmRetryWithPlan();
+      return;
+    }
+    resumeRun();
   }
 
   function sectionControlsRoot(sectionId) {
@@ -1530,7 +2020,7 @@
       simBtn.classList.toggle("is-running", simBusy);
       simBtn.classList.toggle("is-passed", cleared && !simBusy);
       simBtn.classList.toggle("is-failed", !cleared && simBtn.dataset.failed === "1" && !simBusy);
-      simBtn.textContent = simBusy ? "SIM…" : "SIM";
+      simBtn.textContent = simBusy ? "SIMâ€¦" : "SIM";
     }
     if (pauseBtn) {
       pauseBtn.disabled = !isRunning;
@@ -1547,14 +2037,18 @@
         && !isRunning && (isPaused || controlState !== "running");
       startBtn.disabled = !canStart;
       startBtn.classList.toggle("is-primary", canStart || isPaused);
+      startBtn.classList.toggle("is-active", isPaused);
       if (isPaused) {
-        startBtn.title = "Resume run";
+        startBtn.title = "Resume run (Play)";
+        startBtn.setAttribute("aria-label", "Resume run");
       } else if (isActiveSection && controlState === "done") {
         startBtn.title = cleared ? "Run again" : "Run Sim first to unlock Start";
+        startBtn.setAttribute("aria-label", "Start live run");
       } else {
         startBtn.title = cleared
           ? "Start live run for this section"
           : "Run Sim for this section first to unlock Start";
+        startBtn.setAttribute("aria-label", "Start live run");
       }
     }
   }
@@ -1732,7 +2226,7 @@
           field: "llm",
           healable: code === "unsupported_llm",
           fix_hint: code === "disconnected_llm"
-            ? `Open Model → Load and paste a ${entry ? entry.provider : "provider"} API key.`
+            ? `Open Model â†’ Load and paste a ${entry ? entry.provider : "provider"} API key.`
             : "Pick an Active model, or restore the agent default.",
           files: ["dashboard/pipeline-data.js"],
         }));
@@ -1787,7 +2281,7 @@
           field: "llm",
           healable: code === "unsupported_llm",
           fix_hint: code === "disconnected_llm"
-            ? `Open Model → Load and paste a ${entry ? entry.provider : "provider"} API key.`
+            ? `Open Model â†’ Load and paste a ${entry ? entry.provider : "provider"} API key.`
             : "Set the custom card LLM to an Active model.",
           files: [],
         }));
@@ -1954,7 +2448,7 @@
     clearLogBuffer();
     const scopeName = sectionId ? ((sectionById(sectionId) || {}).name || sectionId) : "Main";
     logLine("Sim", `Dry-run started for "${scopeName}". Checking every in-loop node before a live Start.`, "sim");
-    activityAgent.textContent = `Sim · ${scopeName}`;
+    activityAgent.textContent = `Sim Â· ${scopeName}`;
     statStage.textContent = "Sim";
     consoleDot.classList.add("live");
 
@@ -1964,7 +2458,7 @@
       const freq = mins != null ? `every ${mins}m` : "schedule incomplete";
       const wire = plan.trigger.wired ? "wired" : "unwired";
       setStatus(plan.trigger.id, "thinking");
-      logLine("Trigger", `Would fire ${freq} (${wire}); runCount=${plan.trigger.runCount === "" ? "∞" : plan.trigger.runCount}`, "sim");
+      logLine("Trigger", `Would fire ${freq} (${wire}); runCount=${plan.trigger.runCount === "" ? "âˆž" : plan.trigger.runCount}`, "sim");
       await sleep(100 / speed(), runToken);
       setStatus(plan.trigger.id, plan.trigger.wired && mins != null ? "done" : "flagged");
       setProgress(plan.trigger.id, 100);
@@ -1972,14 +2466,14 @@
     if (plan.skipped.length) {
       logLine("Sim", `Out of loop (skipped): ${plan.skipped.map((id) => (agentById(id) || {}).short || id).join(", ")}`, "system");
     }
-    logLine("Sim", `In-loop order: ${plan.order.map((id) => (agentById(id) || {}).short || id).join(" → ") || "(empty)"}`, "system");
+    logLine("Sim", `In-loop order: ${plan.order.map((id) => (agentById(id) || {}).short || id).join(" â†’ ") || "(empty)"}`, "system");
 
     for (const id of plan.order) {
       const agent = agentById(id);
       if (!agent) continue;
       setStatus(agent.id, "thinking");
       setProgress(agent.id, 20);
-      logLine(agent.short, `Checking ${agent.role || agent.short}…`, "sim");
+      logLine(agent.short, `Checking ${agent.role || agent.short}â€¦`, "sim");
       await sleep(120 / speed(), runToken);
       setStatus(agent.id, "running");
       setProgress(agent.id, 55);
@@ -2000,7 +2494,7 @@
 
     const healed = issues.length ? autoHealIssues(issues) : [];
     if (healed.length) {
-      logLine("Sim", `Auto-healed ${healed.length} issue${healed.length === 1 ? "" : "s"}. Re-checking…`, "ok");
+      logLine("Sim", `Auto-healed ${healed.length} issue${healed.length === 1 ? "" : "s"}. Re-checkingâ€¦`, "ok");
       await sleep(100 / speed(), runToken);
       issues = validatePipeline(sectionId);
       issues.forEach((issue) => {
@@ -2085,15 +2579,22 @@
       clearInterval(clockInterval);
       clockInterval = null;
     }
+    setPausedCard(currentRunningAgentId());
     setRunControls("paused");
     activityAgent.textContent = "Paused";
     statStage.textContent = "Paused";
-    logLine(null, "run paused", "system");
-    showToast("Paused", "Pipeline paused. Resume to continue, or Stop to abort.", "info");
+    logLine(null, "run paused (no further LLM calls until Resume)", "system");
+    showToast("Paused", "Execution paused. Hit Play on the card or section to resume.", "info");
+    postControl("/api/pause").catch((err) => {
+      console.warn("[pause] failed", err);
+      showToast("Pause", "UI paused; server pause signal failed.", "warn");
+    });
   }
   function resumeRun() {
     if (controlState !== "paused") return;
     runPaused = false;
+    confirmDismissed = false;
+    setPausedCard(null);
     clockStart = performance.now();
     clockInterval = setInterval(() => {
       runClockEl.textContent = formatElapsed(clockAccumMs + (performance.now() - clockStart));
@@ -2102,10 +2603,32 @@
     waiting.forEach((fn) => fn());
     setRunControls("running");
     activityAgent.textContent = "Running";
+    statStage.textContent = "Running";
     logLine(null, "run resumed", "system");
+    showToast("Resumed", "Pipeline continuing.", "info");
+    if (awaitingConfirm) closeConfirmModal();
+    /* Soft resume; if server is awaiting_retry, /api/resume maps to retry. */
+    if (runMeta.status === "awaiting_retry") {
+      persistRunPlanFromCanvas()
+        .then(() => postControl("/api/resume"))
+        .catch((err) => {
+          console.warn("[resume] failed", err);
+          showToast("Resume", String(err.message || err), "warn");
+        });
+      runMeta.status = "running";
+      runMeta.failed = false;
+      updateRunChrome();
+      return;
+    }
+    postControl("/api/resume").catch((err) => {
+      console.warn("[resume] failed", err);
+      showToast("Resume", "UI resumed; server resume signal failed.", "warn");
+    });
   }
   function stopActiveRun() {
     runPaused = false;
+    confirmDismissed = false;
+    setPausedCard(null);
     const waiting = pauseResolvers.splice(0);
     waiting.forEach((fn) => fn());
     runToken += 1;
@@ -2142,18 +2665,42 @@
           working[a.id][f] = e[f] != null ? e[f] : String(a[f] != null ? a[f] : DUMMY_COPY[f] || "");
         } else if (f === "summary") {
           working[a.id][f] = e[f] != null ? e[f] : (a.summary || DUMMY_COPY.summary || "");
+        } else if (f === "llm" || f === "fallback_llm") {
+          // User edits win. Otherwise keep pipeline/node value; recommend only when blank.
+          if (e[f] != null) {
+            working[a.id][f] = e[f];
+          } else {
+            working[a.id][f] = a[f] || "";
+          }
         } else {
           working[a.id][f] = e[f] != null ? e[f] : (a[f] || "");
         }
       });
+      // Preselect recommended models when no user override and field still empty.
+      if (a.kind !== "trigger" && a.kind !== "preview" && a.kind !== "section") {
+        const rec = recommendedModelsForAgent(a.id);
+        if (e.llm == null && !String(working[a.id].llm || "").trim()) {
+          working[a.id].llm = rec.primary || DUMMY_COPY.llm || "";
+          if (a.kind === "custom" && working[a.id].llm) a.llm = working[a.id].llm;
+        }
+        if (e.fallback_llm == null && !String(working[a.id].fallback_llm || "").trim()) {
+          const primary = String(working[a.id].llm || "").trim();
+          const fb = (rec.fallbackList || []).find((id) => id && id !== primary) || rec.fallback || "";
+          if (fb) {
+            working[a.id].fallback_llm = fb;
+            if (a.kind === "custom") a.fallback_llm = fb;
+          }
+        }
+      }
       if (a.kind === "trigger") {
         working[a.id].schedule = a.schedule || { mode: "preset", preset: "daily", customValue: 1, customUnit: "days" };
         working[a.id].runCount = a.runCount != null ? a.runCount : "";
       }
       if (a.kind === "preview") {
         working[a.id].watchMode = a.watchMode || "auto";
+        working[a.id].watchScope = a.watchScope || "all";
         working[a.id].viewTab = a.viewTab || "live";
-        working[a.id].summary = a.summary || "Live agent viewport · browser, tools, LLM, output";
+        working[a.id].summary = a.summary || "Live agent viewport Â· browser, tools, LLM, output";
         working[a.id].role = a.role || "Preview";
       }
     });
@@ -2182,7 +2729,8 @@
     } else {
       edits[id][field] = trimmed;
     }
-    working[id][field] = trimmed || orig;
+    // fallback_llm is optional: empty means "none selected" (do not revive orig).
+    working[id][field] = field === "fallback_llm" ? trimmed : (trimmed || orig);
     if (!isPipelineAgent(id)) {
       node[field] = working[id][field];
       if (field === "summary") node.summary = working[id][field];
@@ -2274,7 +2822,7 @@
     // Drop edges whose endpoints no longer exist.
     graphEdges = graphEdges.filter((e) => alive.has(e.from) && alive.has(e.to));
 
-    // Drop stale main↔LI bridges and non-canonical LI/main pipeline edges.
+    // Drop stale mainâ†”LI bridges and non-canonical LI/main pipeline edges.
     graphEdges = graphEdges.filter((e) => {
       const bothPipeline = pipelineIds.has(e.from) && pipelineIds.has(e.to);
       if (!bothPipeline) return true;
@@ -2282,7 +2830,7 @@
       const crosses = (mainIds.has(e.from) && liIds.has(e.to)) || (liIds.has(e.from) && mainIds.has(e.to));
       const liInternal = liIds.has(e.from) && liIds.has(e.to);
       if (crosses || liInternal) return defaultKey.has(key);
-      // Heal old Compile→LI Easy→Apply splice: drop pipeline edges not in current defaults
+      // Heal old Compileâ†’LI Easyâ†’Apply splice: drop pipeline edges not in current defaults
       // only when either end is a LinkedIn agent or linkedin_easy_apply sits on a main path.
       if (liIds.has(e.from) || liIds.has(e.to)) return defaultKey.has(key);
       return true;
@@ -2336,12 +2884,17 @@
     let dirty = false;
     const liList = liAgentsList().filter((a) => !hiddenIds.includes(a.id));
     const liMeta = (typeof LI_SECTION !== "undefined" && LI_SECTION) ? LI_SECTION : null;
+    const liPreview = liPreviewMeta();
 
     if (liList.length && liMeta) {
       const liId = liMeta.id || "section_linkedin";
       let liSec = sections.find((s) => s.id === liId || s.id === "section_linkedin");
       const memberIds = (liMeta.memberIds || liList.map((a) => a.id))
         .filter((id) => liList.some((a) => a.id === id) || agentById(id));
+      // Always keep the LinkedIn live preview at the end of the section when present.
+      if (liPreview && agentById(liPreview.id) && !memberIds.includes(liPreview.id)) {
+        memberIds.push(liPreview.id);
+      }
       const box = boundsFromMembers(memberIds);
       if (!liSec) {
         liSec = {
@@ -2360,6 +2913,9 @@
         const before = liSec.memberIds.slice().sort().join("|");
         const merged = Array.from(new Set((liSec.memberIds || []).concat(memberIds)));
         liSec.memberIds = merged.filter((id) => !!agentById(id) && !hiddenIds.includes(id));
+        if (liPreview && agentById(liPreview.id) && !liSec.memberIds.includes(liPreview.id)) {
+          liSec.memberIds.push(liPreview.id);
+        }
         liSec.name = liSec.name || liMeta.name || "LinkedIn";
         if (!liSec.manualBounds) {
           const nextBox = boundsFromMembers(liSec.memberIds);
@@ -2374,7 +2930,7 @@
       sections.forEach((s) => {
         if (s.id === liSec.id) return;
         const before = s.memberIds.length;
-        s.memberIds = s.memberIds.filter((id) => !liAgentIdSet().has(id));
+        s.memberIds = s.memberIds.filter((id) => !liAgentIdSet().has(id) && !isLiPreviewId(id));
         if (s.memberIds.length !== before) dirty = true;
       });
     }
@@ -2448,14 +3004,14 @@
     const fromLabel = (a && a.short) || from;
     const toLabel = (b && b.short) || to;
     if (a && a.kind === "trigger") {
-      logLine("Trigger", `Wired into loop → ${toLabel}. Re-run Sim to arm schedule.`, "system");
+      logLine("Trigger", `Wired into loop â†’ ${toLabel}. Re-run Sim to arm schedule.`, "system");
       syncScheduleFromCanvas({ armed: false });
     } else if (b && b.kind === "preview") {
-      logLine("Preview", `Now watching ← ${fromLabel}`, "system");
+      logLine("Preview", `Now watching â† ${fromLabel}`, "system");
     } else if (b && b.kind === "custom") {
       logLine(toLabel, "Custom card now in loop (once reachable). Re-run Sim.", "system");
     } else {
-      logLine(null, `edge ${fromLabel} → ${toLabel}`, "system");
+      logLine(null, `edge ${fromLabel} â†’ ${toLabel}`, "system");
     }
     return true;
   }
@@ -2641,7 +3197,8 @@
 
   function applyLayoutOrder(order) {
     const liIds = liAgentIdSet();
-    const mainOrder = order.filter((id) => !liIds.has(id));
+    const liPreview = liPreviewMeta();
+    const mainOrder = order.filter((id) => !liIds.has(id) && !isLiPreviewId(id));
     const liOrder = order.filter((id) => liIds.has(id));
     let x = START_X;
     mainOrder.forEach((id) => {
@@ -2664,9 +3221,22 @@
       positions[id] = { x, y: liY, w, h };
       x += w + CARD_GAP_X;
     });
+    if (liPreview && agentById(liPreview.id)) {
+      const box = nodeBoxDefaults(liPreview);
+      const prev = positions[liPreview.id] || {};
+      const suggested = (typeof LI_SECTION !== "undefined" && LI_SECTION && LI_SECTION.suggestedPositions)
+        ? LI_SECTION.suggestedPositions[liPreview.id]
+        : null;
+      positions[liPreview.id] = {
+        x: suggested && suggested.x != null ? suggested.x : x,
+        y: suggested && suggested.y != null ? suggested.y : liY,
+        w: prev.w || (suggested && suggested.w) || box.w,
+        h: prev.h || (suggested && suggested.h) || box.h,
+      };
+    }
   }
 
-  /** Reflow all nodes L→R with 5× gap; used after add / splice / reset layout. */
+  /** Reflow all nodes Lâ†’R with 5Ã— gap; used after add / splice / reset layout. */
   function relayoutChain(focusId) {
     applyLayoutOrder(getLayoutOrder());
     savePositions();
@@ -2685,7 +3255,20 @@
     liAgentsList().forEach((a, i) => {
       pos[a.id] = { x: START_X + i * (CARD_W + CARD_GAP_X), y: liY, w: CARD_W, h: CARD_H };
     });
-    const baseCount = AGENTS.length + liAgentsList().length;
+    const liPreview = liPreviewMeta();
+    if (liPreview) {
+      const suggested = (typeof LI_SECTION !== "undefined" && LI_SECTION && LI_SECTION.suggestedPositions)
+        ? LI_SECTION.suggestedPositions[liPreview.id]
+        : null;
+      const box = nodeBoxDefaults(liPreview);
+      pos[liPreview.id] = {
+        x: suggested && suggested.x != null ? suggested.x : START_X + liAgentsList().length * (CARD_W + CARD_GAP_X),
+        y: suggested && suggested.y != null ? suggested.y : liY,
+        w: (suggested && suggested.w) || box.w,
+        h: (suggested && suggested.h) || box.h,
+      };
+    }
+    const baseCount = AGENTS.length + liAgentsList().length + (liPreview ? 1 : 0);
     extraNodes.forEach((n, i) => {
       if (pos[n.id]) return;
       const box = nodeBoxDefaults(n);
@@ -2773,7 +3356,7 @@
     applyView();
   }
 
-  /** Pinch zoom — +50% vs prior 0.0025875 (chain: 0.00115 → 0.001725 → 0.0025875 → 0.00388125). */
+  /** Pinch zoom â€” +50% vs prior 0.0025875 (chain: 0.00115 â†’ 0.001725 â†’ 0.0025875 â†’ 0.00388125). */
   function applyWheelZoom(e) {
     e.preventDefault();
     const factor = Math.exp(-e.deltaY * 0.00388125);
@@ -2916,14 +3499,18 @@
     return el;
   }
 
-  function makeLlmSelect(agentId, value, onChange) {
+  function makeLlmSelect(agentId, value, onChange, options = {}) {
+    const mode = options.mode === "fallback" ? "fallback" : "primary";
+    const fieldKey = mode === "fallback" ? "fallback_llm" : "llm";
     const wrap = document.createElement("div");
-    wrap.className = "llm-select";
-    wrap.title = "Active models are selectable. Load a key only when Disconnected.";
+    wrap.className = "llm-select" + (mode === "fallback" ? " llm-select-fallback" : "");
+    wrap.title = mode === "fallback"
+      ? "Lower-demand alternative when primary Model is busy (503). Does not change Model."
+      : "Active models are selectable. Load a key only when Disconnected.";
 
     const lab = document.createElement("span");
     lab.className = "field-label";
-    lab.textContent = "Model";
+    lab.textContent = mode === "fallback" ? "Fallback models" : "Model";
 
     const trigger = document.createElement("button");
     trigger.type = "button";
@@ -2932,6 +3519,22 @@
     const menu = document.createElement("ul");
     menu.className = "llm-select-menu";
     menu.hidden = true;
+
+    function primaryLlm() {
+      return String((working[agentId] && working[agentId].llm) || "").trim();
+    }
+
+    function fieldValue() {
+      const w = working[agentId] || {};
+      return String(w[fieldKey] != null ? w[fieldKey] : (value || "")).trim();
+    }
+
+    function listModels() {
+      if (mode === "fallback") {
+        return catalogFallbackModels(primaryLlm());
+      }
+      return catalogModels();
+    }
 
     function closeMenu() {
       menu.hidden = true;
@@ -2946,12 +3549,19 @@
       const rect = trigger.getBoundingClientRect();
       menu.classList.add("is-portal");
       menu.style.position = "fixed";
-      menu.style.left = `${Math.max(8, rect.left)}px`;
-      menu.style.width = `${Math.max(rect.width, 220)}px`;
+      const minW = 280;
+      const maxW = Math.min(360, window.innerWidth - 16);
+      const width = Math.min(maxW, Math.max(rect.width, minW));
+      let left = Math.max(8, rect.left);
+      if (left + width > window.innerWidth - 8) {
+        left = Math.max(8, window.innerWidth - 8 - width);
+      }
+      menu.style.left = `${left}px`;
+      menu.style.width = `${width}px`;
       menu.style.right = "auto";
       menu.style.top = `${rect.bottom + 4}px`;
       menu.style.bottom = "auto";
-      const maxH = Math.min(280, window.innerHeight - rect.bottom - 16);
+      const maxH = Math.min(320, window.innerHeight - rect.bottom - 16);
       menu.style.maxHeight = `${Math.max(120, maxH)}px`;
       if (menu.parentElement !== document.body) {
         document.body.appendChild(menu);
@@ -2960,28 +3570,41 @@
 
     function fillMenu() {
       menu.innerHTML = "";
-      const models = catalogModels();
-      const selected = String((working[agentId] && working[agentId].llm) || value || "").trim();
-      const selectedEntry = modelEntry(selected);
-      trigger.textContent = (selectedEntry && selectedEntry.label) || selected || "(no model)";
+      const models = listModels();
+      const selected = fieldValue();
+      const selectedEntry = selected ? modelEntry(selected) : null;
+      const hasFallbackPick = mode === "fallback" && !!selected;
+
+      if (mode === "fallback") {
+        trigger.textContent = hasFallbackPick
+          ? ((selectedEntry && selectedEntry.label) || selected)
+          : "Pick lower-demandâ€¦";
+      } else {
+        trigger.textContent = (selectedEntry && selectedEntry.label) || selected || "(no model)";
+      }
       trigger.dataset.status = selectedEntry ? selectedEntry.status : "unknown";
       trigger.classList.toggle("is-active", !!(selectedEntry && selectedEntry.status === "active"));
       trigger.classList.toggle("is-inactive", !!(selectedEntry && selectedEntry.status === "inactive"));
       trigger.classList.toggle("is-disconnected", !!(selectedEntry && selectedEntry.status === "disconnected"));
+      trigger.classList.toggle("is-placeholder", mode === "fallback" && !hasFallbackPick);
 
       const header = document.createElement("li");
       header.className = "llm-menu-header";
       const groqOk = !!(modelCatalog.providers && modelCatalog.providers.groq && modelCatalog.providers.groq.connected);
       const gemOk = !!(modelCatalog.providers && modelCatalog.providers.gemini && modelCatalog.providers.gemini.connected);
-      header.textContent = modelCatalog.ok
-        ? `Session models · Groq ${groqOk ? "on" : "off"} · Gemini ${gemOk ? "on" : "off"}`
-        : "Session models (offline fallback)";
+      header.textContent = mode === "fallback"
+        ? "Lower demand Â· sets Fallback only"
+        : (modelCatalog.ok
+          ? `Session models Â· Groq ${groqOk ? "on" : "off"} Â· Gemini ${gemOk ? "on" : "off"}`
+          : "Session models (offline fallback)");
       menu.appendChild(header);
 
       if (!models.length) {
         const empty = document.createElement("li");
         empty.className = "llm-menu-empty";
-        empty.textContent = "No models yet. Refresh or Load a key.";
+        empty.textContent = mode === "fallback"
+          ? "No low-demand models yet. Refresh or Load a key."
+          : "No models yet. Refresh or Load a key.";
         menu.appendChild(empty);
       }
 
@@ -2990,18 +3613,33 @@
         li.className = `llm-option status-${m.status}`;
         li.dataset.value = m.id;
         li.dataset.status = m.status;
+        const recommended = isRecommendedModel(agentId, m.id);
+        if (recommended) {
+          li.classList.add("is-recommended");
+          m.recommended = true;
+        }
 
         const name = document.createElement("span");
-        name.className = "llm-option-id";
+        name.className = "llm-option-id" + (recommended ? " is-recommended" : "");
         name.textContent = m.label || m.id;
 
         const meta = document.createElement("div");
         meta.className = "llm-option-meta";
 
+        if (mode === "fallback" && m.fallback_hint) {
+          const hint = document.createElement("span");
+          hint.className = "llm-fallback-hint";
+          hint.textContent = m.fallback_hint;
+          meta.appendChild(hint);
+        }
+
+        const chipRow = document.createElement("div");
+        chipRow.className = "llm-option-chips";
+
         const chip = document.createElement("span");
         chip.className = `llm-status-chip ${m.status}`;
         chip.textContent = m.status_label || m.status;
-        meta.appendChild(chip);
+        chipRow.appendChild(chip);
 
         // Load only when disconnected
         if (m.status === "disconnected") {
@@ -3015,8 +3653,10 @@
             closeMenu();
             openModelConnectModal(m.provider, m.id);
           });
-          meta.appendChild(loadBtn);
+          chipRow.appendChild(loadBtn);
         }
+
+        meta.appendChild(chipRow);
 
         li.append(name, meta);
         if (m.id === selected) li.classList.add("is-selected");
@@ -3025,14 +3665,21 @@
           li.addEventListener("mousedown", (e) => {
             e.preventDefault();
             e.stopPropagation();
-            if (m.id !== (working[agentId] || {}).llm) pushHistory();
-            persistField(agentId, "llm", m.id);
-            trigger.textContent = working[agentId].llm;
-            trigger.dataset.status = "active";
-            trigger.classList.add("is-active");
-            trigger.classList.remove("is-inactive", "is-disconnected");
+            const prev = String((working[agentId] || {})[fieldKey] || "").trim();
+            if (m.id !== prev) pushHistory();
+            persistField(agentId, fieldKey, m.id);
+            // Primary Model change: clear fallback if it would equal the new primary.
+            if (mode === "primary") {
+              const fb = String((working[agentId] || {}).fallback_llm || "").trim();
+              if (fb && fb === m.id) persistField(agentId, "fallback_llm", "");
+            }
             closeMenu();
-            if (onChange) onChange(working[agentId].llm);
+            refreshAllLlmPickers();
+            if (mode === "fallback") {
+              showToast("Fallback", `Fallback set to ${m.label || m.id}`, "info");
+              logLine(agentId, `fallback_llm â†’ ${m.id}`, "system");
+            }
+            if (onChange) onChange(working[agentId][fieldKey]);
           });
         } else {
           li.title = m.status === "inactive"
@@ -3056,7 +3703,7 @@
         e.preventDefault();
         e.stopPropagation();
         refreshBtn.disabled = true;
-        refreshBtn.textContent = "Refreshing…";
+        refreshBtn.textContent = "Refreshingâ€¦";
         await loadModelCatalog({ rebuild: false });
         fillMenu();
         positionPortalMenu();
@@ -3089,9 +3736,6 @@
           if (m) {
             m.hidden = true;
             m.classList.remove("is-portal");
-            if (m.parentElement === document.body && el.append) {
-              // leave orphaned portal menus attached to other wraps if present
-            }
           }
         }
       });
@@ -3110,7 +3754,7 @@
 
       // Re-fetch if we are still on offline fallback / empty catalog
       if (!modelCatalog.ok || !(modelCatalog.models && modelCatalog.models.length)) {
-        trigger.textContent = "Loading models…";
+        trigger.textContent = "Loading modelsâ€¦";
         await loadModelCatalog({ rebuild: false });
       }
       fillMenu();
@@ -3125,24 +3769,93 @@
     return wrap;
   }
 
+  /** Compact Model â†” Fallback swap control between the two pickers. */
+  function makeLlmSwapControl(agentId) {
+    const row = document.createElement("div");
+    row.className = "llm-swap-row";
+
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "llm-swap-btn";
+    btn.title = "Swap Model and Fallback models";
+    btn.setAttribute("aria-label", "Swap Model and Fallback models");
+    btn.innerHTML = `
+      <svg class="llm-swap-icon" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+        <path fill="currentColor" d="M5 2.75a.75.75 0 0 1 .75.75v7.19l1.22-1.22a.75.75 0 1 1 1.06 1.06l-2.5 2.5a.75.75 0 0 1-1.06 0l-2.5-2.5a.75.75 0 1 1 1.06-1.06l1.22 1.22V3.5A.75.75 0 0 1 5 2.75zm6 10.5a.75.75 0 0 1-.75-.75V5.31l-1.22 1.22a.75.75 0 1 1-1.06-1.06l2.5-2.5a.75.75 0 0 1 1.06 0l2.5 2.5a.75.75 0 1 1-1.06 1.06L11.75 5.31V12.5a.75.75 0 0 1-.75.75z"/>
+      </svg>
+      <span class="llm-swap-label">Swap</span>
+    `;
+
+    function syncSwap() {
+      const fb = String((working[agentId] || {}).fallback_llm || "").trim();
+      const disabled = !fb;
+      btn.disabled = disabled;
+      btn.classList.toggle("is-disabled", disabled);
+      btn.title = disabled
+        ? "Set a Fallback model first, then swap"
+        : "Swap Model and Fallback models";
+    }
+
+    btn.addEventListener("mousedown", (e) => e.stopPropagation());
+    btn.addEventListener("pointerdown", (e) => e.stopPropagation());
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const w = working[agentId] || {};
+      const primary = String(w.llm || "").trim();
+      const fb = String(w.fallback_llm || "").trim();
+      if (!fb) {
+        showToast("Swap", "Set a Fallback model first", "warn");
+        syncSwap();
+        return;
+      }
+      pushHistory();
+      persistField(agentId, "llm", fb);
+      persistField(agentId, "fallback_llm", primary);
+      refreshAllLlmPickers();
+      syncSwap();
+      const short = (id) => (id.includes("/") ? id.split("/").pop() : id) || "(empty)";
+      showToast("Swapped", `${short(fb)} â†” ${short(primary)}`, "info");
+      logLine(agentId, `swapped llm â†” fallback_llm`, "system");
+    });
+
+    row.appendChild(btn);
+    row._syncSwap = syncSwap;
+    syncSwap();
+    return row;
+  }
+
   async function loadModelCatalog({ rebuild = false } = {}) {
     try {
       const res = await fetch("/api/models", { cache: "no-store" });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       const models = Array.isArray(data.models) ? data.models : [];
+      // Prefer API list; if stale server omits tags/list, derive from models.
+      let fallbackModels = Array.isArray(data.fallback_models) ? data.fallback_models : [];
+      if (!fallbackModels.length && models.length) {
+        fallbackModels = models.filter((m) => m.fallback || isLowDemandFallback(m.id));
+        if (!fallbackModels.length) {
+          fallbackModels = models.filter((m) => !isHeavyOrProModel(m.id));
+          const withoutBusy = fallbackModels.filter(
+            (m) => !HIGH_DEMAND_FLASH.has(shortModelId(m.id))
+          );
+          if (withoutBusy.length) fallbackModels = withoutBusy;
+        }
+        fallbackModels = orderFallbackModels(
+          fallbackModels.map((m) => enrichFallbackEntry(m))
+        );
+      }
       modelCatalog = {
         ok: data.ok !== false && models.length > 0,
         providers: data.providers || {},
         models,
+        fallback_models: fallbackModels,
         active_ids: Array.isArray(data.active_ids) ? data.active_ids : models.filter((m) => m.status === "active").map((m) => m.id),
       };
       if (rebuild) buildCards();
       else {
         // Refresh open pickers in place without full card rebuild
-        document.querySelectorAll(".llm-select").forEach((el) => {
-          if (typeof el._llmFillMenu === "function") el._llmFillMenu();
-        });
+        refreshAllLlmPickers();
       }
       updateStartGate();
       return modelCatalog;
@@ -3152,6 +3865,7 @@
         ok: false,
         providers: {},
         models: FALLBACK_MODELS.map((m) => ({ ...m })),
+        fallback_models: FALLBACK_MODELS.filter((m) => m.fallback).map((m) => ({ ...m })),
         active_ids: [],
       };
       logLine("Models", `Could not load model catalog (${err.message || err}). Showing Disconnected fallback.`, "flag");
@@ -3200,6 +3914,9 @@
         ok: true,
         providers: data.providers || {},
         models: Array.isArray(data.models) ? data.models : [],
+        fallback_models: Array.isArray(data.fallback_models)
+          ? data.fallback_models
+          : (Array.isArray(data.models) ? data.models.filter((m) => m.fallback) : []),
         active_ids: Array.isArray(data.active_ids) ? data.active_ids : [],
       };
       closeModelConnectModal();
@@ -3363,7 +4080,7 @@
     if (fromId !== toId) {
       pushHistory();
       if (addEdge(fromId, toId)) {
-        logLine(null, `connected ${agentById(fromId)?.short || fromId} → ${agentById(toId)?.short || toId}`, "system");
+        logLine(null, `connected ${agentById(fromId)?.short || fromId} â†’ ${agentById(toId)?.short || toId}`, "system");
       } else {
         undoStack.pop();
       }
@@ -3391,8 +4108,8 @@
     const chrome = document.createElement("div");
     chrome.className = "card-chrome";
     const idxLabel = isCustom
-      ? `NEW · ${agent.short || "Card"}`
-      : `${String(agent.index).padStart(2, "0")} / ${String(pipelineAgents().length).padStart(2, "0")} · ${agent.short}`;
+      ? `NEW Â· ${agent.short || "Card"}`
+      : `${String(agent.index).padStart(2, "0")} / ${String(pipelineAgents().length).padStart(2, "0")} Â· ${agent.short}`;
     chrome.innerHTML = `
       <span class="card-handle" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
       <span class="card-index">${idxLabel}</span>
@@ -3414,6 +4131,29 @@
     title.className = "card-title";
     title.textContent = w.role;
 
+    const playBtn = document.createElement("button");
+    playBtn.type = "button";
+    playBtn.className = "card-play-btn";
+    playBtn.hidden = true;
+    playBtn.disabled = true;
+    playBtn.title = "Resume / retry from this agent";
+    playBtn.setAttribute("aria-label", "Play paused pipeline");
+    playBtn.innerHTML = `
+      <svg class="card-play-icon" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+        <path fill="currentColor" d="M4.5 2.75a.75.75 0 0 1 1.14-.64l8 4.75a.75.75 0 0 1 0 1.28l-8 4.75A.75.75 0 0 1 4.5 12.25V2.75z"/>
+      </svg>
+    `;
+    playBtn.addEventListener("mousedown", (e) => e.stopPropagation());
+    playBtn.addEventListener("pointerdown", (e) => e.stopPropagation());
+    playBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      playPausedPipeline();
+    });
+
+    const titleRow = document.createElement("div");
+    titleRow.className = "card-title-row";
+    titleRow.append(title, playBtn);
+
     const summaryDummy = isCustom && w.summary === DUMMY_COPY.summary;
     const summary = document.createElement("div");
     summary.className = `card-summary field-edit${summaryDummy ? " is-dummy" : ""}`;
@@ -3432,11 +4172,14 @@
     const depsEl = document.createElement("div");
     depsEl.className = "card-meta-deps";
     depsEl.textContent = deps.length
-      ? `In ← ${deps.map((d) => agentById(d)?.short || d).join(" + ")}`
+      ? `In â† ${deps.map((d) => agentById(d)?.short || d).join(" + ")}`
       : (isCustom ? "Free-floating (connect ports or drop on an edge)" : "Start of run");
 
     const modelBlock = makeLlmSelect(agent.id, w.llm || DUMMY_COPY.llm, null);
     modelBlock.classList.add("llm-select-top");
+    const swapBlock = makeLlmSwapControl(agent.id);
+    const fallbackBlock = makeLlmSelect(agent.id, w.fallback_llm || "", null, { mode: "fallback" });
+    fallbackBlock.classList.add("llm-select-top", "llm-select-fallback-row");
 
     const fields = document.createElement("div");
     fields.className = "card-fields";
@@ -3454,14 +4197,14 @@
 
     const body = document.createElement("div");
     body.className = "card-body";
-    body.append(title, summary, modelBlock, depsEl, fields, prog);
+    body.append(titleRow, summary, modelBlock, swapBlock, fallbackBlock, depsEl, fields, prog);
 
     card.addEventListener("wheel", (e) => handleCardWheel(e, card), { passive: false });
 
     card.append(chrome, body, makeResizeHandles(agent.id), makePorts(agent.id));
 
     card.addEventListener("pointerdown", (e) => {
-      if (e.target.closest(".field-edit") || e.target.closest(".card-chrome") || e.target.closest(".card-edge") || e.target.closest(".llm-select") || e.target.closest(".card-port") || e.target.closest(".skill-tag") || e.target.closest(".trigger-preset") || e.target.closest(".trigger-input") || e.target.closest(".trigger-select")) return;
+      if (e.target.closest(".field-edit") || e.target.closest(".card-chrome") || e.target.closest(".card-edge") || e.target.closest(".llm-select") || e.target.closest(".llm-swap-row") || e.target.closest(".card-play-btn") || e.target.closest(".card-port") || e.target.closest(".skill-tag") || e.target.closest(".trigger-preset") || e.target.closest(".trigger-input") || e.target.closest(".trigger-select")) return;
       if (e.shiftKey) selectCard(agent.id, { toggle: true });
       else selectCard(agent.id);
     });
@@ -3482,7 +4225,7 @@
     chrome.className = "card-chrome";
     chrome.innerHTML = `
       <span class="card-handle" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
-      <span class="card-index">TRIGGER · Schedule</span>
+      <span class="card-index">TRIGGER Â· Schedule</span>
       <span class="card-badge">Idle</span>
       <button type="button" class="card-delete" title="Delete (Del)">Delete</button>
     `;
@@ -3600,7 +4343,7 @@
     const depsEl = document.createElement("div");
     depsEl.className = "card-meta-deps";
     depsEl.textContent = outs.length
-      ? `Out → ${outs.map((e) => agentById(e.to)?.short || e.to).join(", ")}`
+      ? `Out â†’ ${outs.map((e) => agentById(e.to)?.short || e.to).join(", ")}`
       : "Connect output port into the pipeline";
 
     const body = document.createElement("div");
@@ -3640,7 +4383,28 @@
     return "auto";
   }
 
+  function previewWatchScope(previewId) {
+    const node = agentById(previewId);
+    return (working[previewId] && working[previewId].watchScope)
+      || (node && node.watchScope)
+      || "all";
+  }
+
   function previewAcceptsAgent(previewId, agentId) {
+    const scope = previewWatchScope(previewId);
+    if (scope === "linkedin") {
+      if (agentId && !isLiAgentId(agentId)) return false;
+      // Unscoped browser frames (no agent_id yet): keep on LI Preview during LI runs / idle.
+      if (!agentId) {
+        const mainBusy = allNodes().some(
+          (n) =>
+            n.kind !== "preview" &&
+            !isLiAgentId(n.id) &&
+            (statuses[n.id] === "running" || statuses[n.id] === "thinking")
+        );
+        if (mainBusy && activeRunSectionId !== "section_linkedin") return false;
+      }
+    }
     const watch = previewWatchIds(previewId);
     if (watch == null) return true;
     if (watch === "auto") {
@@ -3737,15 +4501,102 @@
     return null;
   }
 
+  function isMinimalBrowserPreview(id) {
+    return isLiPreviewId(id) || previewWatchScope(id) === "linkedin";
+  }
+
+  function canEmbedPreviewUrl(url) {
+    if (!url) return false;
+    try {
+      const u = new URL(url);
+      if (u.protocol !== "http:" && u.protocol !== "https:") return false;
+      const host = u.hostname.replace(/^www\./i, "").toLowerCase();
+      // LinkedIn (and most auth walls) refuse iframe embeds.
+      if (host === "linkedin.com" || host.endsWith(".linkedin.com")) return false;
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function bindInteractivePreviewStage(stage, id) {
+    if (!stage || stage.dataset.interactiveBound === "1") return;
+    stage.dataset.interactiveBound = "1";
+    const stream = ensurePreviewStream(id);
+    if (!stream.view) stream.view = { scale: 1, x: 0, y: 0 };
+
+    stage.addEventListener("click", (e) => {
+      const openBtn = e.target.closest(".preview-url-open");
+      if (!openBtn) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const u = openBtn.getAttribute("data-url");
+      if (u) window.open(u, "_blank", "noopener,noreferrer");
+    });
+    stage.addEventListener("pointerdown", (e) => {
+      if (e.target.closest(".preview-url-open, a.preview-url-link")) e.stopPropagation();
+    });
+
+    stage.addEventListener("wheel", (e) => {
+      if (!stage.classList.contains("has-shot") && !stage.classList.contains("has-frame")) return;
+      if (stage.classList.contains("has-frame")) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const view = stream.view;
+      const delta = e.deltaY > 0 ? -0.08 : 0.08;
+      view.scale = Math.min(3, Math.max(0.5, view.scale + delta));
+      applyPreviewViewTransform(stage, view);
+    }, { passive: false });
+
+    let dragging = false;
+    let lastX = 0;
+    let lastY = 0;
+    stage.addEventListener("pointerdown", (e) => {
+      if (e.button !== 0) return;
+      if (e.target.closest("a,button,iframe,.preview-url-bar")) return;
+      if (!stage.classList.contains("has-shot")) return;
+      dragging = true;
+      lastX = e.clientX;
+      lastY = e.clientY;
+      stage.setPointerCapture(e.pointerId);
+      stage.classList.add("is-panning");
+      e.preventDefault();
+      e.stopPropagation();
+    });
+    stage.addEventListener("pointermove", (e) => {
+      if (!dragging) return;
+      stream.view.x += e.clientX - lastX;
+      stream.view.y += e.clientY - lastY;
+      lastX = e.clientX;
+      lastY = e.clientY;
+      applyPreviewViewTransform(stage, stream.view);
+    });
+    const endPan = (e) => {
+      if (!dragging) return;
+      dragging = false;
+      stage.classList.remove("is-panning");
+      try { stage.releasePointerCapture(e.pointerId); } catch (_) {}
+    };
+    stage.addEventListener("pointerup", endPan);
+    stage.addEventListener("pointercancel", endPan);
+  }
+
+  function applyPreviewViewTransform(stage, view) {
+    const shot = stage.querySelector(".preview-shot");
+    if (!shot || !view) return;
+    shot.style.transform = `translate(${view.x}px, ${view.y}px) scale(${view.scale})`;
+  }
+
   function refreshPreviewCard(id) {
     const card = getCard(id);
     if (!card || !card.classList.contains("kind-preview")) return;
     const stream = ensurePreviewStream(id);
-    const tab = (working[id] && working[id].viewTab) || "live";
+    const minimal = isMinimalBrowserPreview(id);
+    const tab = minimal ? "browser" : ((working[id] && working[id].viewTab) || "live");
     const stage = card.querySelector(".preview-stage");
     const feed = card.querySelector(".preview-feed");
     const meta = card.querySelector(".preview-meta");
-    if (!stage || !feed) return;
+    if (!stage) return;
 
     let frames = stream.frames;
     if (tab === "browser") frames = frames.filter((f) => f.kind === "browser");
@@ -3753,45 +4604,124 @@
     else if (tab === "tools") frames = frames.filter((f) => f.kind === "tool" || f.kind === "step");
     else if (tab === "output") frames = frames.filter((f) => f.kind === "output");
 
+    const latest = frames[frames.length - 1] || null;
     const latestShot = [...frames].reverse().find((f) => f.image);
+    const latestUrl = ([...frames].reverse().find((f) => f.url) || {}).url || "";
+    const embed = canEmbedPreviewUrl(latestUrl);
+
+    if (minimal) {
+      bindInteractivePreviewStage(stage, id);
+      if (!stream.view) stream.view = { scale: 1, x: 0, y: 0 };
+
+      if (embed) {
+        const prev = stage.querySelector("iframe.preview-frame");
+        if (!prev || prev.src !== latestUrl) {
+          stage.innerHTML = `
+            <div class="preview-url-bar">
+              <a class="preview-url-link" href="${escapeHtml(latestUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(latestUrl)}</a>
+              <button type="button" class="preview-url-open" data-url="${escapeHtml(latestUrl)}" title="Open in new tab">Open</button>
+            </div>
+            <iframe class="preview-frame" src="${escapeHtml(latestUrl)}" title="Live page" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"></iframe>
+            <div class="preview-action-overlay">${escapeHtml((latest && (latest.label || latest.action)) || "Live")}</div>
+          `;
+        } else {
+          const overlay = stage.querySelector(".preview-action-overlay");
+          if (overlay) overlay.textContent = (latest && (latest.label || latest.action)) || "Live";
+          const link = stage.querySelector(".preview-url-link");
+          if (link) {
+            link.href = latestUrl;
+            link.textContent = latestUrl;
+          }
+        }
+        stage.classList.add("has-frame");
+        stage.classList.remove("has-shot");
+      } else if (latestShot && latestShot.image) {
+        const url = latestShot.url || latestUrl || "";
+        const existingImg = stage.querySelector("img.preview-shot");
+        if (existingImg && existingImg.getAttribute("src") === latestShot.image) {
+          const overlay = stage.querySelector(".preview-action-overlay");
+          if (overlay) overlay.textContent = latestShot.label || latestShot.action || "Browser";
+          const link = stage.querySelector(".preview-url-link");
+          if (link) link.textContent = url || "browser";
+          const openBtn = stage.querySelector(".preview-url-open");
+          if (openBtn && url) openBtn.setAttribute("data-url", url);
+        } else {
+          stage.innerHTML = `
+            <div class="preview-url-bar">
+              <span class="preview-url-link">${escapeHtml(url || "browser")}</span>
+              ${url ? `<button type="button" class="preview-url-open" data-url="${escapeHtml(url)}" title="Open in new tab">Open</button>` : ""}
+            </div>
+            <div class="preview-shot-wrap">
+              <img class="preview-shot" src="${escapeHtml(latestShot.image)}" alt="" draggable="false" />
+            </div>
+            <div class="preview-action-overlay">${escapeHtml(latestShot.label || latestShot.action || "Browser")}</div>
+          `;
+          stream.view = { scale: 1, x: 0, y: 0 };
+        }
+        stage.classList.add("has-shot");
+        stage.classList.remove("has-frame");
+        applyPreviewViewTransform(stage, stream.view);
+      } else if (latest) {
+        stage.innerHTML = `
+          <div class="preview-url-bar">
+            <span class="preview-url-link">${escapeHtml(latest.url || latest.short || "browser")}</span>
+            ${latest.url ? `<button type="button" class="preview-url-open" data-url="${escapeHtml(latest.url)}" title="Open in new tab">Open</button>` : ""}
+          </div>
+          <div class="preview-hero-action">
+            <span class="preview-action-pill">${escapeHtml(latest.action || latest.kind || "live")}</span>
+            <strong>${escapeHtml(latest.label || "")}</strong>
+          </div>
+        `;
+        stage.classList.remove("has-shot", "has-frame");
+      } else {
+        stage.innerHTML = `<div class="preview-empty">Waiting for browserâ€¦</div>`;
+        stage.classList.remove("has-shot", "has-frame");
+      }
+
+      if (feed) feed.hidden = true;
+      if (meta) meta.hidden = true;
+      return;
+    }
+
     if (latestShot && latestShot.image) {
       stage.innerHTML = `<img class="preview-shot" src="${escapeHtml(latestShot.image)}" alt="Browser preview" />`;
       stage.classList.add("has-shot");
     } else if (tab === "llm" && stream.narration) {
       stage.innerHTML = `<div class="preview-narration">${escapeHtml(stream.narration)}</div>`;
       stage.classList.remove("has-shot");
+    } else if (latest) {
+      stage.innerHTML = `
+        <div class="preview-hero-action">
+          <span class="preview-action-pill">${escapeHtml(latest.kind || "live")}</span>
+          <strong>${escapeHtml(latest.label || "")}</strong>
+          <span class="preview-hero-sub">${escapeHtml(latest.short || "")}${latest.url ? " Â· " + escapeHtml(latest.url) : ""}</span>
+          ${latest.preview ? `<pre class="preview-hero-text">${escapeHtml(String(latest.preview).slice(0, 600))}</pre>` : ""}
+        </div>`;
+      stage.classList.remove("has-shot");
     } else {
-      const latest = frames[frames.length - 1];
-      if (latest) {
-        stage.innerHTML = `
-          <div class="preview-hero-action">
-            <span class="preview-action-pill">${escapeHtml(latest.kind || "live")}</span>
-            <strong>${escapeHtml(latest.label || "")}</strong>
-            <span class="preview-hero-sub">${escapeHtml(latest.short || "")}${latest.url ? " · " + escapeHtml(latest.url) : ""}</span>
-            ${latest.preview ? `<pre class="preview-hero-text">${escapeHtml(String(latest.preview).slice(0, 600))}</pre>` : ""}
-          </div>`;
-      } else {
-        stage.innerHTML = `<div class="preview-empty">Waiting for agent activity. Wire an agent in, or leave Auto to follow the live run. Playwright actions and screenshots appear here.</div>`;
-      }
+      stage.innerHTML = `<div class="preview-empty">Waiting for agent activity.</div>`;
       stage.classList.remove("has-shot");
     }
 
-    const recent = frames.slice(-12).reverse();
-    feed.innerHTML = recent.length
-      ? recent
-          .map((f) => {
-            const tok = f.tokens != null ? ` · ${Number(f.tokens).toLocaleString()} tok` : "";
-            return `<div class="preview-feed-row kind-${escapeHtml(f.kind || "live")}">
-              <span class="preview-feed-kind">${escapeHtml(f.kind || "")}</span>
-              <span class="preview-feed-label">${escapeHtml(f.label || "")}</span>
-              <span class="preview-feed-meta">${escapeHtml(f.short || "")}${tok}</span>
-            </div>`;
-          })
-          .join("")
-      : `<div class="preview-feed-empty">No frames yet</div>`;
-
+    if (feed) {
+      feed.hidden = false;
+      const recent = frames.slice(-12).reverse();
+      feed.innerHTML = recent.length
+        ? recent
+            .map((f) => {
+              const tok = f.tokens != null ? ` Â· ${Number(f.tokens).toLocaleString()} tok` : "";
+              return `<div class="preview-feed-row kind-${escapeHtml(f.kind || "live")}">
+                <span class="preview-feed-kind">${escapeHtml(f.kind || "")}</span>
+                <span class="preview-feed-label">${escapeHtml(f.label || "")}</span>
+                <span class="preview-feed-meta">${escapeHtml(f.short || "")}${tok}</span>
+              </div>`;
+            })
+            .join("")
+        : `<div class="preview-feed-empty">No frames yet</div>`;
+    }
     if (meta) {
-      meta.textContent = `${stream.frames.length} frames · ${tab}`;
+      meta.hidden = false;
+      meta.textContent = `${stream.frames.length} frames Â· ${tab}`;
     }
   }
 
@@ -3801,7 +4731,7 @@
       const total = estimate && estimate.total_tokens != null ? estimate.total_tokens : "~800";
       const model = (estimate && estimate.model) || "gemini/gemini-2.5-flash";
       const cost = estimate && estimate.approx_cost_usd != null
-        ? `≈ $${Number(estimate.approx_cost_usd).toFixed(5)}`
+        ? `â‰ˆ $${Number(estimate.approx_cost_usd).toFixed(5)}`
         : "low cost";
       if (previewTokenBody) {
         previewTokenBody.textContent =
@@ -3879,7 +4809,7 @@
         if (node) node.viewTab = "llm";
         const used = data.tokens || (data.estimate && data.estimate.total_tokens);
         if (used) bumpTokens(previewId, used);
-        logLine("Preview", `AI narration · ${used || "?"} tok · ${data.model || ""}`, "ok");
+        logLine("Preview", `AI narration Â· ${used || "?"} tok Â· ${data.model || ""}`, "ok");
         showToast("Preview narrated", `${used || "?"} tokens used`, "info");
       }
     } catch (err) {
@@ -3899,10 +4829,10 @@
       /apply|scout|linkedin|playwright/.test(role);
     if (!isBrowser) return;
     const steps = [
-      { action: "navigate", label: `Sim · open page for ${agent.short}` },
-      { action: "scroll", label: "Sim · scroll like a human" },
-      { action: "click", label: "Sim · click primary action" },
-      { action: "type", label: "Sim · fill visible fields" },
+      { action: "navigate", label: `Sim Â· open page for ${agent.short}` },
+      { action: "scroll", label: "Sim Â· scroll like a human" },
+      { action: "click", label: "Sim Â· click primary action" },
+      { action: "type", label: "Sim Â· fill visible fields" },
     ];
     steps.forEach((s, i) => {
       setTimeout(() => {
@@ -3922,18 +4852,25 @@
 
   function buildPreviewCard(agent) {
     const w = working[agent.id] || {};
+    const minimal = isMinimalBrowserPreview(agent.id);
     const card = document.createElement("article");
-    card.className = "card kind-preview";
+    card.className = "card kind-preview" + (minimal ? " is-minimal-browser" : "");
     card.dataset.id = agent.id;
     card.dataset.status = statuses[agent.id] || "pending";
     applyCardBox(card, agent.id);
     ensurePreviewStream(agent.id);
+    if (minimal) {
+      working[agent.id] = working[agent.id] || {};
+      working[agent.id].viewTab = "browser";
+      working[agent.id].watchScope = working[agent.id].watchScope || agent.watchScope || "linkedin";
+      agent.viewTab = "browser";
+    }
 
     const chrome = document.createElement("div");
     chrome.className = "card-chrome";
     chrome.innerHTML = `
       <span class="card-handle" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
-      <span class="card-index">PREVIEW · Viewport</span>
+      <span class="card-index">${minimal ? "Browser" : "PREVIEW Â· Viewport"}</span>
       <span class="card-badge">${statusLabel(statuses[agent.id] || "pending")}</span>
       <button type="button" class="card-delete" title="Delete (Del)">Delete</button>
     `;
@@ -3948,112 +4885,121 @@
     });
     chrome.querySelector(".card-delete").addEventListener("pointerdown", (e) => e.stopPropagation());
 
-    const title = document.createElement("h2");
-    title.className = "card-title";
-    title.textContent = w.role || agent.role || "Preview";
-
-    const summary = document.createElement("div");
-    summary.className = "card-summary";
-    summary.textContent = w.summary || agent.summary || "Live agent viewport";
-
-    const watchMode = w.watchMode || agent.watchMode || "auto";
-    const viewTab = w.viewTab || agent.viewTab || "live";
-
-    const watchWrap = document.createElement("div");
-    watchWrap.className = "preview-watch";
-    const watchLab = document.createElement("label");
-    watchLab.textContent = "Watch";
-    const watchSel = document.createElement("select");
-    watchSel.className = "preview-select";
-    [
-      { id: "auto", label: "Auto (active agent)" },
-      { id: "wired", label: "Wired inputs only" },
-      { id: "all", label: "Entire run" },
-    ].forEach((opt) => {
-      const o = document.createElement("option");
-      o.value = opt.id;
-      o.textContent = opt.label;
-      if (opt.id === watchMode) o.selected = true;
-      watchSel.appendChild(o);
-    });
-    watchSel.addEventListener("pointerdown", (e) => e.stopPropagation());
-    watchSel.addEventListener("change", () => {
-      working[agent.id].watchMode = watchSel.value;
-      agent.watchMode = watchSel.value;
-      saveGraph();
-      refreshPreviewCard(agent.id);
-    });
-    watchWrap.append(watchLab, watchSel);
-
-    const tabs = document.createElement("div");
-    tabs.className = "preview-tabs";
-    [
-      { id: "live", label: "Live" },
-      { id: "browser", label: "Browser" },
-      { id: "llm", label: "LLM" },
-      { id: "tools", label: "Tools" },
-      { id: "output", label: "Output" },
-    ].forEach((t) => {
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "preview-tab" + (viewTab === t.id ? " is-active" : "");
-      btn.textContent = t.label;
-      btn.dataset.tab = t.id;
-      btn.addEventListener("pointerdown", (e) => e.stopPropagation());
-      btn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        working[agent.id].viewTab = t.id;
-        agent.viewTab = t.id;
-        saveGraph();
-        tabs.querySelectorAll(".preview-tab").forEach((b) => b.classList.toggle("is-active", b.dataset.tab === t.id));
-        refreshPreviewCard(agent.id);
-      });
-      tabs.appendChild(btn);
-    });
-
     const stage = document.createElement("div");
-    stage.className = "preview-stage";
-    const feed = document.createElement("div");
-    feed.className = "preview-feed";
-    const meta = document.createElement("div");
-    meta.className = "preview-meta";
-
-    const actions = document.createElement("div");
-    actions.className = "preview-actions";
-    const narrateBtn = document.createElement("button");
-    narrateBtn.type = "button";
-    narrateBtn.className = "btn btn-primary preview-narrate";
-    narrateBtn.textContent = "Explain with AI";
-    narrateBtn.title = "Uses LLM tokens. Confirms estimate first.";
-    narrateBtn.addEventListener("pointerdown", (e) => e.stopPropagation());
-    narrateBtn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      requestPreviewNarration(agent.id);
-    });
-    const clearBtn = document.createElement("button");
-    clearBtn.type = "button";
-    clearBtn.className = "btn";
-    clearBtn.textContent = "Clear";
-    clearBtn.addEventListener("pointerdown", (e) => e.stopPropagation());
-    clearBtn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      previewStreams[agent.id] = { frames: [], narration: "", busy: false };
-      refreshPreviewCard(agent.id);
-    });
-    actions.append(narrateBtn, clearBtn);
-
-    const deps = depsFor(agent.id);
-    const depsEl = document.createElement("div");
-    depsEl.className = "card-meta-deps";
-    depsEl.textContent = deps.length
-      ? `Watching ← ${deps.map((d) => agentById(d)?.short || d).join(" + ")}`
-      : "Auto-follow · wire an agent in to lock source";
+    stage.className = "preview-stage" + (minimal ? " is-interactive" : "");
 
     const body = document.createElement("div");
-    body.className = "card-body preview-body";
-    body.append(title, summary, watchWrap, tabs, stage, feed, meta, actions, depsEl);
+    body.className = "card-body preview-body" + (minimal ? " is-minimal" : "");
 
-    card.addEventListener("wheel", (e) => handleCardWheel(e, card), { passive: false });
+    if (minimal) {
+      body.append(stage);
+    } else {
+      const title = document.createElement("h2");
+      title.className = "card-title";
+      title.textContent = w.role || agent.role || "Preview";
+
+      const summary = document.createElement("div");
+      summary.className = "card-summary";
+      summary.textContent = w.summary || agent.summary || "Live agent viewport";
+
+      const watchMode = w.watchMode || agent.watchMode || "auto";
+      const viewTab = w.viewTab || agent.viewTab || "live";
+
+      const watchWrap = document.createElement("div");
+      watchWrap.className = "preview-watch";
+      const watchLab = document.createElement("label");
+      watchLab.textContent = "Watch";
+      const watchSel = document.createElement("select");
+      watchSel.className = "preview-select";
+      [
+        { id: "auto", label: "Auto (active agent)" },
+        { id: "wired", label: "Wired inputs only" },
+        { id: "all", label: "Entire run" },
+      ].forEach((opt) => {
+        const o = document.createElement("option");
+        o.value = opt.id;
+        o.textContent = opt.label;
+        if (opt.id === watchMode) o.selected = true;
+        watchSel.appendChild(o);
+      });
+      watchSel.addEventListener("pointerdown", (e) => e.stopPropagation());
+      watchSel.addEventListener("change", () => {
+        working[agent.id].watchMode = watchSel.value;
+        agent.watchMode = watchSel.value;
+        saveGraph();
+        refreshPreviewCard(agent.id);
+      });
+      watchWrap.append(watchLab, watchSel);
+
+      const tabs = document.createElement("div");
+      tabs.className = "preview-tabs";
+      [
+        { id: "live", label: "Live" },
+        { id: "browser", label: "Browser" },
+        { id: "llm", label: "LLM" },
+        { id: "tools", label: "Tools" },
+        { id: "output", label: "Output" },
+      ].forEach((t) => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "preview-tab" + (viewTab === t.id ? " is-active" : "");
+        btn.textContent = t.label;
+        btn.dataset.tab = t.id;
+        btn.addEventListener("pointerdown", (e) => e.stopPropagation());
+        btn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          working[agent.id].viewTab = t.id;
+          agent.viewTab = t.id;
+          saveGraph();
+          tabs.querySelectorAll(".preview-tab").forEach((b) => b.classList.toggle("is-active", b.dataset.tab === t.id));
+          refreshPreviewCard(agent.id);
+        });
+        tabs.appendChild(btn);
+      });
+
+      const feed = document.createElement("div");
+      feed.className = "preview-feed";
+      const meta = document.createElement("div");
+      meta.className = "preview-meta";
+
+      const actions = document.createElement("div");
+      actions.className = "preview-actions";
+      const narrateBtn = document.createElement("button");
+      narrateBtn.type = "button";
+      narrateBtn.className = "btn btn-primary preview-narrate";
+      narrateBtn.textContent = "Explain with AI";
+      narrateBtn.title = "Uses LLM tokens. Confirms estimate first.";
+      narrateBtn.addEventListener("pointerdown", (e) => e.stopPropagation());
+      narrateBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        requestPreviewNarration(agent.id);
+      });
+      const clearBtn = document.createElement("button");
+      clearBtn.type = "button";
+      clearBtn.className = "btn";
+      clearBtn.textContent = "Clear";
+      clearBtn.addEventListener("pointerdown", (e) => e.stopPropagation());
+      clearBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        previewStreams[agent.id] = { frames: [], narration: "", busy: false };
+        refreshPreviewCard(agent.id);
+      });
+      actions.append(narrateBtn, clearBtn);
+
+      const deps = depsFor(agent.id);
+      const depsEl = document.createElement("div");
+      depsEl.className = "card-meta-deps";
+      depsEl.textContent = deps.length
+        ? `Watching â† ${deps.map((d) => agentById(d)?.short || d).join(" + ")}`
+        : "Auto-follow Â· wire an agent in to lock source";
+
+      body.append(title, summary, watchWrap, tabs, stage, feed, meta, actions, depsEl);
+    }
+
+    card.addEventListener("wheel", (e) => {
+      if (minimal && e.target.closest(".preview-stage")) return;
+      handleCardWheel(e, card);
+    }, { passive: false });
     card.append(chrome, body, makeResizeHandles(agent.id), makePorts(agent.id));
     card.addEventListener("pointerdown", (e) => {
       if (
@@ -4071,7 +5017,6 @@
       else selectCard(agent.id);
     });
 
-    // Fill after mount
     setTimeout(() => refreshPreviewCard(agent.id), 0);
     return card;
   }
@@ -4124,8 +5069,98 @@
     };
   }
 
+  function cardRect(id) {
+    const p = positions[id];
+    if (!p) return null;
+    return {
+      x: p.x,
+      y: p.y,
+      w: p.w || CARD_W,
+      h: p.h || CARD_H,
+    };
+  }
+
+  function rectFullyInside(inner, outer) {
+    if (!inner || !outer) return false;
+    return inner.x >= outer.x
+      && inner.y >= outer.y
+      && inner.x + inner.w <= outer.x + outer.w
+      && inner.y + inner.h <= outer.y + outer.h;
+  }
+
+  function sectionFrameRect(sec) {
+    return { x: sec.x, y: sec.y, w: sec.w, h: sec.h };
+  }
+
+  function cardFullyInsideSection(sec, cardId) {
+    const r = cardRect(cardId);
+    if (!r || !sec) return false;
+    return rectFullyInside(r, sectionFrameRect(sec));
+  }
+
   function pointInSection(sec, wx, wy) {
     return wx >= sec.x && wx <= sec.x + sec.w && wy >= sec.y && wy <= sec.y + sec.h;
+  }
+
+  /** Drop duplicate/empty sections; keep members fully inside frames; heal stale manualBounds. */
+  function reconcileSectionsLayout(opts) {
+    const options = opts || {};
+    let changed = false;
+    const canonicalIds = new Set(["section_main", "section_linkedin"]);
+    const liMeta = (typeof LI_SECTION !== "undefined" && LI_SECTION && LI_SECTION.id)
+      ? LI_SECTION.id
+      : "section_linkedin";
+    if (liMeta) canonicalIds.add(liMeta);
+
+    const memberKey = (sec) => (sec.memberIds || []).slice().sort().join("|");
+    const byMembers = new Map();
+    sections.forEach((sec) => {
+      const key = memberKey(sec);
+      if (!key) return;
+      const prev = byMembers.get(key);
+      if (!prev) {
+        byMembers.set(key, sec);
+        return;
+      }
+      const keep = (canonicalIds.has(prev.id) && !canonicalIds.has(sec.id))
+        ? prev
+        : (canonicalIds.has(sec.id) ? sec : prev);
+      const drop = keep === prev ? sec : prev;
+      sections = sections.filter((s) => s.id !== drop.id);
+      byMembers.set(key, keep);
+      changed = true;
+    });
+
+    sections = sections.filter((sec) => {
+      if ((sec.memberIds || []).length) return true;
+      if (canonicalIds.has(sec.id)) return true;
+      changed = true;
+      return false;
+    });
+
+    sections.forEach((sec) => {
+      if (!sec.memberIds.length) return;
+
+      const fitBox = boundsFromMembers(sec.memberIds);
+      const membersFitFrame = sec.memberIds.every((id) => cardFullyInsideSection(sec, id));
+      if (!sec.manualBounds || !membersFitFrame) {
+        if (sec.manualBounds && !membersFitFrame) sec.manualBounds = false;
+        if (sec.x !== fitBox.x || sec.y !== fitBox.y || sec.w !== fitBox.w || sec.h !== fitBox.h) {
+          sec.x = fitBox.x;
+          sec.y = fitBox.y;
+          sec.w = fitBox.w;
+          sec.h = fitBox.h;
+          changed = true;
+        }
+      }
+
+      const before = (sec.memberIds || []).slice();
+      sec.memberIds = before.filter((id) => agentById(id) && cardFullyInsideSection(sec, id));
+      if (sec.memberIds.length !== before.length) changed = true;
+    });
+
+    if (changed && !options.skipSave) saveGraph();
+    return changed;
   }
 
   function selectCards(ids, primaryId) {
@@ -4194,7 +5229,7 @@
     selectedId = null;
     buildSections();
     syncSelectionClasses();
-    logLine(null, `section "${sec.name}" · ${ids.length} cards`, "system");
+    logLine(null, `section "${sec.name}" Â· ${ids.length} cards`, "system");
     return sec;
   }
 
@@ -4209,7 +5244,7 @@
     buildSections();
     if (kept.length) selectCards(kept, kept[0]);
     else clearSelection();
-    logLine(null, `ungrouped section · ${kept.length} cards kept`, "system");
+    logLine(null, `ungrouped section Â· ${kept.length} cards kept`, "system");
   }
 
   function beginSectionDrag(e, sectionId) {
@@ -4483,7 +5518,7 @@
     const nameEl = document.createElement("div");
     nameEl.className = "section-name";
     nameEl.textContent = sec.name || "Section";
-    nameEl.title = "Double-click to rename · Drag to move section";
+    nameEl.title = "Double-click to rename Â· Drag to move section";
     nameEl.addEventListener("dblclick", (e) => {
       e.preventDefault();
       e.stopPropagation();
@@ -4534,7 +5569,7 @@
     wIn.setAttribute("aria-label", "Section width");
     const sizeSep = document.createElement("span");
     sizeSep.className = "section-size-sep";
-    sizeSep.textContent = "×";
+    sizeSep.textContent = "Ã—";
     const hIn = document.createElement("input");
     hIn.type = "number";
     hIn.className = "section-size-h";
@@ -4644,7 +5679,7 @@
 
   function onSectionStart(sectionId) {
     if (activeRunSectionId === sectionId && controlState === "paused") {
-      resumeRun();
+      playPausedPipeline();
       return;
     }
     if (activeRunSectionId === sectionId && controlState === "running") {
@@ -4664,6 +5699,7 @@
 
   function buildSections() {
     if (!sectionsLayer) return;
+    reconcileSectionsLayout({ skipSave: true });
     sectionsLayer.innerHTML = "";
     if (sectionChromesLayer) sectionChromesLayer.innerHTML = "";
     if (sectionDocksLayer) sectionDocksLayer.innerHTML = "";
@@ -4746,14 +5782,11 @@
 
   function maybeDetachFromSection(cardId, opts) {
     const options = opts || {};
-    const p = positions[cardId];
-    if (!p) return false;
-    const cx = p.x + (p.w || CARD_W) / 2;
-    const cy = p.y + (p.h || CARD_H) / 2;
+    if (!positions[cardId]) return false;
     let changed = false;
     sections.forEach((sec) => {
       if (!sec.memberIds.includes(cardId)) return;
-      if (!pointInSection(sec, cx, cy)) {
+      if (!cardFullyInsideSection(sec, cardId)) {
         sec.memberIds = sec.memberIds.filter((id) => id !== cardId);
         changed = true;
         logLine(null, `detached ${agentById(cardId)?.short || cardId} from "${sec.name}"`, "system");
@@ -4828,6 +5861,7 @@
     drawEdges();
     renderTokens();
     buildSections();
+    refreshCardPlayButtons();
   }
 
   function getCard(id) {
@@ -4896,7 +5930,7 @@
           <path d="M0,0 L6,2.5 L0,5 Z" fill="rgba(255,255,255,0.25)"/>
         </marker>
         <marker id="arr-a" markerWidth="7" markerHeight="7" refX="6" refY="2.5" orient="auto">
-          <path d="M0,0 L6,2.5 L0,5 Z" fill="#5e6ad2"/>
+          <path d="M0,0 L6,2.5 L0,5 Z" fill="currentColor"/>
         </marker>
       </defs>
     `;
@@ -4917,7 +5951,7 @@
         ev.stopPropagation();
         pushHistory();
         if (removeEdge(e.from, e.to)) {
-          logLine(null, `disconnected ${agentById(e.from)?.short || e.from} → ${agentById(e.to)?.short || e.to}`, "system");
+          logLine(null, `disconnected ${agentById(e.from)?.short || e.from} â†’ ${agentById(e.to)?.short || e.to}`, "system");
           drawEdges();
         } else {
           undoStack.pop();
@@ -5422,7 +6456,7 @@
   }
 
   // ---- pan / zoom ----
-  // Pinch/ctrl+wheel zooms (gentle). Plain wheel pans — unless over a card
+  // Pinch/ctrl+wheel zooms (gentle). Plain wheel pans â€” unless over a card
   // (card handler scrolls fields/body, or pinches via applyWheelZoom).
   viewport.addEventListener("wheel", (e) => {
     if (e.target.closest(".card")) return; // handled on the card
@@ -5510,6 +6544,11 @@
 
   window.addEventListener("keydown", (e) => {
     if (e.key === "Escape") {
+      if (confirmModal && !confirmModal.hidden) {
+        dismissConfirmModal();
+        e.preventDefault();
+        return;
+      }
       if (placeMode) {
         cancelPlaceMode();
         logLine(null, "place cancelled", "system");
@@ -5625,21 +6664,22 @@
 
   if (confirmRetryBtn) {
     confirmRetryBtn.addEventListener("click", async () => {
-      closeConfirmModal();
-      showToast("Retrying", "User confirmed fix. Resuming pipeline.", "info");
-      logLine(null, "user confirmed retry", "system");
-      runMeta.status = "running";
-      runMeta.failed = false;
-      updateRunChrome();
-      try {
-        await postControl("/api/retry");
-      } catch (err) {
-        showToast("Retry failed", String(err.message || err), "error");
-      }
+      await confirmRetryWithPlan();
+    });
+  }
+  if (confirmDismissBtn) {
+    confirmDismissBtn.addEventListener("click", () => {
+      dismissConfirmModal();
+    });
+  }
+  if (confirmModal) {
+    confirmModal.addEventListener("click", (e) => {
+      if (e.target === confirmModal) dismissConfirmModal();
     });
   }
   if (confirmAbortBtn) {
     confirmAbortBtn.addEventListener("click", async () => {
+      confirmDismissed = false;
       closeConfirmModal();
       showToast("Aborted", "Run stopped by user.", "error");
       logLine(null, "user aborted run", "flag");
@@ -5689,7 +6729,7 @@
       const titles = { trigger: "Trigger", preview: "Preview", card: "New Card" };
       ghost.innerHTML = `
         <div class="place-ghost-title">${titles[placeMode.kind] || "New Card"}</div>
-        <div class="place-ghost-hint">Click to place · Esc cancel</div>
+        <div class="place-ghost-hint">Click to place Â· Esc cancel</div>
       `;
       viewport.appendChild(ghost);
     }
@@ -5732,6 +6772,7 @@
       description: DUMMY_COPY.description,
       expected_output: DUMMY_COPY.expected_output,
       llm: DUMMY_COPY.llm,
+      fallback_llm: DUMMY_COPY.fallback_llm || "",
       max_iter: 3,
       max_rpm: 2,
       tools: [],
@@ -5815,8 +6856,9 @@
       index: 200 + customSeq,
       short: "Preview",
       role: "Preview",
-      summary: "Live agent viewport · browser, tools, LLM, output",
+      summary: "Live agent viewport Â· browser, tools, LLM, output",
       watchMode: "auto",
+      watchScope: "all",
       viewTab: "live",
       skills: [],
       tools: [],
@@ -5838,6 +6880,87 @@
     buildCards();
     selectCard(id);
     logLine(null, "placed Preview: wire an agent in (or leave Auto). Explain with AI confirms tokens first.", "system");
+  }
+
+  /** Ensure the LinkedIn section ends with a live HTML/browser Preview viewport. */
+  function ensureLiLivePreview() {
+    const meta = liPreviewMeta();
+    if (!meta) return false;
+    const existing = extraNodes.find((n) => n.id === meta.id);
+    let created = false;
+    let dirty = false;
+    if (!existing) {
+      const node = {
+        id: meta.id,
+        kind: "preview",
+        index: meta.index != null ? meta.index : 200,
+        short: meta.short || "LI Preview",
+        role: meta.role || "LinkedIn Live Preview",
+        summary: meta.summary || "Live HTML / browser actions from LinkedIn agents",
+        watchMode: meta.watchMode || "auto",
+        watchScope: meta.watchScope || "linkedin",
+        viewTab: meta.viewTab || "browser",
+        skills: [],
+        tools: [],
+        dependsOn: [],
+      };
+      extraNodes.push(node);
+      created = true;
+      dirty = true;
+    } else {
+      existing.kind = "preview";
+      if (!existing.watchScope) {
+        existing.watchScope = meta.watchScope || "linkedin";
+        dirty = true;
+      }
+      if (!existing.viewTab) {
+        existing.viewTab = meta.viewTab || "browser";
+        dirty = true;
+      }
+      existing.short = existing.short || meta.short || "LI Preview";
+      existing.role = existing.role || meta.role || "LinkedIn Live Preview";
+      existing.summary = existing.summary || meta.summary;
+    }
+    const suggested = (typeof LI_SECTION !== "undefined" && LI_SECTION && LI_SECTION.suggestedPositions)
+      ? LI_SECTION.suggestedPositions[meta.id]
+      : null;
+    const box = nodeBoxDefaults(meta);
+    if (!positions[meta.id]) {
+      positions[meta.id] = {
+        x: suggested && suggested.x != null
+          ? suggested.x
+          : START_X + liAgentsList().length * (CARD_W + CARD_GAP_X),
+        y: suggested && suggested.y != null ? suggested.y : 1100,
+        w: (suggested && suggested.w) || box.w,
+        h: (suggested && suggested.h) || box.h,
+      };
+      dirty = true;
+    } else {
+      const prev = positions[meta.id];
+      positions[meta.id] = {
+        x: prev.x,
+        y: prev.y,
+        w: prev.w || (suggested && suggested.w) || box.w,
+        h: prev.h || (suggested && suggested.h) || box.h,
+      };
+    }
+    statuses[meta.id] = statuses[meta.id] || "pending";
+    tokens[meta.id] = tokens[meta.id] || 0;
+    ensurePreviewStream(meta.id);
+    // Soft-wire browser-heavy LI agents so Wired mode and deps label work.
+    ["linkedin_job_scout", "linkedin_easy_apply_specialist", "linkedin_external_apply_specialist"].forEach((from) => {
+      if (!agentById(from)) return;
+      if (!graphEdges.some((e) => e.from === from && e.to === meta.id)) {
+        graphEdges.push({ from, to: meta.id });
+        dirty = true;
+      }
+    });
+    if (dirty) {
+      seedWorking();
+      saveGraph();
+      savePositions();
+    }
+    return created;
   }
 
   function finishPlaceAt(clientX, clientY) {
@@ -5885,13 +7008,29 @@
   }
 
   // ---- tokens (live from llm events; sim still estimates) ----
+  function formatTokens(n) {
+    const v = Math.round(Number(n) || 0);
+    if (v < 1000) return String(v);
+    if (v < 1_000_000) {
+      const k = v / 1000;
+      if (v % 1000 === 0) return `${k}k`;
+      if (k >= 10) return `${Math.round(k)}k`;
+      return `${k.toFixed(1).replace(/\.0$/, "")}k`;
+    }
+    const m = v / 1_000_000;
+    if (v % 1_000_000 === 0) return `${m}M`;
+    if (m >= 10) return `${Math.round(m)}M`;
+    return `${m.toFixed(1).replace(/\.0$/, "")}M`;
+  }
+
   function renderTokens() {
     const nodes = allNodes().filter((a) => a.kind !== "trigger" && a.kind !== "preview");
     const max = Math.max(1, ...nodes.map((a) => tokens[a.id] || 0));
     const total = nodes.reduce((s, a) => s + (tokens[a.id] || 0), 0);
-    tokensTotalLabel.textContent = `${total.toLocaleString()} total`;
+    tokensTotalLabel.textContent = `${formatTokens(total)} total`;
     if (typeof statTokens !== "undefined" && statTokens) {
-      statTokens.textContent = total >= 1000 ? `${(total / 1000).toFixed(1)}k` : String(total);
+      statTokens.textContent = formatTokens(total);
+      statTokens.title = total ? `${total.toLocaleString()} tokens` : "0 tokens";
     }
     tokensChart.innerHTML = "";
     nodes.forEach((a) => {
@@ -5901,10 +7040,11 @@
       col.className = "tok-col";
       col.dataset.agentId = a.id;
       const active = statuses[a.id] === "running" || statuses[a.id] === "thinking";
+      const valLabel = v ? formatTokens(v) : "Â·";
       col.innerHTML = `
-        <span class="tok-val">${v ? v.toLocaleString() : "·"}</span>
+        <span class="tok-val" title="${v ? v.toLocaleString() + " tokens" : ""}">${valLabel}</span>
         <div class="tok-bar-wrap"><div class="tok-bar${active ? " active" : ""}" style="height:${pct}%"></div></div>
-        <span class="tok-label">${a.short || a.id}</span>
+        <span class="tok-label" title="${a.short || a.id}">${a.short || a.id}</span>
       `;
       tokensChart.appendChild(col);
       // Mirror onto the agent card badge for glanceable live usage
@@ -5917,7 +7057,8 @@
           const chrome = card.querySelector(".card-chrome");
           if (chrome) chrome.appendChild(badge);
         }
-        badge.textContent = v ? `${v.toLocaleString()} tok` : "0 tok";
+        badge.textContent = v ? `${formatTokens(v)} tok` : "0 tok";
+        badge.title = v ? `${v.toLocaleString()} tokens` : "0 tokens";
         badge.classList.toggle("is-hot", active && v > 0);
       }
     });
@@ -5956,7 +7097,7 @@
     if (detail.files && detail.files.length) parts.push(`Files: ${detail.files.join(", ")}`);
     if (detail.suggestion) parts.push(detail.suggestion);
     if (detail.error && detail.error !== hint && detail.error !== detail.suggestion) {
-      parts.push(detail.error.length > 500 ? detail.error.slice(0, 500) + "…" : detail.error);
+      parts.push(detail.error.length > 500 ? detail.error.slice(0, 500) + "â€¦" : detail.error);
     }
     return parts.join("\n") || "No extra summary.";
   }
@@ -6199,7 +7340,7 @@
     updateRunChrome();
     logLine(null, `kickoff() - canvas plan (${plan.order.length} steps, simulated)`, "system");
     if (plan.trigger) {
-      logLine("Trigger", `schedule every ${plan.trigger.interval_minutes}m · runCount=${plan.trigger.runCount === "" ? "∞" : plan.trigger.runCount}`, "system");
+      logLine("Trigger", `schedule every ${plan.trigger.interval_minutes}m Â· runCount=${plan.trigger.runCount === "" ? "âˆž" : plan.trigger.runCount}`, "system");
     }
 
     let prev = null;
@@ -6240,6 +7381,8 @@
 
   function resetRun(sectionId) {
     runPaused = false;
+    confirmDismissed = false;
+    setPausedCard(null);
     pauseResolvers.splice(0).forEach((fn) => fn());
     runToken += 1;
     stopPolling();
@@ -6278,7 +7421,7 @@
     else simClearedBySection = {};
     renderTokens();
     clearLogBuffer();
-    logLine(null, sectionId ? `run reset · ${(sectionById(sectionId) || {}).name || sectionId}` : "run reset", "system");
+    logLine(null, sectionId ? `run reset Â· ${(sectionById(sectionId) || {}).name || sectionId}` : "run reset", "system");
     setRunControls("idle");
     updateStartGate();
     postControl("/api/abort").catch(() => {});
@@ -6316,6 +7459,7 @@
           expected_output: DUMMY_COPY.expected_output,
           summary: DUMMY_COPY.summary,
           llm: DUMMY_COPY.llm,
+          fallback_llm: DUMMY_COPY.fallback_llm || "",
           skills: [],
         });
       }
@@ -6366,7 +7510,7 @@
       title.textContent = item.job_title || item.company || item.job_url || item.id;
       const meta = document.createElement("div");
       meta.className = "li-review-item-meta";
-      meta.textContent = [item.company, item.location, item.job_url].filter(Boolean).join(" · ");
+      meta.textContent = [item.company, item.location, item.job_url].filter(Boolean).join(" Â· ");
       const reason = document.createElement("div");
       reason.className = "li-review-item-reason";
       reason.textContent = item.flag_reason || "Flagged for review";
@@ -6471,7 +7615,7 @@
   }
 
   function setChatStatus(text) {
-    if (chatStatus) chatStatus.textContent = text || "Auto · ready";
+    if (chatStatus) chatStatus.textContent = text || "JobHunter assistant · ready";
   }
 
   function appendChatBubble(role, text, opts) {
@@ -6588,6 +7732,7 @@
           short: n.short,
           kind: n.kind || "pipeline",
           llm: (working[n.id] && working[n.id].llm) || n.llm || null,
+          fallback_llm: (working[n.id] && working[n.id].fallback_llm) || n.fallback_llm || null,
           status: (statuses && statuses[n.id]) || "pending",
         })),
       edges: graphEdges.slice(0, 80).map((e) => ({ from: e.from, to: e.to })),
@@ -6655,7 +7800,7 @@
           const sid = action.section != null ? resolveChatSectionId(action.section) : (selectedSectionId || null);
           resetRun(sid);
           const name = sid ? ((sectionById(sid) || {}).name || sid) : "canvas";
-          notes.push(`Reset run · ${name}`);
+          notes.push(`Reset run Â· ${name}`);
         } else if (type === "reset_layout") {
           resetLayout();
           notes.push("Reset layout");
@@ -6703,11 +7848,11 @@
     if (!message || chatBusy) return;
     chatBusy = true;
     if (chatSendBtn) chatSendBtn.disabled = true;
-    setChatStatus("Auto · thinking…");
+    setChatStatus("JobHunter assistant · thinking…");
     appendChatBubble("user", message);
     chatHistory.push({ role: "user", content: message });
     saveChatHistory();
-    const pending = appendChatBubble("assistant", "…", { pending: true });
+    const pending = appendChatBubble("assistant", "â€¦", { pending: true });
     try {
       await refreshChatErrorsCache();
       const res = await fetch("/api/chat", {
@@ -6727,7 +7872,7 @@
           pending.classList.add("error");
           pending.textContent = err;
         }
-        setChatStatus("Auto · error");
+        setChatStatus("JobHunter assistant · error");
         return;
       }
       const reply = String(data.reply || "").trim() || "(empty reply)";
@@ -6747,14 +7892,14 @@
       if (notes.length) saveChatHistory();
 
       const model = data.model ? String(data.model).split("/").pop() : "flash";
-      setChatStatus("Auto · " + model);
+      setChatStatus("JobHunter assistant · " + model);
     } catch (err) {
       if (pending) {
         pending.classList.remove("pending");
         pending.classList.add("error");
         pending.textContent = "Chat failed. Is the dashboard server running?";
       }
-      setChatStatus("Auto · offline");
+      setChatStatus("JobHunter assistant · offline");
     } finally {
       chatBusy = false;
       if (chatSendBtn) chatSendBtn.disabled = false;
@@ -6769,10 +7914,82 @@
     chatHistory = [];
     saveChatHistory();
     renderChatHistory();
-    setChatStatus("Auto · ready");
+    setChatStatus("JobHunter assistant · ready");
+  }
+
+  function initAssistantBridge() {
+    if (!assistantDelegated) return;
+    const footer = document.querySelector(".stage-footer");
+    if (footer) footer.classList.add("assistant-delegated");
+    if (chatDock) {
+      chatDock.classList.add("chat-dock-delegated");
+      const head = chatDock.querySelector(".chat-head");
+      if (head) {
+        const title = head.querySelector(".chat-title");
+        if (title) title.textContent = "Ask Cursor";
+        const sub = head.querySelector(".chat-sub");
+        if (sub) sub.textContent = "Opens left panel (Cursor bridge)";
+        const clearBtn = head.querySelector(".chat-clear");
+        if (clearBtn) clearBtn.hidden = true;
+        let openBtn = head.querySelector(".chat-open-assistant");
+        if (!openBtn) {
+          openBtn = document.createElement("button");
+          openBtn.type = "button";
+          openBtn.className = "chat-open-assistant";
+          openBtn.textContent = "Open Ask Cursor panel";
+          openBtn.addEventListener("click", (e) => {
+            e.preventDefault();
+            try {
+              window.parent.postMessage({ type: "jh-assistant-open" }, "*");
+            } catch (_) { /* ignore */ }
+          });
+          head.appendChild(openBtn);
+        }
+      }
+    }
+    window.addEventListener("message", async (ev) => {
+      const data = ev.data;
+      if (!data || typeof data !== "object") return;
+      if (data.type === "jh-chat-get-context") {
+        await refreshChatErrorsCache();
+        try {
+          ev.source.postMessage(
+            {
+              type: "jh-chat-context",
+              requestId: data.requestId,
+              context: chatCanvasContext(),
+            },
+            "*"
+          );
+        } catch (_) { /* ignore */ }
+        return;
+      }
+      if (data.type === "jh-chat-apply-actions") {
+        let notes = [];
+        try {
+          notes = await applyChatActions(data.actions || [], data.executed || []);
+        } catch (err) {
+          notes = [String(err && err.message ? err.message : err)];
+        }
+        try {
+          ev.source.postMessage(
+            {
+              type: "jh-chat-actions-done",
+              requestId: data.requestId,
+              notes,
+            },
+            "*"
+          );
+        } catch (_) { /* ignore */ }
+      }
+    });
   }
 
   function initCanvasChat() {
+    if (assistantDelegated) {
+      initAssistantBridge();
+      return;
+    }
     const stored = loadJSON(CHAT_KEY, []);
     chatHistory = Array.isArray(stored)
       ? stored.filter((m) => m && (m.role === "user" || m.role === "assistant" || m.role === "action") && m.content).slice(-40)
@@ -6810,10 +8027,52 @@
   }
 
   // ---- wire ----
+  if (clearErrorsBtn) clearErrorsBtn.addEventListener("click", async () => {
+    try {
+      const res = await fetch("/api/errors/latest");
+      const data = await res.json();
+      const ids = (data.open || []).map((e) => e.id);
+      if (!ids.length) { showToast("Nothing to clear", "No open errors from previous sessions.", "info"); return; }
+      await fetch("/api/errors/resolve", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids, note: "manual_clear" }),
+      });
+      showToast("Errors cleared", `Resolved ${ids.length} stale error${ids.length !== 1 ? "s" : ""} from previous session.`, "ok");
+    } catch (e) {
+      showToast("Clear failed", String(e), "error");
+    }
+  });
   if (resetLayoutBtn) resetLayoutBtn.addEventListener("click", resetLayout);
   if (resetCardsBtn) resetCardsBtn.addEventListener("click", resetCards);
   if (liReviewRefreshBtn) liReviewRefreshBtn.addEventListener("click", () => loadLiReviewQueue());
 
+  async function refreshAutofixStatus() {
+    if (!autofixEnabled || !autofixStatus) return;
+    try {
+      const res = await fetch("/api/autofix");
+      const data = await res.json();
+      if (!data || data.ok === false) return;
+      // Always on while JobHunter dashboard is in use.
+      autofixEnabled.checked = true;
+      autofixEnabled.disabled = true;
+      if (autofixToggle) {
+        autofixToggle.classList.add("is-locked");
+        autofixToggle.classList.remove("is-off");
+        autofixToggle.classList.toggle("is-busy", !!data.busy);
+        autofixToggle.title = "AutoFix is always on while JobHunter is in use";
+      }
+      if (data.busy) autofixStatus.textContent = "busy";
+      else if (data.last_action) autofixStatus.textContent = String(data.last_action).replace(/^autofix_/, "").slice(0, 18);
+      else autofixStatus.textContent = "on";
+    } catch (_) {
+      /* server may be down */
+    }
+  }
+
+  // Status-only control: AutoFix cannot be turned off from the UI.
+  refreshAutofixStatus();
+  setInterval(refreshAutofixStatus, 4000);
   window.addEventListener("resize", () => {
     applyPanelSizes();
     drawEdges();
@@ -6824,11 +8083,14 @@
   installPanelResizeHandles();
   initCanvasChat();
   loadGraph();
+  const liPreviewCreated = ensureLiLivePreview();
   seedWorking();
   loadPositions();
   loadView();
+  applyView();
   const pipelineNewcomers = consumePipelineNewcomers();
-  const needLiReflow = pipelineNewcomers.some((id) => isLiAgentId(id))
+  const needLiReflow = pipelineNewcomers.some((id) => isLiAgentId(id) || isLiPreviewId(id))
+    || liPreviewCreated
     || (liAgentsList().length > 0 && !sections.some((s) => s.id === "section_linkedin" || s.id === (typeof LI_SECTION !== "undefined" && LI_SECTION && LI_SECTION.id)));
   if (pipelineNewcomers.length || needLiReflow) {
     // Old saved positions stack new cards under neighbors; force LTR reflow.
@@ -6837,6 +8099,7 @@
     savePositions();
   }
   seedPipelineSections(pipelineNewcomers);
+  reconcileSectionsLayout();
   allNodes().forEach((a) => { statuses[a.id] = "pending"; tokens[a.id] = 0; });
   resetLiveViews();
   setRailTab("activity");
@@ -6852,18 +8115,23 @@
   if (pipelineNewcomers.length || needLiReflow) {
     fitView();
     const labels = (pipelineNewcomers.length ? pipelineNewcomers : liAgentsList().map((a) => a.id))
+      .concat(liPreviewCreated ? ["linkedin_live_preview"] : [])
+      .filter((id, i, arr) => arr.indexOf(id) === i)
       .map((id) => (agentById(id) || {}).short || id)
       .join(", ");
     logLine(null, `Pipeline sections ready${labels ? `: ${labels}` : ""}. Layout refreshed.`, "system");
-    if (typeof showToast === "function" && pipelineNewcomers.length) {
+    if (typeof showToast === "function" && (pipelineNewcomers.length || liPreviewCreated)) {
       showToast("Pipeline updated", `Added ${labels}. Use Fit if needed.`, "ok");
     }
   }
   applyView();
   loadModelCatalog({ rebuild: true }).then((cat) => {
     const n = (cat.active_ids || []).length;
-    if (cat.ok) logLine("Models", `${n} active · Groq/Gemini session catalog loaded`, "ok");
+    if (cat.ok) logLine("Models", `${n} active Â· Groq/Gemini session catalog loaded`, "ok");
     else logLine("Models", "Using Disconnected fallback. Open Model menu and Refresh, or restart dashboard server.", "flag");
+    // Re-seed blank llm/fallback against the live catalog (does not clobber edits).
+    seedWorking();
+    refreshAllLlmPickers();
   });
   loadSkillsCatalog().then(() => {
     // refresh custom cards so skill tags appear
@@ -6883,9 +8151,11 @@
     });
   }
   requestAnimationFrame(() => {
+    if (reconcileSectionsLayout()) buildSections();
     if (!loadJSON(VIEW_KEY, null)) fitView();
     logLine(null, "canvas ready - run section Sim before Start", "system");
   });
+
 
   /* Hooks for Task 1 section-scoped Start + verification */
   window.__jhCanvas = {

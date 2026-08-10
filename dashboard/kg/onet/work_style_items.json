@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "scale": {
+    "min": 1,
+    "max": 5,
+    "labels": {
+      "1": "Not like me",
+      "3": "Somewhat like me",
+      "5": "Very much like me"
+    }
+  },
+  "items": [
+    {"id": "ws1", "dimension": "Achievement Orientation", "text": "I push myself to hit ambitious goals, even when no one is checking"},
+    {"id": "ws2", "dimension": "Adaptability", "text": "I adjust easily when plans change at the last minute"},
+    {"id": "ws3", "dimension": "Attention to Detail", "text": "I catch small errors that others tend to miss"},
+    {"id": "ws4", "dimension": "Cautiousness", "text": "I slow down to weigh risks before committing to a decision"},
+    {"id": "ws5", "dimension": "Cooperation", "text": "I go out of my way to make teamwork smooth for everyone involved"},
+    {"id": "ws6", "dimension": "Dependability", "text": "People know they can count on me to follow through"},
+    {"id": "ws7", "dimension": "Empathy", "text": "I notice and respond to how others are feeling"},
+    {"id": "ws8", "dimension": "Humility", "text": "I'm quick to credit others and admit when I'm wrong"},
+    {"id": "ws9", "dimension": "Initiative", "text": "I start things on my own without being asked"},
+    {"id": "ws10", "dimension": "Innovation", "text": "I look for new or unconventional ways to solve a problem"},
+    {"id": "ws11", "dimension": "Integrity", "text": "I stick to what's right even when it's inconvenient"},
+    {"id": "ws12", "dimension": "Intellectual Curiosity", "text": "I dig into a topic just because I want to understand it better"},
+    {"id": "ws13", "dimension": "Leadership Orientation", "text": "I naturally step up to guide a group toward a goal"},
+    {"id": "ws14", "dimension": "Optimism", "text": "I expect things to work out, even when the path isn't clear"},
+    {"id": "ws15", "dimension": "Perseverance", "text": "I keep going on something hard long after it stops being fun"},
+    {"id": "ws16", "dimension": "Self-Confidence", "text": "I trust my own judgment, even under pushback"},
+    {"id": "ws17", "dimension": "Self-Control", "text": "I stay composed when things get tense or frustrating"},
+    {"id": "ws18", "dimension": "Sincerity", "text": "I say what I actually mean, even in small talk"},
+    {"id": "ws19", "dimension": "Social Orientation", "text": "I'd rather work closely with people than work alone all day"},
+    {"id": "ws20", "dimension": "Stress Tolerance", "text": "I stay effective when deadlines and pressure pile up"},
+    {"id": "ws21", "dimension": "Tolerance for Ambiguity", "text": "I'm comfortable moving forward without a fully clear plan"}
+  ]
+}

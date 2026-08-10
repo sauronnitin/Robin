@@ -35,6 +35,8 @@ Serves dashboard/ static files and run-control APIs:
   GET  /api/kg/all
   GET  /api/kg/share
   GET  /api/kg/riasec
+  GET  /api/kg/work-styles
+  GET  /api/kg/market-pulse
   POST /api/profile
   POST /api/profile/parse
   POST /api/profile/resume-preview
@@ -43,6 +45,7 @@ Serves dashboard/ static files and run-control APIs:
   POST /api/kg/individual
   POST /api/kg/share
   POST /api/kg/riasec
+  POST /api/kg/work-styles
   POST /api/run
   POST /api/run/plan
   POST /api/schedule
@@ -1160,6 +1163,36 @@ class DashboardHandler(SimpleHTTPRequestHandler):
             except Exception as exc:
                 print(f"[dashboard] kg/riasec error: {exc!r}")
                 return self._json({"ok": False, "error": str(exc)}, status=500)
+        if path == "/api/kg/work-styles":
+            try:
+                return self._json({
+                    "ok": True,
+                    "items": kg_store.load_work_style_items(),
+                    "result": kg_store.load_work_styles(),
+                })
+            except Exception as exc:
+                print(f"[dashboard] kg/work-styles error: {exc!r}")
+                return self._json({"ok": False, "error": str(exc)}, status=500)
+        if path == "/api/kg/market-pulse":
+            try:
+                q = (params.get("q") or "").strip()
+                if not q:
+                    return self._json({
+                        "ok": True,
+                        "key": kg_store.serpapi_key_status(),
+                        "query": None,
+                        "fetched_at": None,
+                        "items": [],
+                    })
+                result = kg_store.fetch_market_pulse(q)
+                status = 200 if result.get("ok") or result.get("key_missing") else 502
+                return self._json({
+                    **result,
+                    "key": kg_store.serpapi_key_status(),
+                }, status=status)
+            except Exception as exc:
+                print(f"[dashboard] kg/market-pulse error: {exc!r}")
+                return self._json({"ok": False, "error": str(exc)}, status=500)
         if path.startswith("/api/skills"):
             try:
                 skills = scan_skills()
@@ -1292,6 +1325,15 @@ class DashboardHandler(SimpleHTTPRequestHandler):
                 return self._json({"ok": True, "result": result})
             except Exception as exc:
                 print(f"[dashboard] kg/riasec save failed: {exc!r}")
+                return self._json({"ok": False, "error": str(exc)}, status=500)
+        if path == "/api/kg/work-styles":
+            if not isinstance(body, dict):
+                return self._json({"ok": False, "error": "JSON object required"}, status=400)
+            try:
+                result = kg_store.save_work_styles(body)
+                return self._json({"ok": True, "result": result})
+            except Exception as exc:
+                print(f"[dashboard] kg/work-styles save failed: {exc!r}")
                 return self._json({"ok": False, "error": str(exc)}, status=500)
         if path == "/api/job-sources/scan":
             try:

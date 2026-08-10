@@ -1,0 +1,283 @@
+{
+  "version": 2,
+  "kind": "individual",
+  "updated_at": "2026-08-06T00:00:00+00:00",
+  "targets": {
+    "primary_role_id": "role:product-designer",
+    "secondary_role_id": "role:ux-designer",
+    "confirmed": false,
+    "suggested_primary_id": "role:product-designer",
+    "suggested_secondary_id": "role:ux-designer"
+  },
+  "compensation": {
+    "currency": "USD",
+    "current": 118000,
+    "target": 145000,
+    "region": "US"
+  },
+  "role_stats": {},
+  "nodes": [
+    {
+      "id": "skill:figma",
+      "label": "Figma",
+      "type": "skill",
+      "weight": 5,
+      "provenance": "stated",
+      "importance": "potential",
+      "meta": {}
+    },
+    {
+      "id": "skill:prototyping",
+      "label": "Prototyping",
+      "type": "skill",
+      "weight": 4,
+      "provenance": "stated",
+      "importance": "normal",
+      "meta": {}
+    },
+    {
+      "id": "skill:design-systems",
+      "label": "Design Systems",
+      "type": "skill",
+      "weight": 4,
+      "provenance": "stated",
+      "importance": "potential",
+      "meta": {}
+    },
+    {
+      "id": "skill:user-research",
+      "label": "User Research",
+      "type": "skill",
+      "weight": 2,
+      "provenance": "stated",
+      "importance": "risk",
+      "meta": { "gap_hint": "thin evidence in recent roles" }
+    },
+    {
+      "id": "skill:systems-thinking",
+      "label": "Systems thinking",
+      "type": "skill",
+      "weight": 2,
+      "provenance": "inferred",
+      "importance": "potential",
+      "meta": { "from": "chat" }
+    },
+    {
+      "id": "role:product-designer",
+      "label": "Product Designer",
+      "type": "role",
+      "weight": 5,
+      "provenance": "stated",
+      "importance": "normal",
+      "meta": {}
+    },
+    {
+      "id": "role:ux-designer",
+      "label": "UX Designer",
+      "type": "role",
+      "weight": 3,
+      "provenance": "stated",
+      "importance": "normal",
+      "meta": {}
+    },
+    {
+      "id": "company:acme",
+      "label": "Acme Labs",
+      "type": "company",
+      "weight": 3,
+      "provenance": "stated",
+      "importance": "normal",
+      "meta": {}
+    },
+    {
+      "id": "company:northwind",
+      "label": "Northwind",
+      "type": "company",
+      "weight": 2,
+      "provenance": "stated",
+      "importance": "normal",
+      "meta": {}
+    },
+    {
+      "id": "edu:design-ba",
+      "label": "B.A. Design",
+      "type": "edu",
+      "weight": 2,
+      "provenance": "stated",
+      "importance": "normal",
+      "meta": {}
+    },
+    {
+      "id": "opp:senior-pd",
+      "label": "Senior Product Designer",
+      "type": "opp",
+      "weight": 3,
+      "provenance": "inferred",
+      "importance": "potential",
+      "meta": {}
+    },
+    {
+      "id": "opp:design-ops",
+      "label": "Design Ops",
+      "type": "opp",
+      "weight": 2,
+      "provenance": "inferred",
+      "importance": "potential",
+      "meta": {}
+    },
+    {
+      "id": "gap:user-research-thin",
+      "label": "Gap: User Research",
+      "type": "gap",
+      "weight": 3,
+      "provenance": "inferred",
+      "importance": "risk",
+      "meta": {
+        "skill": "User Research",
+        "for_role": "role:product-designer",
+        "reason": "thin evidence in recent roles",
+        "seeded": true
+      }
+    },
+    {
+      "id": "band:product-designer-us",
+      "label": "Product Designer pay (estimate)",
+      "type": "band",
+      "weight": 2,
+      "provenance": "stated",
+      "importance": "normal",
+      "meta": {
+        "low": 95000,
+        "mid": 130000,
+        "high": 165000,
+        "market": "US",
+        "source": "curated_estimate",
+        "role_id": "role:product-designer",
+        "currency": "USD"
+      }
+    },
+    {
+      "id": "band:ux-designer-us",
+      "label": "UX Designer pay (estimate)",
+      "type": "band",
+      "weight": 2,
+      "provenance": "stated",
+      "importance": "normal",
+      "meta": {
+        "low": 90000,
+        "mid": 120000,
+        "high": 155000,
+        "market": "US",
+        "source": "curated_estimate",
+        "role_id": "role:ux-designer",
+        "currency": "USD"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "source": "skill:figma",
+      "target": "role:product-designer",
+      "label": "used in",
+      "provenance": "stated",
+      "weight": 1
+    },
+    {
+      "source": "skill:prototyping",
+      "target": "role:product-designer",
+      "label": "used in",
+      "provenance": "stated",
+      "weight": 1
+    },
+    {
+      "source": "skill:design-systems",
+      "target": "role:product-designer",
+      "label": "used in",
+      "provenance": "stated",
+      "weight": 1
+    },
+    {
+      "source": "skill:user-research",
+      "target": "role:ux-designer",
+      "label": "used in",
+      "provenance": "stated",
+      "weight": 1
+    },
+    {
+      "source": "skill:systems-thinking",
+      "target": "role:product-designer",
+      "label": "inferred",
+      "provenance": "inferred",
+      "weight": 1
+    },
+    {
+      "source": "role:product-designer",
+      "target": "company:acme",
+      "label": "worked at",
+      "provenance": "stated",
+      "weight": 1
+    },
+    {
+      "source": "role:ux-designer",
+      "target": "company:northwind",
+      "label": "worked at",
+      "provenance": "stated",
+      "weight": 1
+    },
+    {
+      "source": "edu:design-ba",
+      "target": "role:product-designer",
+      "label": "led to",
+      "provenance": "stated",
+      "weight": 1
+    },
+    {
+      "source": "skill:figma",
+      "target": "opp:senior-pd",
+      "label": "maps to",
+      "provenance": "inferred",
+      "weight": 1
+    },
+    {
+      "source": "role:product-designer",
+      "target": "opp:senior-pd",
+      "label": "adjacent",
+      "provenance": "inferred",
+      "weight": 1
+    },
+    {
+      "source": "skill:design-systems",
+      "target": "opp:design-ops",
+      "label": "adjacent",
+      "provenance": "inferred",
+      "weight": 1
+    },
+    {
+      "source": "gap:user-research-thin",
+      "target": "role:product-designer",
+      "label": "needed for",
+      "provenance": "inferred",
+      "weight": 1
+    },
+    {
+      "source": "role:product-designer",
+      "target": "band:product-designer-us",
+      "label": "pay estimate",
+      "provenance": "stated",
+      "weight": 1
+    },
+    {
+      "source": "role:ux-designer",
+      "target": "band:ux-designer-us",
+      "label": "pay estimate",
+      "provenance": "stated",
+      "weight": 1
+    }
+  ],
+  "documents": [],
+  "insights": {
+    "summary": "Suggested Primary: Product Designer. Secondary: UX Designer. Fit about 70% based on skills already on your graph. User Research is thin. USA pay estimate mid around $130,000 (curated estimate). Your target $145,000 sits above the mid. Confirm Primary when it looks right, or Change either role.",
+    "node_briefs": {},
+    "last_analyze": null
+  }
+}
