@@ -1,0 +1,35 @@
+{
+  "company_watchlist": [
+    "greenhouse,anthropic",
+    "greenhouse,stripe",
+    "greenhouse,vercel",
+    "greenhouse,linear",
+    "greenhouse,notion",
+    "greenhouse,figma",
+    "lever,vercel",
+    "lever,loom",
+    "lever,pitch",
+    "ashby,linear",
+    "ashby,vercel",
+    "workable,gitlab"
+  ],
+  "free_source_targets": [
+    "github:product designer hiring help wanted",
+    "hn:product designer remote hiring",
+    "reddit:forhire:product designer hiring remote",
+    "ats:greenhouse:stripe"
+  ],
+  "enabled_sources": [
+    "greenhouse",
+    "lever",
+    "ashby",
+    "remoteok",
+    "remotive",
+    "jobicy",
+    "arbeitnow",
+    "himalayas",
+    "themuse",
+    "github",
+    "hn"
+  ]
+}

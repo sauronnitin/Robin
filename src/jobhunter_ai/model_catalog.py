@@ -32,6 +32,33 @@ FALLBACK_MODELS: list[dict[str, str]] = [
 # Back-compat alias used by older callers / docs.
 CURATED_MODELS = FALLBACK_MODELS
 
+# Hints for known quieter alternatives (ids must already appear in `models`).
+# Fallback picker never invents separate catalog entries.
+_FALLBACK_HINTS: dict[str, str] = {
+    "gemini/gemini-2.5-flash-lite": "Lower demand than Flash",
+    "gemini/gemini-3.1-flash-lite": "Lite capacity, usually quieter",
+    "gemini/gemini-3.5-flash": "Newer Flash line if available",
+    "groq/llama-3.1-8b-instant": "Fast Groq escape hatch",
+    "groq/gemma2-9b-it": "Light Groq chat model",
+}
+
+# High-demand Gemini Flash pins users typically leave when 503s hit.
+_HIGH_DEMAND_FLASH = frozenset(
+    {
+        "gemini-2.5-flash",
+        "gemini-2.5-flash-001",
+    }
+)
+
+# Heavy / expensive model tokens never shown as fallbacks.
+_HEAVY_TOKENS = (
+    "pro",
+    "70b",
+    "405b",
+    "ultra",
+    "versatile",  # e.g. llama-3.3-70b-versatile
+)
+
 # Official Gemini API earliest shutdown dates (ai.google.dev/gemini-api/docs/deprecations).
 # Hidden from the picker once shutdown_date <= today. Still remapped at kickoff.
 _GEMINI_SHUTDOWN_DATES: dict[str, date] = {
@@ -90,6 +117,206 @@ def _strip_prefix(model_id: str) -> str:
     if "/" in model_id:
         return model_id.split("/", 1)[1]
     return model_id
+
+
+def _short_model(model_id: str) -> str:
+    short = _strip_prefix(model_id or "").lower()
+    if short.startswith("models/"):
+        short = short.split("/", 1)[-1]
+    return short
+
+
+def is_heavy_or_pro_model(model_id: str) -> bool:
+    """True for Pro / large / expensive models excluded from fallback picks."""
+    short = _short_model(model_id)
+    if not short:
+        return True
+    return any(tok in short for tok in _HEAVY_TOKENS)
+
+
+def is_low_demand_fallback(model_id: str) -> bool:
+    """True for quieter / lower-tier models suitable as high-demand fallbacks.
+
+    Must still appear in the main Model catalog; this only tags eligibility.
+    Never includes Pro or other heavy models, nor classic busy Flash pins.
+    """
+    mid = (model_id or "").strip()
+    if not mid:
+        return False
+    short = _short_model(mid)
+    if is_heavy_or_pro_model(mid):
+        return False
+    if short in _HIGH_DEMAND_FLASH:
+        return False
+
+    # Tier 1: Flash Lite
+    if "flash-lite" in short or short.endswith("-lite"):
+        return True
+    # Tier 2: quieter / newer Flash (not classic 2.5 high-demand)
+    if "flash" in short and short.startswith("gemini-"):
+        # Allow 3.x Flash and other non-2.5 flash lines as quieter alternatives.
+        if short.startswith("gemini-2.5-flash"):
+            return False
+        return True
+    # Tier 3: Gemma (Gemini API or Groq)
+    if short.startswith("gemma"):
+        return True
+    # Tier 4: Groq 8B Instant escape hatch
+    if short.startswith("llama-3.1-8b") or short.startswith("llama3.1-8b"):
+        return True
+    if "8b-instant" in short:
+        return True
+    return False
+
+
+def fallback_hint_for(model_id: str) -> str:
+    """Short UX hint for the Fallback models menu."""
+    mid = (model_id or "").strip()
+    if mid in _FALLBACK_HINTS:
+        return _FALLBACK_HINTS[mid]
+    short = _short_model(mid)
+    if "flash-lite" in short or short.endswith("-lite"):
+        return "Lower demand than Flash"
+    if short.startswith("gemma"):
+        return "Light Gemma alternative"
+    if "8b" in short:
+        return "Fast Groq escape hatch"
+    if "flash" in short:
+        return "Quieter Flash alternative"
+    return "Lower demand alternative"
+
+
+def fallback_rank(model_id: str, *, relative_to: str | None = None) -> tuple:
+    """Sort key for next-best quieter fallbacks (lower = better).
+
+    Global intent (Gemini-primary busy Flash):
+      Flash Lite → quieter/newer Flash → Gemma → Groq 8B
+
+    When relative_to is a Groq model, light Groq options rank first, then
+    Gemini lite / Gemma, then other cross-provider escapes.
+    """
+    mid = (model_id or "").strip()
+    short = _short_model(mid)
+    rel_full = (relative_to or "").strip()
+    if rel_full.startswith("groq/"):
+        groq_primary = True
+    elif rel_full.startswith("gemini/"):
+        groq_primary = False
+    else:
+        groq_primary = False
+
+    def _band() -> int:
+        is_flash_lite = "flash-lite" in short or (
+            short.startswith("gemini-") and short.endswith("-lite")
+        )
+        is_quiet_flash = (
+            short.startswith("gemini-")
+            and "flash" in short
+            and not is_flash_lite
+        )
+        is_gemma = short.startswith("gemma")
+        is_groq_8b = (
+            short.startswith("llama-3.1-8b")
+            or short.startswith("llama3.1-8b")
+            or "8b-instant" in short
+        )
+
+        if groq_primary:
+            if is_groq_8b:
+                return 0
+            if is_gemma and mid.startswith("groq/"):
+                return 5
+            if is_flash_lite:
+                return 20
+            if is_gemma:
+                return 25
+            if is_quiet_flash:
+                return 30
+            return 50
+
+        # Gemini / default: lite Flash first, then quieter Flash, Gemma, Groq 8B
+        if is_flash_lite:
+            return 0
+        if is_quiet_flash:
+            return 10
+        if is_gemma:
+            return 20
+        if is_groq_8b:
+            return 40
+        return 60
+
+    # Within a band: prefer newer version tokens slightly (3.5 before 2.5).
+    ver = 0.0
+    m = re.search(r"(\d+\.\d+)", short)
+    if m:
+        try:
+            ver = -float(m.group(1))
+        except ValueError:
+            ver = 0.0
+    return (_band(), ver, mid)
+
+
+def order_fallback_models(
+    models: list[dict[str, Any]],
+    *,
+    relative_to: str | None = None,
+) -> list[dict[str, Any]]:
+    """Order fallback catalog entries as next-best quieter picks."""
+    status_order = {"active": 0, "disconnected": 1}
+
+    def _key(m: dict[str, Any]) -> tuple:
+        mid = m.get("id") or ""
+        return (
+            status_order.get(m.get("status") or "", 9),
+            *fallback_rank(mid, relative_to=relative_to),
+        )
+
+    return sorted(models, key=_key)
+
+
+def select_fallback_models(
+    models: list[dict[str, Any]],
+    *,
+    relative_to: str | None = None,
+) -> list[dict[str, Any]]:
+    """Subset of Model catalog suitable as lower-demand switch targets.
+
+    Never invents ids. Excludes ``relative_to`` when set. Prefers
+    ``is_low_demand_fallback`` tags; if that would leave the list empty
+    (e.g. current selection is already Flash Lite and it was the only
+    tagged pick), broadens to any non-heavy catalog entry except the
+    current id. Still prefers excluding classic high-demand Flash when
+    other options exist.
+    """
+    cur = (relative_to or "").strip()
+    by_id = {str(m.get("id") or ""): m for m in models if m.get("id")}
+
+    def _enrich(m: dict[str, Any]) -> dict[str, Any]:
+        mid = m["id"]
+        out = dict(m)
+        out["fallback"] = True
+        out["fallback_hint"] = out.get("fallback_hint") or fallback_hint_for(mid)
+        return out
+
+    preferred = [
+        _enrich(m)
+        for mid, m in by_id.items()
+        if mid != cur and is_low_demand_fallback(mid)
+    ]
+    if preferred:
+        return order_fallback_models(preferred, relative_to=relative_to or None)
+
+    # Safety net: never empty when quieter/equal alternatives exist.
+    broadened = [
+        _enrich(m)
+        for mid, m in by_id.items()
+        if mid != cur and not is_heavy_or_pro_model(mid)
+    ]
+    without_busy = [
+        m for m in broadened if _short_model(m["id"]) not in _HIGH_DEMAND_FLASH
+    ]
+    pool = without_busy if without_busy else broadened
+    return order_fallback_models(pool, relative_to=relative_to or None)
 
 
 def is_discontinued_model(model_id: str, *, today: date | None = None) -> bool:
@@ -346,6 +573,21 @@ def build_catalog(*, refresh_live: bool = True) -> dict[str, Any]:
     # Drop inactive (not on this account / outdated id) from the picker.
     models = [m for m in models if m.get("status") != "inactive"]
 
+    # Tag quieter alternatives already present in the Model catalog.
+    # Fallback list is always a subset of `models` (same ids / status).
+    for m in models:
+        mid = m["id"]
+        if is_low_demand_fallback(mid):
+            m["fallback"] = True
+            m["fallback_hint"] = fallback_hint_for(mid)
+        else:
+            m["fallback"] = False
+            m["fallback_hint"] = ""
+
+    # Global fallback menu (client excludes the card's current llm).
+    # Safety net keeps this non-empty whenever non-heavy alternatives exist.
+    fallback_models = select_fallback_models(models)
+
     # Active first, then disconnected; stable by id within group.
     order = {"active": 0, "disconnected": 1}
     models.sort(key=lambda m: (order.get(m["status"], 9), m["id"]))
@@ -354,6 +596,7 @@ def build_catalog(*, refresh_live: bool = True) -> dict[str, Any]:
         "ok": True,
         "providers": providers,
         "models": models,
+        "fallback_models": fallback_models,
         "active_ids": [m["id"] for m in models if m["status"] == "active"],
     }
 

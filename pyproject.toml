@@ -14,10 +14,15 @@ dependencies = [
     "playwright>=1.44.0",
     "requests>=2.31.0",
     "python-dotenv>=1.0.0",
+    "pdfminer.six>=20231228",
+    "python-docx>=1.1.0",
+    "pdfplumber>=0.11.10",
 ]
 
 [project.scripts]
 jobhunter = "jobhunter_ai.main:run"
+jh-cursor-reply = "jobhunter_ai.cursor_chat_reply:main"
+jh-cursor-watch = "jobhunter_ai.cursor_chat_watch:main"
 
 [build-system]
 requires = ["hatchling"]
