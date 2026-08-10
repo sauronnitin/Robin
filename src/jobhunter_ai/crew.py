@@ -795,12 +795,16 @@ class InjectionScreenerAgent(Agent):
         return super().execute_task(task, context=context, tools=tools)
 
 
-# Hybrid routing: Groq 8B for tool/mechanical agents; Gemini Flash for thinking.
-# Never gemini-2.5-pro (Studio cost trap). Groq 70B is off the thinking path.
+# Hybrid routing: Groq 8B for tool/mechanical agents; Groq 70B for thinking
+# agents (Gemini Flash kept configured as the fallback_llm target, promoted
+# by AutoFix on transient Groq errors -- see graph_crew.py/auto_fix.py).
+# Never gemini-2.5-pro (Studio cost trap).
 _GEMINI_FLASH = "gemini/gemini-2.5-flash"
 _GROQ_8B = "groq/llama-3.1-8b-instant"
+_GROQ_70B = "groq/llama-3.3-70b-versatile"
 
 _groq_8b = GroqLLM(model=_GROQ_8B, temperature=0.1)
+_groq_70b = GroqLLM(model=_GROQ_70B, temperature=0.2)
 # is_litellm=True keeps our GeminiLLM subclass (retry/events) instead of
 # CrewAI swapping in native GeminiCompletion.
 _gemini_flash = GeminiLLM(model=_GEMINI_FLASH, temperature=0.2, is_litellm=True)
@@ -845,7 +849,7 @@ class JobhunterAiCrew:
             config=self.agents_config["job_fit_analyst"],
             tools=[],
             max_iter=1,
-            llm=_gemini_flash,
+            llm=_groq_70b,
             **_SHARED_AGENT_KWARGS,
         )
 
@@ -855,7 +859,7 @@ class JobhunterAiCrew:
             config=self.agents_config["resume_tailor"],
             tools=[GoogleDocsCreateTool()],
             max_iter=3,
-            llm=_gemini_flash,
+            llm=_groq_70b,
             **_SHARED_AGENT_KWARGS,
         )
 
@@ -865,7 +869,7 @@ class JobhunterAiCrew:
             config=self.agents_config["cover_letter_writer"],
             tools=[GoogleDocsCreateTool(), GoogleDocsGetTool(), GoogleDocsReplaceTool()],
             max_iter=3,
-            llm=_gemini_flash,
+            llm=_groq_70b,
             **_SHARED_AGENT_KWARGS,
         )
 
@@ -875,7 +879,7 @@ class JobhunterAiCrew:
             config=self.agents_config["content_humanizer_ai_detection_specialist"],
             tools=[GoogleDocsGetTool(), GoogleDocsReplaceTool()],
             max_iter=3,
-            llm=_gemini_flash,
+            llm=_groq_70b,
             **_SHARED_AGENT_KWARGS,
         )
 
@@ -925,7 +929,7 @@ class JobhunterAiCrew:
             config=self.agents_config["linkedin_job_fit_analyst"],
             tools=[],
             max_iter=1,
-            llm=_gemini_flash,
+            llm=_groq_70b,
             **_SHARED_AGENT_KWARGS,
         )
 
@@ -935,7 +939,7 @@ class JobhunterAiCrew:
             config=self.agents_config["linkedin_resume_tailor"],
             tools=[GoogleDocsCreateTool()],
             max_iter=3,
-            llm=_gemini_flash,
+            llm=_groq_70b,
             **_SHARED_AGENT_KWARGS,
         )
 
@@ -945,7 +949,7 @@ class JobhunterAiCrew:
             config=self.agents_config["linkedin_cover_letter_writer"],
             tools=[GoogleDocsCreateTool(), GoogleDocsGetTool(), GoogleDocsReplaceTool()],
             max_iter=3,
-            llm=_gemini_flash,
+            llm=_groq_70b,
             **_SHARED_AGENT_KWARGS,
         )
 

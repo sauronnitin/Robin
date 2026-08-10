@@ -26,18 +26,18 @@ MAIN_ORDER = [
      [], "groq/llama-3.1-8b-instant", 1, 2, 3400, 900, 1),
     ("job_fit_analyst", "score_and_prioritise_jobs", "Score",
      "Scores jobs 0-100 for fit and ranks the shortlist.",
-     [], "gemini/gemini-2.5-flash", 1, 2, 4600, 2200, 0),
+     [], "groq/llama-3.3-70b-versatile", 1, 2, 4600, 2200, 0),
     ("resume_tailor", "tailor_resume_per_job", "Tailor",
      "Keyword-weaves resumes for the top five roles.",
-     ["Google Docs: Create"], "gemini/gemini-2.5-flash", 1, 2, 6100, 2800, 0),
+     ["Google Docs: Create"], "groq/llama-3.3-70b-versatile", 1, 2, 6100, 2800, 0),
     ("cover_letter_writer", "write_cover_letters", "Cover",
      "Writes cover letters only when the listing requires one.",
      ["Google Docs: Create", "Google Docs: Get", "Google Docs: Replace"],
-     "gemini/gemini-2.5-flash", 1, 2, 5800, 2600, 0),
+     "groq/llama-3.3-70b-versatile", 1, 2, 5800, 2600, 0),
     ("content_humanizer_ai_detection_specialist", "humanize_content", "Humanize",
      "Rewrites content to pass AI detection under 10%.",
      ["Google Docs: Get", "Google Docs: Replace"],
-     "gemini/gemini-2.5-flash", 1, 2, 7400, 3200, 0),
+     "groq/llama-3.3-70b-versatile", 1, 2, 7400, 3200, 0),
     ("latex_resume_compiler_drive_publisher", "compile_and_upload_resume_pdfs", "Compile",
      "Compiles LaTeX resumes to PDF and uploads to Drive.",
      ["LaTeX to PDF Compiler", "Google Drive: PDF Upload"],
@@ -63,14 +63,14 @@ LI_ORDER = [
      ["LinkedIn Bot Check"], "groq/llama-3.1-8b-instant", 1, 2, 3200, 900, 1),
     ("linkedin_job_fit_analyst", "linkedin_score_jobs", "LI Fit",
      "Scores clean LinkedIn listings 0-100 for fit.",
-     [], "gemini/gemini-2.5-flash", 1, 2, 4600, 2200, 0),
+     [], "groq/llama-3.3-70b-versatile", 1, 2, 4600, 2200, 0),
     ("linkedin_resume_tailor", "linkedin_tailor_resumes", "LI Tailor",
      "Keyword-weaves resumes for shortlisted LinkedIn roles.",
-     ["Google Docs: Create"], "gemini/gemini-2.5-flash", 1, 2, 6100, 2800, 0),
+     ["Google Docs: Create"], "groq/llama-3.3-70b-versatile", 1, 2, 6100, 2800, 0),
     ("linkedin_cover_letter_writer", "linkedin_write_covers", "LI Cover",
      "Writes cover letters only when the LinkedIn JD requires one.",
      ["Google Docs: Create", "Google Docs: Get", "Google Docs: Replace"],
-     "gemini/gemini-2.5-flash", 1, 2, 5800, 2600, 0),
+     "groq/llama-3.3-70b-versatile", 1, 2, 5800, 2600, 0),
     ("linkedin_latex_compiler", "linkedin_compile_pdfs", "LI Compile",
      "Compiles LinkedIn-loop LaTeX resumes to PDF and uploads to Drive.",
      ["LaTeX to PDF Compiler", "Google Drive: PDF Upload"],
@@ -92,6 +92,16 @@ LI_ORDER = [
 
 # Backward-compatible alias
 ORDER = MAIN_ORDER
+
+
+def _default_fallback_llm(llm):
+    """Gemini Flash backs up the Groq 70B thinking-agent primary (AutoFix
+    promotes this into `llm` in run_plan.json on transient Groq errors).
+    Mechanical Groq 8B agents keep no default fallback, matching prior behavior.
+    """
+    if llm.startswith("groq/") and "8b" not in llm and "instant" not in llm:
+        return "gemini/gemini-2.5-flash"
+    return ""
 
 
 def _build_nodes(order_rows, agents_map, tasks_map, index_offset=0):
@@ -118,6 +128,7 @@ def _build_nodes(order_rows, agents_map, tasks_map, index_offset=0):
             "description": str(t["description"]),
             "expected_output": str(t["expected_output"]),
             "llm": llm,
+            "fallback_llm": _default_fallback_llm(llm),
             "max_iter": max_iter,
             "max_rpm": max_rpm,
             "tools": tools,
@@ -190,7 +201,7 @@ meta = {
     "shared": {
         "allow_delegation": False,
         "max_rpm_default": 2,
-        "model_heavy": "gemini/gemini-2.5-flash",
+        "model_heavy": "groq/llama-3.3-70b-versatile",
         "model_scout": "groq/llama-3.1-8b-instant",
         "model_tools": "groq/llama-3.1-8b-instant",
     },
