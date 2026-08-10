@@ -4079,9 +4079,6 @@ async function loadJobs(q=''){
     jobsLoading = false;
     stopBrowseApiLogPoll();
   }
-  // #region agent log
-  fetch('http://127.0.0.1:7732/ingest/6a8d28cb-02f3-4178-97d9-3a6cf83a0d79',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'262709'},body:JSON.stringify({sessionId:'262709',location:'mockup.html:loadJobs',message:'loadJobs_done',hypothesisId: usedFallback ? 'A' : 'B',data:{q:String(q||'').slice(0,80),sources:sources.slice(0,120),status,apiCount,usedFallback,errMsg,sample,firstCompany:(ALL_JOBS[0]&&ALL_JOBS[0].company)||'',firstDescLen:ALL_JOBS[0]?String(ALL_JOBS[0].desc||'').length:0},timestamp:Date.now()})}).catch(()=>{});
-  // #endregion
   syncFilterChips();
   applyBrowseFilters();
 }
@@ -4353,9 +4350,6 @@ function selJob(id){
   setBrowseSplit(true);
   renderJobs();
   paintJobPreview(j);
-  // #region agent log
-  fetch('http://127.0.0.1:7732/ingest/6a8d28cb-02f3-4178-97d9-3a6cf83a0d79',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'262709'},body:JSON.stringify({sessionId:'262709',location:'mockup.html:selJob',message:'preview_open',hypothesisId:'E',data:{id:String(j.id||'').slice(0,60),company:j.company,title:String(j.title||'').slice(0,60),descLen:String(j.desc||'').length,needsDetail:!!j.needs_detail,ats:j.ats_source||'',demo:String(j.desc||'').includes('Demo fallback')},timestamp:Date.now()})}).catch(()=>{});
-  // #endregion
   enrichSelectedJob(j);
 }
 
@@ -6261,6 +6255,13 @@ function toggleSteepTheme(){
     "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
   }
 }
+</script>
+<script type="module">
+  // knowledge-graph.js is a classic script that references a global THREE.
+  // Modern three.js only ships ES modules, so bridge it onto window here
+  // (module scripts are deferred, so this resolves before rebuildGraph() runs).
+  import * as THREE from "three";
+  window.THREE = THREE;
 </script>
 <script src="knowledge-graph.js"></script>
 <script src="mockup-chat.js"></script>
