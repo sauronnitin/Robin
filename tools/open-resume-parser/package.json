@@ -1,0 +1,18 @@
+{
+  "name": "open-resume-parser",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AGPL-isolated Open Resume PDF parser CLI for JobHunter (subprocess sidecar)",
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "parse": "node parse.mjs"
+  },
+  "dependencies": {
+    "pdfjs-dist": "3.11.174",
+    "tsx": "^4.19.2"
+  }
+}

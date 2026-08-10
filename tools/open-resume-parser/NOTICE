@@ -1,0 +1,24 @@
+Open Resume Parser Sidecar — Attribution Notice
+================================================
+
+This directory vendors and adapts source code from Open Resume:
+
+  Project:  OpenResume (open-resume)
+  Author:   xitanggg and contributors
+  Upstream: https://github.com/xitanggg/open-resume
+  License:  GNU Affero General Public License v3.0 (AGPL-3.0)
+
+Vendored paths (adapted for Node.js CLI use):
+  - src/app/lib/parse-resume-from-pdf/**  →  lib/parse-resume-from-pdf/**
+  - src/app/lib/redux/types.ts           →  lib/redux/types.ts
+  - src/app/lib/deep-clone.ts            →  lib/deep-clone.ts
+
+Local adaptations (still under AGPL-3.0 as derivative work of the above):
+  - lib/parse-resume-from-pdf/read-pdf.ts  (Node file I/O, pdf.js worker, page-break hasEOL fix)
+  - lib/redux/featured-skills.ts           (minimal extract from resumeSlice)
+  - parse.mjs / cli.ts                     (CLI wrapper)
+
+JobHunter's main application code under src/jobhunter_ai/ does NOT include
+these AGPL sources. It invokes this package only as a separate subprocess.
+
+See LICENSE in this directory for the full AGPL-3.0 text.
