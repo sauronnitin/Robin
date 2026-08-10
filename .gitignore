@@ -53,6 +53,7 @@ dashboard/server.*.log
 # Local IDE / agent notes (optional publish later)
 .cursor/
 .claude/
+CONTEXT.md
 Screen Recordings/
 *.mp4
 *.mov
