@@ -11,7 +11,10 @@ role_stats, and gap/band nodes for the career reality check.
 from __future__ import annotations
 
 import json
+import os
 import re
+import urllib.parse
+import urllib.request
 from copy import deepcopy
 from datetime import datetime, timezone
 from pathlib import Path
@@ -31,6 +34,8 @@ _ONET_OCCUPATIONS = _ONET_DIR / "occupations.json"
 _ONET_AI_EXPOSURE = _ONET_DIR / "ai_exposure.json"
 _ONET_RIASEC_ITEMS = _ONET_DIR / "riasec_items.json"
 _RIASEC_USER = _USER_KG / "riasec.json"
+_ONET_WORK_STYLE_ITEMS = _ONET_DIR / "work_style_items.json"
+_WORK_STYLES_USER = _USER_KG / "work_styles.json"
 
 _onet_cache: dict[str, Any] | None = None
 
@@ -151,6 +156,15 @@ def empty_individual() -> dict[str, Any]:
             "completed_at": None,
             "answers": [],
             "transcript": [],
+            "persona": None,
+            "urgency": None,
+        },
+        "market_pulse": {
+            "enabled": False,
+            "query": None,
+            "fetched_at": None,
+            "stale_after_hours": 72,
+            "items": [],
         },
     }
 
@@ -262,6 +276,10 @@ def _normalize_insights(raw: Any) -> dict[str, Any]:
     return base
 
 
+_PERSONA_VALUES = frozenset({"climb", "pivot", "urgent", "explore"})
+_URGENCY_VALUES = frozenset({"now", "soon", "later"})
+
+
 def _normalize_onboarding(raw: Any) -> dict[str, Any]:
     base: dict[str, Any] = {
         "completed": False,
@@ -269,6 +287,8 @@ def _normalize_onboarding(raw: Any) -> dict[str, Any]:
         "completed_at": None,
         "answers": [],
         "transcript": [],
+        "persona": None,
+        "urgency": None,
     }
     if not isinstance(raw, dict):
         return base
@@ -283,6 +303,48 @@ def _normalize_onboarding(raw: Any) -> dict[str, Any]:
     transcript = raw.get("transcript")
     if isinstance(transcript, list):
         base["transcript"] = [t for t in transcript if isinstance(t, dict)]
+    persona = str(raw.get("persona") or "").strip().lower()
+    if persona in _PERSONA_VALUES:
+        base["persona"] = persona
+    urgency = str(raw.get("urgency") or "").strip().lower()
+    if urgency in _URGENCY_VALUES:
+        base["urgency"] = urgency
+    return base
+
+
+def _normalize_market_pulse(raw: Any) -> dict[str, Any]:
+    base: dict[str, Any] = {
+        "enabled": False,
+        "query": None,
+        "fetched_at": None,
+        "stale_after_hours": 72,
+        "items": [],
+    }
+    if not isinstance(raw, dict):
+        return base
+    base["enabled"] = bool(raw.get("enabled"))
+    if raw.get("query"):
+        base["query"] = str(raw.get("query")).strip() or None
+    if raw.get("fetched_at"):
+        base["fetched_at"] = str(raw.get("fetched_at"))
+    try:
+        hours = int(raw.get("stale_after_hours") or 72)
+        base["stale_after_hours"] = max(1, hours)
+    except (TypeError, ValueError):
+        base["stale_after_hours"] = 72
+    items = raw.get("items")
+    if isinstance(items, list):
+        cleaned: list[dict[str, Any]] = []
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            cleaned.append({
+                "title": str(item.get("title") or "").strip(),
+                "source": str(item.get("source") or "").strip(),
+                "date": str(item.get("date") or "").strip(),
+                "url": str(item.get("url") or "").strip(),
+            })
+        base["items"] = [i for i in cleaned if i["title"]]
     return base
 
 
@@ -325,6 +387,7 @@ def normalize_graph(raw: dict[str, Any] | None, *, kind: str) -> dict[str, Any]:
         out["compensation"] = _normalize_compensation(raw.get("compensation"))
         out["insights"] = _normalize_insights(raw.get("insights"))
         out["onboarding"] = _normalize_onboarding(raw.get("onboarding"))
+        out["market_pulse"] = _normalize_market_pulse(raw.get("market_pulse"))
         stats = raw.get("role_stats")
         out["role_stats"] = stats if isinstance(stats, dict) else {}
         out = compute_role_stats(out)
@@ -465,7 +528,14 @@ def _title_tokens(text: str) -> set[str]:
 
 
 def _title_adjacency_boost(graph: dict[str, Any], occ_title: str) -> float:
-    """Boost occupations whose titles overlap stated role/opp labels (e.g. Product Designer)."""
+    """Small tie-breaker for occupations whose titles overlap stated role/opp labels.
+
+    Kept deliberately weak: this must never let title-word overlap alone (e.g. both
+    titles containing "Designer") outrank real skill-based adjacency_score/
+    demands_abilities_fit. A single shared generic token like "designer" used to add
+    up to +0.55, enough to put e.g. Floral Designer (zero skill overlap) ahead of
+    genuinely adjacent roles for a product/UX designer. Caps lowered accordingly.
+    """
     labels = [
         str(n.get("label") or "")
         for n in (graph.get("nodes") or [])
@@ -481,19 +551,38 @@ def _title_adjacency_boost(graph: dict[str, Any], occ_title: str) -> float:
         if not a:
             continue
         if a in ot or ot in a:
-            best = max(best, 0.7)
+            best = max(best, 0.25)
             continue
         at = _title_tokens(a)
         shared = at & ot_tokens
         if not shared:
             continue
         if len(shared) >= 2:
-            best = max(best, 0.65)
+            best = max(best, 0.2)
         elif "design" in shared or "designer" in shared:
-            best = max(best, 0.55)
+            best = max(best, 0.1)
         elif len(shared) == 1 and next(iter(shared)) not in {"product", "manager", "specialist"}:
-            best = max(best, 0.35)
+            best = max(best, 0.06)
     return best
+
+
+# Fit is computed as two calibrated sub-scores, not one importance-weighted
+# fraction over the whole raw skill list:
+#
+# - "core" = real O*NET Content-Model Skills (survey-rated Importance/Level,
+#   ~10-25 items per occupation, sum_importance ~40-100). Capped so a longer
+#   list never dilutes a match, but otherwise these values are meaningful.
+# - "tools" = Software Skills "hot technology" proxies (a synthetic, flat
+#   importance stamp; some occupations list 100+ of them). Importance-weighting
+#   these is meaningless since they're not differentiated - instead this is a
+#   plain coverage fraction against a capped *expected* tool count, since no
+#   real resume will ever evidence anywhere near the full raw list.
+#
+# Without this split, a single real match (e.g. Figma) against an occupation
+# with 150+ tied-importance software rows read as ~1% fit even for a strong
+# candidate - mechanically defensible but unusable as a displayed number.
+_CORE_IMPORTANCE_CAP = 45.0
+_TOOL_EXPECTED_COUNT = 10
 
 
 def _score_occupation(
@@ -502,21 +591,49 @@ def _score_occupation(
     *,
     title_boost: float = 0.0,
     riasec_user: dict[str, float] | None = None,
+    work_styles_user: dict[str, float] | None = None,
 ) -> dict[str, Any]:
     occ_skills = occ.get("skills") or []
-    total_importance = sum(float(s.get("importance") or 0) for s in occ_skills) or 1.0
-    matched_weight = 0.0
-    matched: list[str] = []
-    missing: list[str] = []
-    for s in occ_skills:
-        imp = float(s.get("importance") or 0)
-        user_level = _lookup_user_level(user_vec, str(s.get("name") or ""))
-        if user_level:
-            matched_weight += min(imp, imp * (user_level / 5.0))
-            matched.append(str(s.get("name")))
-        else:
-            missing.append(str(s.get("name")))
-    demands_abilities_fit = round(min(1.0, matched_weight / total_importance), 3)
+    core_skills = [s for s in occ_skills if s.get("source") != "software"]
+    tool_skills = [s for s in occ_skills if s.get("source") == "software"]
+
+    def _match_bucket(bucket: list[dict[str, Any]]) -> tuple[list[str], list[str], float]:
+        hit: list[str] = []
+        miss: list[str] = []
+        weight = 0.0
+        for s in bucket:
+            name = str(s.get("name") or "")
+            imp = float(s.get("importance") or 0)
+            level = _lookup_user_level(user_vec, name)
+            if level:
+                hit.append(name)
+                weight += min(imp, imp * (level / 5.0))
+            else:
+                miss.append(name)
+        return hit, miss, weight
+
+    core_hit, core_miss, core_weight = _match_bucket(core_skills)
+    tool_hit, tool_miss, _tool_weight = _match_bucket(tool_skills)
+
+    core_total = min(sum(float(s.get("importance") or 0) for s in core_skills), _CORE_IMPORTANCE_CAP)
+    core_fit = min(1.0, core_weight / core_total) if core_total > 0 else None
+
+    tool_expected = min(len(tool_skills), _TOOL_EXPECTED_COUNT)
+    tool_fit = min(1.0, len(tool_hit) / tool_expected) if tool_expected > 0 else None
+
+    if core_fit is not None and tool_fit is not None:
+        demands_abilities_fit = core_fit * 0.7 + tool_fit * 0.3
+    elif core_fit is not None:
+        demands_abilities_fit = core_fit
+    elif tool_fit is not None:
+        demands_abilities_fit = tool_fit
+    else:
+        demands_abilities_fit = 0.0
+    demands_abilities_fit = round(demands_abilities_fit, 3)
+
+    matched = core_hit + tool_hit
+    missing = core_miss + tool_miss
+
     # adjacency: coarse cosine-like overlap across the occupation's full skill set vs user vector
     occ_keys = {_norm_skill_key(str(s.get("name") or "")) for s in occ_skills}
     matched_keys = {
@@ -528,6 +645,8 @@ def _score_occupation(
     overlap = len(matched_keys) if matched_keys else len(occ_keys & set(user_vec.keys()))
     denom = (len(occ_keys) ** 0.5) * (len(user_vec) ** 0.5) or 1.0
     adjacency_score = round(min(1.0, (overlap / denom) + title_boost), 3)
+    trait_bonus = 0.0
+    trait_weight = 0.0
     if riasec_user:
         occ_riasec = occ.get("riasec") or {}
         riasec_bonus = (
@@ -537,7 +656,20 @@ def _score_occupation(
             )
             / 6.0
         )
-        adjacency_score = round(min(1.0, adjacency_score * 0.8 + riasec_bonus * 0.2), 3)
+        trait_bonus += riasec_bonus
+        trait_weight += 1.0
+    if work_styles_user:
+        occ_styles = occ.get("work_styles") or {}
+        style_keys = set(work_styles_user) & set(occ_styles)
+        if style_keys:
+            style_bonus = sum(
+                min(float(work_styles_user.get(k, 0) or 0), (float(occ_styles.get(k, 0) or 0) + 3.0) / 6.0)
+                for k in style_keys
+            ) / len(style_keys)
+            trait_bonus += style_bonus
+            trait_weight += 1.0
+    if trait_weight:
+        adjacency_score = round(min(1.0, adjacency_score * 0.8 + (trait_bonus / trait_weight) * 0.2), 3)
     return {
         "soc_code": occ.get("soc_code"),
         "title": occ.get("title"),
@@ -562,6 +694,7 @@ def rank_adjacent_occupations(graph: dict[str, Any], top_n: int = 8) -> list[dic
         return []
     zone_ceiling = _inferred_job_zone(graph) + 1
     riasec = load_riasec().get("scores") or None
+    work_styles = load_work_styles().get("scores") or None
     scored = []
     for occ in _load_onet().get("occupations") or []:
         jz = occ.get("job_zone")
@@ -574,6 +707,7 @@ def rank_adjacent_occupations(graph: dict[str, Any], top_n: int = 8) -> list[dic
                 occ,
                 title_boost=boost,
                 riasec_user=riasec if isinstance(riasec, dict) and riasec else None,
+                work_styles_user=work_styles if isinstance(work_styles, dict) and work_styles else None,
             )
         )
     scored.sort(
@@ -756,7 +890,201 @@ def _prune_stale_gaps(graph: dict[str, Any], keep_ids: set[str]) -> None:
     ]
 
 
+# Minimal identity crosswalk from this app's internal role/opp node ids to the
+# real O*NET occupation they represent. Unlike _ROLE_SKILL_EXPECTATIONS below,
+# this curates only *which occupation* a role maps to; every skill requirement,
+# importance weight, and gap is then computed live from that occupation's real
+# O*NET data (_score_role_onet), not hand-picked. O*NET does not split
+# Product/UX/UI Designer into separate SOC codes - "Web and Digital Interface
+# Designers" (15-1255.00) is the real government taxonomy's closest single
+# occupation for all three, so they intentionally crosswalk to the same code.
+# Ids with no confident O*NET analog (e.g. "Design Ops") are left out on purpose
+# and fall back to the curated dict below rather than guessing a wrong SOC code.
+_ROLE_SOC_CROSSWALK: dict[str, str] = {
+    "role:product-designer": "15-1255.00",
+    "role:ux-designer": "15-1255.00",
+    "role:ui-designer": "15-1255.00",
+    "role:design-lead": "15-1255.00",
+    "opp:senior-pd": "15-1255.00",
+}
+
+_onet_by_soc_cache: dict[str, dict[str, Any]] | None = None
+
+
+def _onet_occupation_by_soc(soc_code: str) -> dict[str, Any] | None:
+    global _onet_by_soc_cache
+    if _onet_by_soc_cache is None:
+        _onet_by_soc_cache = {
+            str(o.get("soc_code")): o for o in _load_onet().get("occupations") or []
+        }
+    return _onet_by_soc_cache.get(soc_code)
+
+
+def _find_matching_skill_node(
+    skills: list[dict[str, Any]], skill_name: str
+) -> dict[str, Any] | None:
+    """Same exact-then-soft-substring matching as _lookup_user_level, but returns
+    the graph skill node (for provenance/weight) instead of just its weight."""
+    key = _norm_skill_key(skill_name)
+    if not key:
+        return None
+    for s in skills:
+        if _norm_skill_key(str(s.get("label") or "")) == key:
+            return s
+    if len(key) < 4:
+        return None
+    for s in skills:
+        skey = _norm_skill_key(str(s.get("label") or ""))
+        if len(skey) < 4:
+            continue
+        if skey == key or skey in key or key in skey:
+            return s
+    return None
+
+
+def _score_role_onet(
+    role_id: str,
+    soc_code: str,
+    skills: list[dict[str, Any]],
+    graph: dict[str, Any],
+) -> dict[str, Any] | None:
+    occ = _onet_occupation_by_soc(soc_code)
+    if not occ:
+        return None
+    user_vec = _user_skill_vector(graph.get("nodes") or [])
+    riasec = load_riasec().get("scores") or None
+    work_styles = load_work_styles().get("scores") or None
+    scored = _score_occupation(
+        user_vec,
+        occ,
+        title_boost=0.0,
+        riasec_user=riasec if isinstance(riasec, dict) and riasec else None,
+        work_styles_user=work_styles if isinstance(work_styles, dict) and work_styles else None,
+    )
+    fit_score = round(scored["demands_abilities_fit"], 2)
+
+    # Real Content-Model skills first (survey-differentiated importance, ~10-25
+    # items) so gap chips surface meaningful signal like "Coordination" instead
+    # of an arbitrary alphabetical pick off a 150-item tied-importance software
+    # tail. Software/tool rows still get scanned and shown, just after core.
+    occ_skills = sorted(
+        occ.get("skills") or [],
+        key=lambda s: (
+            0 if s.get("source") != "software" else 1,
+            -(float(s.get("importance") or 0)),
+        ),
+    )
+    matched_entries: list[tuple[dict[str, Any], dict[str, Any]]] = []
+    missing_all: list[dict[str, Any]] = []
+    for s in occ_skills:
+        name = str(s.get("name") or "")
+        if not name:
+            continue
+        node = _find_matching_skill_node(skills, name)
+        if node:
+            matched_entries.append((s, node))
+        else:
+            missing_all.append(s)
+    # Scan the FULL list for matches (a real match like "Figma" may sit anywhere
+    # in a long tied-importance software-tools tail) but only cap the *unmatched*
+    # side shown to the user - otherwise a 150+ skill occupation would spawn a
+    # gap node per missing tool.
+    missing_top = missing_all[:8]
+
+    stated_hits = 0
+    inferred_hits = 0
+    gap_ids: list[str] = []
+    for skill_row, node in matched_entries:
+        if node.get("provenance") == "inferred":
+            inferred_hits += 1
+        else:
+            stated_hits += 1
+        if (
+            int(node.get("weight") or 0) <= 2
+            or node.get("importance") == "risk"
+            or (node.get("meta") or {}).get("gap_hint")
+        ):
+            reason = str(
+                (node.get("meta") or {}).get("gap_hint") or "thin evidence for this skill"
+            )
+            gid = _upsert_gap_node(
+                graph, role_id=role_id, skill_label=str(skill_row.get("name")), reason=reason
+            )
+            meta = next((n.get("meta") for n in graph["nodes"] if n.get("id") == gid), {})
+            if isinstance(meta, dict):
+                meta["auto"] = True
+            gap_ids.append(gid)
+    missing_labels: list[str] = []
+    for skill_row in missing_top:
+        name = str(skill_row.get("name") or "")
+        missing_labels.append(name)
+        gid = _upsert_gap_node(
+            graph,
+            role_id=role_id,
+            skill_label=name,
+            reason=f"little or no evidence for {name} ({occ.get('title')}, O*NET)",
+        )
+        meta = next((n.get("meta") for n in graph["nodes"] if n.get("id") == gid), {})
+        if isinstance(meta, dict):
+            meta["auto"] = True
+        gap_ids.append(gid)
+
+    total = max(1, len(matched_entries) + len(missing_top))
+    stretch_score = round(
+        min(1.0, max(0.0, 1.0 - fit_score * 0.7 + 0.1 * len(gap_ids) / total)), 2
+    )
+
+    bands = _band_index()
+    band = bands.get(role_id) or {}
+    band_id = str(band.get("id") or "") or None
+
+    neighbor_skills: set[str] = set()
+    for e in graph.get("edges") or []:
+        if not isinstance(e, dict):
+            continue
+        src, tgt = e.get("source"), e.get("target")
+        if src == role_id or tgt == role_id:
+            other = tgt if src == role_id else src
+            sn = next((n for n in skills if n.get("id") == other), None)
+            if sn:
+                neighbor_skills.add(str(sn.get("label") or ""))
+
+    return {
+        "fit_score": fit_score,
+        "stretch_score": stretch_score,
+        "gap_ids": gap_ids,
+        "band_id": band_id,
+        "stated_skill_hits": stated_hits,
+        "inferred_skill_hits": inferred_hits,
+        "expected_skills": [str(s.get("name")) for s, _ in matched_entries] + missing_labels,
+        "missing_skills": missing_labels,
+        "neighbor_skill_count": len(neighbor_skills),
+        "source": "onet",
+        "soc_code": soc_code,
+        "onet_title": occ.get("title"),
+    }
+
+
 def _score_role(
+    role_id: str,
+    skills: list[dict[str, Any]],
+    graph: dict[str, Any],
+) -> dict[str, Any]:
+    """Primary scorer: real O*NET occupation data via _ROLE_SOC_CROSSWALK.
+
+    Falls back to the small curated skill-expectation dict (_score_role_curated)
+    only for role/opp ids with no confident O*NET occupation match (e.g. the
+    synthetic "Design Ops" opportunity id) or if the O*NET bundle is unavailable.
+    """
+    soc_code = _ROLE_SOC_CROSSWALK.get(role_id)
+    if soc_code:
+        onet_stats = _score_role_onet(role_id, soc_code, skills, graph)
+        if onet_stats:
+            return onet_stats
+    return _score_role_curated(role_id, skills, graph)
+
+
+def _score_role_curated(
     role_id: str,
     skills: list[dict[str, Any]],
     graph: dict[str, Any],
@@ -1140,3 +1468,123 @@ def save_riasec(body: dict[str, Any] | None) -> dict[str, Any]:
     result = {"completed_at": _utc_now(), "scores": scores, "raw_answers": answers}
     _write_json(_RIASEC_USER, result)
     return result
+
+
+def load_work_style_items() -> dict[str, Any]:
+    return _read_json(_ONET_WORK_STYLE_ITEMS) or {"items": []}
+
+
+def load_work_styles() -> dict[str, Any]:
+    data = _read_json(_WORK_STYLES_USER)
+    if isinstance(data, dict):
+        return data
+    return {"completed_at": None, "scores": {}, "raw_answers": []}
+
+
+def save_work_styles(body: dict[str, Any] | None) -> dict[str, Any]:
+    answers = (body or {}).get("raw_answers") if isinstance(body, dict) else None
+    answers = answers if isinstance(answers, list) else []
+    items = {i["id"]: i["dimension"] for i in load_work_style_items().get("items") or []}
+    sums: dict[str, list[int]] = {}
+    for a in answers:
+        if not isinstance(a, dict):
+            continue
+        dim = items.get(a.get("id"))
+        val = a.get("value")
+        if dim and isinstance(val, (int, float)):
+            sums.setdefault(dim, []).append(int(val))
+    scores = {dim: round(sum(vals) / len(vals) / 5.0, 3) for dim, vals in sums.items() if vals}
+    result = {"completed_at": _utc_now(), "scores": scores, "raw_answers": answers}
+    _write_json(_WORK_STYLES_USER, result)
+    return result
+
+
+def serpapi_key_status() -> dict[str, Any]:
+    """Masked status for Market Pulse toggle (same key as job search)."""
+    key = (os.getenv("SERPAPI_API_KEY") or "").strip()
+    present = bool(key) and "your_" not in key.lower()
+    return {"set": present, "status": "set" if present else "missing"}
+
+
+def fetch_market_pulse(query: str, *, num: int = 8) -> dict[str, Any]:
+    """SerpAPI Google News for live market signals. Cached by the client store.
+
+    Free-tier budget is shared with Google Jobs (100 searches/month). Call only
+    when the user opts in and the cache is stale.
+    """
+    q = str(query or "").strip()
+    key_info = serpapi_key_status()
+    if not key_info["set"]:
+        return {
+            "ok": False,
+            "key_missing": True,
+            "error": "Connect a SerpAPI key in Settings to enable live market signals.",
+            "query": q or None,
+            "fetched_at": None,
+            "items": [],
+        }
+    if not q:
+        return {
+            "ok": False,
+            "key_missing": False,
+            "error": "Missing search query.",
+            "query": None,
+            "fetched_at": None,
+            "items": [],
+        }
+    api_key = (os.getenv("SERPAPI_API_KEY") or "").strip()
+    encoded = urllib.parse.quote_plus(q)
+    url = (
+        "https://serpapi.com/search.json"
+        f"?engine=google_news&q={encoded}&hl=en&gl=us"
+        f"&api_key={urllib.parse.quote_plus(api_key)}"
+    )
+    try:
+        req = urllib.request.Request(
+            url,
+            headers={
+                "User-Agent": "JobHunterAI/1.0 (+local; market-pulse)",
+                "Accept": "application/json",
+            },
+        )
+        with urllib.request.urlopen(req, timeout=20) as resp:
+            data = json.loads(resp.read())
+    except Exception as exc:
+        return {
+            "ok": False,
+            "key_missing": False,
+            "error": f"Market pulse fetch failed: {exc}",
+            "query": q,
+            "fetched_at": None,
+            "items": [],
+        }
+
+    items: list[dict[str, str]] = []
+    for row in data.get("news_results") or []:
+        if not isinstance(row, dict):
+            continue
+        title = str(row.get("title") or "").strip()
+        if not title:
+            continue
+        source = row.get("source")
+        if isinstance(source, dict):
+            source_name = str(source.get("name") or "").strip()
+        else:
+            source_name = str(source or "").strip()
+        items.append({
+            "title": title,
+            "source": source_name,
+            "date": str(row.get("date") or row.get("published_at") or "").strip(),
+            "url": str(row.get("link") or row.get("url") or "").strip(),
+        })
+        if len(items) >= max(1, min(int(num or 8), 12)):
+            break
+
+    return {
+        "ok": True,
+        "key_missing": False,
+        "error": None,
+        "query": q,
+        "fetched_at": _utc_now(),
+        "items": items,
+    }
