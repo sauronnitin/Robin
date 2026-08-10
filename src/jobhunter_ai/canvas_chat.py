@@ -122,6 +122,18 @@ def _pick_model() -> tuple[str, str | None]:
     return "", "No GEMINI_API_KEY or GROQ_API_KEY in .env. Connect a key in the model picker."
 
 
+def _pick_fallback_model(primary_model: str, *, has_media: bool = False) -> str | None:
+    """Secondary model to retry on if the primary call fails (e.g. quota exhausted).
+
+    Mirrors the AutoFix promote-fallback pattern used for the live agent pipeline.
+    Groq is text-only, so no fallback is offered for media-attached turns.
+    """
+    if has_media or not primary_model.startswith("gemini/"):
+        return None
+    groq = (os.environ.get("GROQ_API_KEY") or "").strip()
+    return "groq/llama-3.1-8b-instant" if groq else None
+
+
 def estimate_tokens(text: str, *, reply_budget: int = 600) -> dict[str, Any]:
     """Rough token estimate (~4 chars/token) for confirm-before-spend UX."""
     chars = len(text or "")
@@ -537,24 +549,48 @@ def _build_user_content(message: str, attachments: list[dict[str, Any]]) -> str 
     return parts
 
 
-def _completion(model: str, messages: list[dict[str, Any]], *, has_media: bool = False) -> tuple[str, Any]:
-    """Call litellm; prefer JSON mode on Gemini, fall back if unsupported."""
+def _completion(
+    model: str,
+    messages: list[dict[str, Any]],
+    *,
+    has_media: bool = False,
+    fallback_model: str | None = None,
+    want_json: bool = True,
+    temperature: float = 0.35,
+    max_tokens: int = 1200,
+) -> tuple[str, Any, str]:
+    """Call litellm; prefer JSON mode (Gemini and Groq both support it), fall
+    back to plain completion if the provider/model rejects response_format.
+
+    If the primary call raises (e.g. Gemini quota/rate-limit exhausted) and a
+    fallback_model is given, retries once on the fallback before propagating.
+    Returns (text, resp, model_actually_used).
+    """
     import litellm
 
-    kwargs: dict[str, Any] = {
-        "model": model,
-        "messages": messages,
-        "temperature": 0.35,
-        "max_tokens": 1200,
-    }
-    use_json_mode = model.startswith("gemini/") and not has_media
-    if use_json_mode:
-        try:
-            resp = litellm.completion(**kwargs, response_format={"type": "json_object"})
-        except Exception:
-            resp = litellm.completion(**kwargs)
-    else:
-        resp = litellm.completion(**kwargs)
+    def _call(m: str) -> Any:
+        kwargs: dict[str, Any] = {
+            "model": m,
+            "messages": messages,
+            "temperature": temperature,
+            "max_tokens": max_tokens,
+        }
+        use_json_mode = want_json and not has_media
+        if use_json_mode:
+            try:
+                return litellm.completion(**kwargs, response_format={"type": "json_object"})
+            except Exception:
+                return litellm.completion(**kwargs)
+        return litellm.completion(**kwargs)
+
+    try:
+        resp = _call(model)
+        model_used = model
+    except Exception:
+        if not fallback_model:
+            raise
+        resp = _call(fallback_model)
+        model_used = fallback_model
 
     choice = (resp.choices or [None])[0]
     text = ""
@@ -563,7 +599,7 @@ def _completion(model: str, messages: list[dict[str, Any]], *, has_media: bool =
         text = (getattr(msg, "content", None) or "") if msg is not None else ""
         if not text and isinstance(choice, dict):
             text = ((choice.get("message") or {}).get("content")) or ""
-    return str(text or "").strip(), resp
+    return str(text or "").strip(), resp, model_used
 
 
 def chat(body: dict[str, Any] | None) -> dict[str, Any]:
@@ -607,10 +643,13 @@ def chat(body: dict[str, Any] | None) -> dict[str, Any]:
     messages.extend(history)
     messages.append({"role": "user", "content": user_content})
 
+    fallback_model = _pick_fallback_model(model, has_media=bool(attachments))
     try:
-        text, resp = _completion(model, messages, has_media=bool(attachments))
+        text, resp, model_used = _completion(
+            model, messages, has_media=bool(attachments), fallback_model=fallback_model
+        )
         if not text:
-            return {"ok": False, "error": "Empty model reply", "model": model}
+            return {"ok": False, "error": "Empty model reply", "model": model_used}
 
         reply, actions = parse_model_reply(text)
         if attach_warnings and reply:
@@ -634,7 +673,8 @@ def chat(body: dict[str, Any] | None) -> dict[str, Any]:
         return {
             "ok": True,
             "reply": reply,
-            "model": model,
+            "model": model_used,
+            "fallback_used": model_used != model,
             "tokens": tokens,
             "actions": client_actions,
             "client_actions": client_actions,
@@ -681,29 +721,22 @@ def narrate_preview(body: dict[str, Any] | None) -> dict[str, Any]:
     model, err = _pick_model()
     if err:
         return {"ok": False, "error": err, "estimate": est}
+    fallback_model = _pick_fallback_model(model)
 
     try:
-        import litellm
-
-        resp = litellm.completion(
-            model=model,
-            messages=[
+        text, resp, model_used = _completion(
+            model,
+            [
                 {"role": "system", "content": _PREVIEW_SYSTEM},
                 {"role": "user", "content": prompt[:12000]},
             ],
+            fallback_model=fallback_model,
+            want_json=False,
             temperature=0.3,
             max_tokens=512,
         )
-        choice = (resp.choices or [None])[0]
-        text = ""
-        if choice is not None:
-            msg = getattr(choice, "message", None)
-            text = (getattr(msg, "content", None) or "") if msg is not None else ""
-            if not text and isinstance(choice, dict):
-                text = ((choice.get("message") or {}).get("content")) or ""
-        text = str(text or "").strip()
         if not text:
-            return {"ok": False, "error": "Empty narration", "model": model, "estimate": est}
+            return {"ok": False, "error": "Empty narration", "model": model_used, "estimate": est}
         usage = getattr(resp, "usage", None) or {}
         tokens = None
         if isinstance(usage, dict):
@@ -713,7 +746,8 @@ def narrate_preview(body: dict[str, Any] | None) -> dict[str, Any]:
         return {
             "ok": True,
             "reply": text[:_MAX_REPLY_CHARS],
-            "model": model,
+            "model": model_used,
+            "fallback_used": model_used != model,
             "tokens": tokens or est.get("total_tokens"),
             "estimate": est,
         }
