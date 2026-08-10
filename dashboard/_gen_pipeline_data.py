@@ -19,8 +19,8 @@ tasks = {**tasks, **li_tasks}
 # Main Scout→Log loop (no LinkedIn Easy Apply).
 MAIN_ORDER = [
     ("global_product_design_job_scout", "scrape_and_filter_job_listings", "Scout",
-     "Finds IC product design listings from remote job boards.",
-     ["Website Scraper (truncated)"], "groq/llama-3.1-8b-instant", 2, 2, 5200, 1800, 0),
+     "Fetches design roles via 6 free APIs: RemoteOK, Remotive, Jobicy, Freehire, Rise, SerpAPI.",
+     ["Job APIs (multi-source)", "Website Scraper (truncated)"], "groq/llama-3.1-8b-instant", 3, 2, 5200, 1800, 0),
     ("content_safety_injection_screener", "screen_listings_for_prompt_injection", "Screen",
      "Scans listings for prompt injection and redacts threats.",
      [], "groq/llama-3.1-8b-instant", 1, 2, 3400, 900, 1),
@@ -137,18 +137,51 @@ def _build_nodes(order_rows, agents_map, tasks_map, index_offset=0):
 main_nodes, main_edges = _build_nodes(MAIN_ORDER, agents, tasks, index_offset=0)
 li_nodes, li_edges = _build_nodes(LI_ORDER, agents, tasks, index_offset=100)
 
-# Suggested canvas positions: main at y=320; LI row at y=1100 with real card spacing.
+# Observational viewport at end of LinkedIn row (not in the exec loop).
 _CARD_W = 400
 _CARD_GAP_X = 400
 _LI_Y = 1100
+_PREVIEW_W = 520
+LI_PREVIEW = {
+    "id": "linkedin_live_preview",
+    "kind": "preview",
+    "index": 200,
+    "short": "LI Preview",
+    "role": "LinkedIn Live Preview",
+    "summary": "Live HTML / browser actions from LinkedIn agents (Scout, Easy Apply, External).",
+    "watchMode": "auto",
+    "watchScope": "linkedin",
+    "viewTab": "browser",
+    "taskId": None,
+    "dependsOn": [],
+    "tools": [],
+    "skills": [],
+    "thinkingLine": "LI Preview: waiting for browser actions...",
+    "runningLine": "LI Preview: capturing live HTML actions...",
+    "outputPreview": "LI Preview idle.",
+    "logLines": [],
+    "flags": 0,
+    "baseDurationMs": 0,
+    "tokenEstimate": 0,
+}
+li_canvas_nodes = li_nodes + [LI_PREVIEW]
+
 LI_SECTION = {
     "id": "section_linkedin",
     "name": "LinkedIn",
-    "memberIds": [n["id"] for n in li_nodes],
+    "memberIds": [n["id"] for n in li_canvas_nodes],
     "suggestedOrigin": {"x": 80, "y": _LI_Y},
     "suggestedPositions": {
-        n["id"]: {"x": 80 + i * (_CARD_W + _CARD_GAP_X), "y": _LI_Y}
-        for i, n in enumerate(li_nodes)
+        **{
+            n["id"]: {"x": 80 + i * (_CARD_W + _CARD_GAP_X), "y": _LI_Y}
+            for i, n in enumerate(li_nodes)
+        },
+        LI_PREVIEW["id"]: {
+            "x": 80 + len(li_nodes) * (_CARD_W + _CARD_GAP_X),
+            "y": _LI_Y,
+            "w": _PREVIEW_W,
+            "h": 440,
+        },
     },
 }
 
@@ -173,6 +206,7 @@ content = (
     "/*\n"
     " * Auto-mined from agents.yaml, tasks.yaml, linkedin_*.yaml, crew.py\n"
     " * Main loop (AGENTS/EDGES) + LinkedIn loop (LI_AGENTS/LI_EDGES/LI_SECTION).\n"
+    " * LI_PREVIEW is observational (not in the LinkedIn exec loop).\n"
     " * SIMULATION: timings / logLines / tokenEstimate are dramatized.\n"
     " */\n"
     f"const PIPELINE_META = {json.dumps(meta, ensure_ascii=False, indent=2)};\n\n"
@@ -180,16 +214,18 @@ content = (
     f"const EDGES = {json.dumps(main_edges, ensure_ascii=False, indent=2)};\n\n"
     f"const LI_AGENTS = {json.dumps(li_nodes, ensure_ascii=False, indent=2)};\n\n"
     f"const LI_EDGES = {json.dumps(li_edges, ensure_ascii=False, indent=2)};\n\n"
+    f"const LI_PREVIEW = {json.dumps(LI_PREVIEW, ensure_ascii=False, indent=2)};\n\n"
     f"const LI_SECTION = {json.dumps(LI_SECTION, ensure_ascii=False, indent=2)};\n\n"
     'if (typeof module !== "undefined") {\n'
-    "  module.exports = { AGENTS, EDGES, PIPELINE_META, LI_AGENTS, LI_EDGES, LI_SECTION };\n"
+    "  module.exports = { AGENTS, EDGES, PIPELINE_META, LI_AGENTS, LI_EDGES, LI_PREVIEW, LI_SECTION };\n"
     "}\n"
 )
 js_path.write_text(content, encoding="utf-8")
 print(
     f"Wrote {js_path} size={js_path.stat().st_size} "
     f"main_agents={len(main_nodes)} main_edges={len(main_edges)} "
-    f"li_agents={len(li_nodes)} li_edges={len(li_edges)}"
+    f"li_agents={len(li_nodes)} li_edges={len(li_edges)} "
+    f"li_preview={LI_PREVIEW['id']}"
 )
 
 # Sanity checks
@@ -208,4 +244,6 @@ expected_li = [
     "linkedin_application_logger",
 ]
 assert li_ids == expected_li, f"LI_ORDER mismatch: {li_ids}"
-print("Sanity OK: MAIN has no LI Easy Apply; LI_AGENTS chain complete.")
+assert LI_PREVIEW["id"] in LI_SECTION["memberIds"], "LI Preview must be in LI_SECTION"
+assert LI_PREVIEW["id"] not in meta["loops"]["linkedin"], "LI Preview must not be in exec loop"
+print("Sanity OK: MAIN has no LI Easy Apply; LI_AGENTS chain complete; LI Preview observational.")
