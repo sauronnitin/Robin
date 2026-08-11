@@ -18,6 +18,7 @@ from crewai.llms.cache import CACHE_BREAKPOINT_KEY
 from jobhunter_ai.tools.scrape_website_truncated import TruncatedScrapeWebsiteTool
 from jobhunter_ai.tools.job_apis import JobApisTool
 from jobhunter_ai import events_bus
+from jobhunter_ai import latex_sanitize
 from jobhunter_ai.screening import screen_listings
 
 from jobhunter_ai.tools.google_docs import (
@@ -322,6 +323,71 @@ def _score_batch_guardrail(task_output) -> tuple[bool, Any]:
     except Exception as exc:
         # Never block the pipeline on queue I/O; fall through with original output.
         print(f"[job_queue] guardrail error (passing score output through): {exc}")
+        return True, raw
+
+
+_LATEX_OUTPUT_KEYS = ("humanized_latex", "resume_latex")
+
+
+def _offload_latex_guardrail(task_output) -> tuple[bool, Any]:
+    """After Humanize: swap each job's LaTeX blob for a short ``FILE:`` ref.
+
+    Compile needs the *identity* of each resume, never its 3.5k tokens of
+    source — it only hands the value straight to the compiler tool, which now
+    resolves refs itself. Leaving the blob inline made it context for Compile,
+    then a tool argument, then conversation history re-sent on every ReAct
+    round: 158k tokens for a single job. The LaTeX still round-trips fully
+    through Tailor -> Humanize, which genuinely rewrite it.
+    """
+    raw = getattr(task_output, "raw", None) or str(task_output)
+    try:
+        start, end = raw.find("["), raw.rfind("]")
+        if start == -1 or end <= start:
+            return True, raw
+        jobs = json.loads(raw[start : end + 1])
+        if not isinstance(jobs, list) or not jobs:
+            return True, raw
+
+        offloaded = 0
+        for i, job in enumerate(jobs, start=1):
+            if not isinstance(job, dict):
+                continue
+            for key in _LATEX_OUTPUT_KEYS:
+                source = job.get(key)
+                # Already a ref (or too small to be a real resume): leave alone.
+                if not isinstance(source, str) or len(source) < 400:
+                    continue
+                job[key] = latex_sanitize.store_job_latex(f"job_{i}", source)
+                offloaded += 1
+
+        if not offloaded:
+            return True, raw
+
+        rewritten = (
+            raw[:start]
+            + json.dumps(jobs, ensure_ascii=False, indent=2)
+            + raw[end + 1 :]
+        )
+        saved = len(raw) - len(rewritten)
+        print(
+            f"[latex_offload] moved {offloaded} LaTeX blob(s) to FILE: refs "
+            f"(~{saved} chars / ~{saved // 3} tokens out of Compile's context)"
+        )
+        events_bus.emit(
+            "step",
+            agent_id="content_humanizer_ai_detection_specialist",
+            task_key="humanize_content",
+            status="done",
+            detail={
+                "label": "latex_offloaded",
+                "blobs": offloaded,
+                "chars_saved": saved,
+            },
+        )
+        return True, rewritten
+    except (json.JSONDecodeError, OSError, TypeError) as exc:
+        # Never block the pipeline on this optimization.
+        print(f"[latex_offload] skipped (passing humanize output through): {exc}")
         return True, raw
 
 
@@ -1016,14 +1082,11 @@ class JobhunterAiCrew:
         return Agent(
             config=self.agents_config["latex_resume_compiler_drive_publisher"],
             tools=[LatexToPdfCompiler(), GoogleDrivePdfUploadTool()],
-            # max_iter=2 could only ever complete one job's compile+upload
-            # tool-call pair (2 calls) before being forced to give a final
-            # answer - this, not prompt formatting, is why only 1 of 3 jobs
-            # ever got a real PDF across every earlier fix attempt tonight.
-            # Kept at 10 (not reduced for batch=1) so restoring the full
-            # batch size later still works without another max_iter fix.
-            # 3 jobs x 2 tool calls each + headroom for retries/reasoning.
-            max_iter=10,
+            # Each job needs exactly 2 tool calls (compile + upload). Scale with
+            # the batch instead of a flat 10: at batch=1 the old ceiling let the
+            # agent burn all 10 rounds re-sending accumulated context (158k
+            # tokens, 50% of a whole run) rather than finishing in 2.
+            max_iter=2 * _TAILOR_BATCH_SIZE + 2,
             # llama-3.1-8b-instant deterministically fails to format the full
             # LaTeX resume source as a tool-call argument ("Failed to call a
             # function", GroqLLM exhausted retries every attempt, not
@@ -1200,7 +1263,12 @@ class JobhunterAiCrew:
 
     @task
     def humanize_content(self) -> Task:
-        return Task(config=self.tasks_config["humanize_content"])
+        return Task(
+            config=self.tasks_config["humanize_content"],
+            # Swap LaTeX blobs for FILE: refs before Compile ever sees them.
+            guardrail=_offload_latex_guardrail,
+            guardrail_max_retries=0,
+        )
 
     @task
     def compile_and_upload_resume_pdfs(self) -> Task:

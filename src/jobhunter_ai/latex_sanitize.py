@@ -9,6 +9,42 @@ _FENCE_RE = re.compile(r"^```(?:latex|tex)?\s*\n?(.*?)\n?```\s*$", re.DOTALL | r
 
 DEFAULT_BASE_RESUME = Path("resume/base_resume.tex")
 
+# A full resume is ~3.5k tokens. Letting it ride through the LLM as task
+# context AND again as a tool-call argument is what made the compile agent
+# burn 158k tokens (50% of a whole run) on a single job: every ReAct round
+# re-sends the accumulated blob. LaTeX moves by reference instead, mirroring
+# the FILE:last_compile.b64 handle the PDF side already uses.
+LATEX_REF_PREFIX = "FILE:"
+_LATEX_CACHE_DIR = Path("dashboard/.cache/latex")
+_SAFE_SLUG_RE = re.compile(r"[^a-zA-Z0-9_.-]+")
+
+
+def store_job_latex(key: str, latex_source: str) -> str:
+    """Persist a job's LaTeX and return the short ``FILE:`` ref for it."""
+    slug = _SAFE_SLUG_RE.sub("_", str(key).strip()) or "job"
+    _LATEX_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    (_LATEX_CACHE_DIR / f"{slug}.tex").write_text(latex_source or "", encoding="utf-8")
+    return f"{LATEX_REF_PREFIX}{slug}.tex"
+
+
+def resolve_latex_ref(value: str) -> str:
+    """Expand a ``FILE:<name>.tex`` ref to its source; pass anything else through.
+
+    A ref that cannot be read falls through to the raw value so the caller's
+    existing sanitize/base-resume fallback still gets its turn.
+    """
+    text = (value or "").strip()
+    if not text.startswith(LATEX_REF_PREFIX):
+        return value
+    name = _SAFE_SLUG_RE.sub("_", text[len(LATEX_REF_PREFIX):].strip())
+    try:
+        path = _LATEX_CACHE_DIR / name
+        if path.is_file():
+            return path.read_text(encoding="utf-8")
+    except OSError:
+        pass
+    return value
+
 
 def strip_markdown_fence(text: str) -> str:
     raw = (text or "").strip()
