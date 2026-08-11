@@ -142,9 +142,40 @@ tailwind.config = {
   html.dark #jList .jh-job-card {
     background: var(--st-card) !important;
     border: 1px solid var(--st-border) !important;
+    box-shadow:
+      0 0 0 1px rgba(240,232,223,0.04),
+      0 4px 12px rgba(0,0,0,0.28) !important;
+  }
+  html.dark #jList .jh-job-card:hover {
+    box-shadow:
+      0 0 0 1px rgba(240,232,223,0.10),
+      0 8px 22px rgba(0,0,0,0.38),
+      0 20px 36px -10px rgba(0,0,0,0.42) !important;
   }
   html.dark #jList .jh-job-card.is-selected {
     background: var(--st-peach) !important;
+  }
+  html.dark #browseDetailFloat .jh-hf-kicker,
+  html.dark #browseDetailFloat .jh-hf-meta,
+  html.dark #browseDetailFloat .jh-hf-desc-label {
+    color: var(--st-slate) !important;
+  }
+  html.dark #browseDetailFloat .jh-hf-title {
+    color: var(--st-ink) !important;
+  }
+  html.dark #browseDetailFloat .jh-hf-company {
+    color: var(--st-sienna) !important;
+  }
+  html.dark #browseDetailFloat .jh-hf-excerpt {
+    color: rgba(240,232,223,0.78) !important;
+  }
+  html.dark #browseDetailFloat .jh-hf-fact {
+    background: var(--st-raised) !important;
+    border-color: var(--st-border) !important;
+  }
+  html.dark #browseDetailFloat .jh-hf-close:hover {
+    background: var(--st-raised);
+    color: var(--st-ink);
   }
   html.dark #browseApiLog {
     background: var(--st-card) !important;
@@ -172,6 +203,45 @@ tailwind.config = {
   html.dark #s-linkedin .h-11,
   html.dark #browseSticky > div {
     background: rgba(15,13,11,0.90) !important;
+  }
+  /* Browse job list continues the sticky/top wash surface (dark only) */
+  html.dark #browseListCol,
+  html.dark #browseListArea,
+  html.dark #browseListScroll {
+    background: rgba(15,13,11,0.90) !important;
+  }
+  html.dark #browseListArea {
+    position: relative;
+    isolation: isolate;
+  }
+  html.dark #browseListArea::before {
+    content: "";
+    position: absolute;
+    left: -12%;
+    right: -12%;
+    top: -40px;
+    height: 220px;
+    pointer-events: none;
+    z-index: 0;
+    background:
+      radial-gradient(ellipse 50% 60% at 10% 30%, rgba(196,128,80,0.10), transparent 70%),
+      radial-gradient(ellipse 35% 50% at 85% 15%, rgba(196,128,80,0.06), transparent 65%);
+    filter: blur(28px);
+  }
+  html.dark #browseListArea > * {
+    position: relative;
+    z-index: 1;
+  }
+  html.dark #browseDetailFloat {
+    position: absolute !important;
+    z-index: 40 !important;
+    background: var(--st-card) !important;
+    color: var(--st-ink) !important;
+    border: 1px solid var(--st-border-hi) !important;
+    box-shadow:
+      0 0 0 1px rgba(240,232,223,0.08),
+      0 6px 18px rgba(0,0,0,0.42),
+      0 24px 48px -10px rgba(0,0,0,0.50) !important;
   }
   html.dark #pBar { background: var(--st-amber) !important; }
 
@@ -541,20 +611,57 @@ nav .border-slate-800, nav .border-t, nav .border-b, nav .border-r {
   backdrop-filter: blur(12px);
 }
 
-/* Job list floats */
+/* Job list cards — subtle lift on hover (contained; no sidebar spill) */
+#browseListCol,
+#browseListArea {
+  isolation: isolate;
+  overflow: hidden !important;
+}
+#browseListScroll {
+  overflow-x: clip;
+  overflow-y: auto;
+}
+#jList {
+  padding-top: 10px;
+  padding-bottom: 20px;
+  padding-left: 22px;
+  padding-right: 22px;
+}
 #jList .jh-job-card {
   background: rgba(255,255,255,0.92) !important;
   border: none !important;
   border-radius: 18px !important;
+  position: relative;
+  transform-origin: center center;
+  transition:
+    transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.28s ease,
+    background-color 0.2s ease;
   box-shadow:
     0 0 0 1px rgba(4,23,43,0.05),
     0 4px 12px rgba(0,0,0,0.05) !important;
 }
 #jList .jh-job-card:hover {
+  transform: translateY(-2px) scale(1.01);
+  z-index: 2;
   box-shadow:
-    0 0 0 1px rgba(4,23,43,0.07),
+    0 0 0 1px rgba(4,23,43,0.08),
     0 6px 16px rgba(0,0,0,0.08),
-    0 16px 28px -8px rgba(0,0,0,0.06) !important;
+    0 14px 24px -10px rgba(0,0,0,0.06) !important;
+}
+#jList .jh-job-card .jh-job-chev {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  margin-top: 2px;
+  color: var(--st-ash);
+  opacity: 0.55;
+  transition: transform 0.24s ease, opacity 0.2s ease, color 0.2s ease;
+}
+#jList .jh-job-card:hover .jh-job-chev {
+  transform: translateX(3px);
+  opacity: 1;
+  color: var(--st-slate);
 }
 #jList .jh-job-card.is-selected,
 #jList .jh-job-card[class*="bg-indigo"] {
@@ -562,6 +669,209 @@ nav .border-slate-800, nav .border-t, nav .border-b, nav .border-r {
   box-shadow:
     0 0 0 1px rgba(93,42,26,0.10),
     0 4px 12px rgba(93,42,26,0.06) !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  #jList .jh-job-card,
+  #jList .jh-job-card .jh-job-chev,
+  #browseDetailFloat {
+    transition: none !important;
+  }
+  #jList .jh-job-card:hover {
+    transform: none !important;
+  }
+}
+
+/* Click-only floating job detail: sticky to top of list window */
+#browseDetailFloat {
+  position: absolute;
+  top: 12px;
+  right: 22px;
+  width: min(640px, 56%);
+  height: min(520px, 70%);
+  max-height: calc(100% - 28px);
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 20px;
+  background: rgba(255,255,255,0.97);
+  color: var(--st-ink);
+  border: 1px solid rgba(4,23,43,0.08);
+  box-shadow:
+    0 0 0 1px rgba(4,23,43,0.06),
+    0 6px 18px rgba(0,0,0,0.075),
+    0 24px 42px -10px rgba(0,0,0,0.10);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateX(10px) scale(0.985);
+  transition:
+    opacity 0.22s ease,
+    transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    visibility 0.22s;
+  backdrop-filter: blur(10px);
+}
+#browseDetailFloat.is-open {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: none;
+}
+#browseDetailFloat[hidden] {
+  display: none !important;
+}
+#browseDetailFloat .jh-hf-head {
+  padding: 14px 14px 10px;
+  border-bottom: 1px solid var(--st-border);
+  flex-shrink: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+#browseDetailFloat .jh-hf-head-main {
+  flex: 1;
+  min-width: 0;
+}
+#browseDetailFloat .jh-hf-close {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--st-ash);
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+}
+#browseDetailFloat .jh-hf-close:hover {
+  background: var(--st-fog);
+  color: var(--st-ink);
+}
+#browseDetailFloat .jh-hf-kicker {
+  font-family: var(--st-sans);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--st-ash);
+  margin-bottom: 8px;
+}
+#browseDetailFloat .jh-hf-company {
+  font-family: var(--st-serif);
+  font-size: 14px;
+  color: var(--st-sienna);
+  line-height: 1.25;
+}
+#browseDetailFloat .jh-hf-title {
+  font-family: var(--st-serif);
+  font-size: 20px;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  color: var(--st-ink);
+  line-height: 1.2;
+  margin-top: 2px;
+}
+#browseDetailFloat .jh-hf-meta {
+  font-size: 12px;
+  color: var(--st-slate);
+  margin-top: 4px;
+}
+#browseDetailFloat .jh-hf-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 8px;
+}
+#browseDetailFloat .jh-hf-tags .jh-wp-chip,
+#browseDetailFloat .jh-hf-tags .jh-src-chip {
+  font-size: 11px !important;
+  padding: 2px 7px !important;
+}
+#browseDetailFloat .jh-hf-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--st-border);
+  flex-shrink: 0;
+}
+#browseDetailFloat .jh-hf-fact {
+  border-radius: 9999px;
+  background: var(--st-fog);
+  border: 1px solid var(--st-border);
+  padding: 4px 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+}
+#browseDetailFloat .jh-hf-fact span {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--st-ash);
+  white-space: nowrap;
+}
+#browseDetailFloat .jh-hf-fact strong {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--st-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 180px;
+}
+#browseDetailFloat .jh-hf-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 12px 14px;
+}
+#browseDetailFloat .jh-hf-desc-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--st-ash);
+  margin-bottom: 8px;
+}
+#browseDetailFloat .jh-hf-excerpt {
+  font-size: 13px;
+  line-height: 1.55;
+  color: rgba(4,23,43,0.78);
+}
+#browseDetailFloat .jh-hf-excerpt p + p { margin-top: 0.65em; }
+#browseDetailFloat .jh-hf-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  padding: 12px 14px;
+  border-top: 1px solid var(--st-border);
+}
+/* Steep hierarchy: one primary (ink), secondary ghosts outline */
+#browseDetailFloat .jh-hf-actions .st-btn-primary {
+  flex: 1 1 auto;
+  min-width: 0;
+  justify-content: center;
+}
+#browseDetailFloat .jh-hf-actions .st-btn-ghost {
+  flex: 0 0 auto;
+  justify-content: center;
+  white-space: nowrap;
+}
+html.dark #browseDetailFloat .jh-hf-actions .st-btn-ghost {
+  border-color: var(--st-border-hi) !important;
+  color: var(--st-ink) !important;
+}
+html.dark #browseDetailFloat .jh-hf-actions .st-btn-ghost:hover {
+  border-color: var(--st-sienna) !important;
+}
+html.dark #browseDetailFloat .jh-hf-actions .st-btn-primary {
+  background: var(--st-ink) !important;
+  color: var(--st-page) !important;
+  border-color: var(--st-ink) !important;
 }
 #jdPanel {
   background: rgba(255,255,255,0.90) !important;
@@ -1149,27 +1459,7 @@ html.dark #s-profile .st-progress-track { background: var(--st-fog); }
     0 0 0 1px rgba(4,23,43,0.05),
     0 8px 24px rgba(0,0,0,0.06) !important;
 }
-#jList .jh-job-card {
-  background: rgba(255,255,255,0.92) !important;
-  border: none !important;
-  border-radius: 18px !important;
-  box-shadow:
-    0 0 0 1px rgba(4,23,43,0.05),
-    0 4px 12px rgba(0,0,0,0.05) !important;
-}
-#jList .jh-job-card:hover {
-  box-shadow:
-    0 0 0 1px rgba(4,23,43,0.07),
-    0 6px 16px rgba(0,0,0,0.08),
-    0 16px 28px -8px rgba(0,0,0,0.06) !important;
-}
-#jList .jh-job-card.is-selected,
-#jList .jh-job-card[class*="bg-indigo"] {
-  background: var(--st-peach) !important;
-  box-shadow:
-    0 0 0 1px rgba(93,42,26,0.10),
-    0 4px 12px rgba(93,42,26,0.06) !important;
-}
+/* Job card hover/shadow rules live with the stats-card spring block above */
 /* Workplace / quiet chips: mist outline (unchanged look, 14px floor) */
 #jList .jh-wp-chip,
 #jdTags .jh-wp-chip {
@@ -1611,12 +1901,25 @@ button.bg-indigo-600.st-btn-primary {
 
 /* ── Animation ── */
 .pulse-dot { animation: stPulse 2s ease-in-out infinite; }
-@keyframes jhSkelPulse { 0%,100%{opacity:1} 50%{opacity:.45} }
+@keyframes jhSkelPulse { 0%,100%{opacity:1} 50%{opacity:.55} }
 #jList[aria-busy="true"] .jh-skel-card {
   animation: jhSkelPulse 1.6s cubic-bezier(0.4,0,0.6,1) infinite;
   pointer-events: none;
+  background: rgba(255,255,255,0.92) !important;
+  border: 1px solid var(--st-border) !important;
+  box-shadow: none !important;
 }
-#jList .jh-skel { background-color: var(--st-mist) !important; }
+html.dark #jList[aria-busy="true"] .jh-skel-card {
+  background: var(--st-card) !important;
+}
+#jList .jh-skel {
+  background-color: rgba(151, 151, 153, 0.20) !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+html.dark #jList .jh-skel {
+  background-color: rgba(155, 145, 137, 0.20) !important;
+}
 @keyframes toastUp { from{transform:translateY(8px);opacity:0} to{transform:translateY(0);opacity:1} }
 .toast-enter { animation: toastUp 0.2s ease; }
 nav *, .rounded-2xl, .rounded-xl, button, input, select, #jdPanel, #jList > div {
@@ -1723,15 +2026,23 @@ html.dark .profile-sticky-head {
   border-radius: 0;
   overflow: hidden;
 }
-#resumeOriginalFrame {
+#resumeOriginalPages {
   position: absolute;
   inset: 0;
-  display: block;
-  width: 100%;
-  height: 100%;
-  min-height: 320px;
-  border: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
   background: #525659;
+  padding: 16px 0 32px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+#resumeOriginalPages canvas {
+  max-width: calc(100% - 32px);
+  height: auto;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+  background: #fff;
 }
 #resumeOriginalEmpty {
   color: var(--st-smoke);
@@ -2012,6 +2323,11 @@ html.dark .jh-asst-rail-btn.is-active {
 html.dark .jh-asst-msg.user { background: rgba(196, 128, 80, 0.14); border-color: rgba(196, 128, 80, 0.28); }
 html.dark .jh-asst-send { background: var(--st-peach); color: var(--st-sienna); border-color: transparent; }
 </style>
+<script type="module">
+  import * as pdfjsLib from "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.7.76/build/pdf.min.mjs";
+  pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.7.76/build/pdf.worker.min.mjs";
+  window.pdfjsLib = pdfjsLib;
+</script>
 </head>
 <body class="st-body antialiased select-none h-screen overflow-hidden">
 
@@ -2325,7 +2641,38 @@ html.dark .jh-asst-send { background: var(--st-peach); color: var(--st-sienna); 
               <div class="text-[14px] font-semibold text-slate-500 px-5 py-3" id="jobsListLabel">Recently posted jobs</div>
               <div id="jList" class="px-4 pb-6 space-y-1.5"></div>
             </div>
-            <div id="jdPanel" class="hidden flex-col min-h-0 overflow-hidden bg-slate-900">
+            <aside id="browseDetailFloat" class="jh-job-detail-float" hidden aria-hidden="true">
+              <div class="jh-hf-head">
+                <div class="jh-hf-head-main">
+                  <div class="jh-hf-kicker">Preview</div>
+                  <div class="flex items-start gap-3">
+                    <div id="hfLogo" class="flex-shrink-0"></div>
+                    <div class="min-w-0 flex-1">
+                      <div id="hfCo" class="jh-hf-company truncate"></div>
+                      <div id="hfTitle" class="jh-hf-title"></div>
+                      <div id="hfMeta" class="jh-hf-meta"></div>
+                      <div id="hfTags" class="jh-hf-tags"></div>
+                    </div>
+                  </div>
+                </div>
+                <button type="button" class="jh-hf-close" onclick="closeJD()" aria-label="Close preview">✕</button>
+              </div>
+              <div class="jh-hf-facts">
+                <div class="jh-hf-fact"><span>Workplace</span><strong id="hfWorkplace">-</strong></div>
+                <div class="jh-hf-fact"><span>Source</span><strong id="hfSource">-</strong></div>
+                <div class="jh-hf-fact"><span>Location</span><strong id="hfLoc">-</strong></div>
+              </div>
+              <div class="jh-hf-body">
+                <div class="jh-hf-desc-label">Description</div>
+                <div id="hfExcerpt" class="jh-hf-excerpt"></div>
+              </div>
+              <div class="jh-hf-actions">
+                <button type="button" onclick="qJob()" class="st-btn-primary">Queue for Apply</button>
+                <a id="hfOpenLink" href="#" target="_blank" rel="noopener" class="st-btn-ghost hidden">Open listing</a>
+                <button type="button" class="st-btn-ghost" onclick="showT('Saved locally for later')">Save</button>
+              </div>
+            </aside>
+            <div id="jdPanel" class="hidden flex-col min-h-0 overflow-hidden bg-slate-900" aria-hidden="true">
               <div class="p-4 border-b border-slate-800 flex items-start gap-3 flex-shrink-0">
                 <div class="flex-1 min-w-0">
                   <div class="flex items-start gap-3 mb-1.5">
@@ -2691,7 +3038,7 @@ html.dark .jh-asst-send { background: var(--st-peach); color: var(--st-sienna); 
           <div id="profilePreviewBody">
             <div id="resumeOriginalWrap">
               <div id="resumeOriginalEmpty">Upload a resume to preview the original file here. Layout stays as uploaded.</div>
-              <iframe id="resumeOriginalFrame" class="hidden" title="Uploaded resume preview"></iframe>
+              <div id="resumeOriginalPages" class="hidden" role="img" aria-label="Uploaded resume preview"></div>
             </div>
             <p id="resumePreviewHint" class="no-print text-[11px] text-slate-600 text-center leading-relaxed">Shows your original file. Profile fields are for applications.</p>
           </div>
@@ -3787,15 +4134,13 @@ function setBrowseSplit(open){
   const area = document.getElementById('browseListArea');
   const panel = document.getElementById('jdPanel');
   if(area) area.classList.toggle('browse-split', !!open);
+  // Legacy split panel stays unused; detail float is the click preview.
   if(panel){
-    if(open){
-      panel.classList.remove('hidden');
-      panel.classList.add('flex');
-    } else {
-      panel.classList.add('hidden');
-      panel.classList.remove('flex');
-    }
+    panel.classList.add('hidden');
+    panel.classList.remove('flex');
+    panel.setAttribute('aria-hidden', 'true');
   }
+  if(!open && typeof hideBrowseDetailFloat === 'function') hideBrowseDetailFloat(true);
 }
 
 function toggleBrowseApiLog(){
@@ -4216,21 +4561,20 @@ function renderJobSkeletons(n=8){
   const root = document.getElementById('jList');
   if(!root) return;
   root.setAttribute('aria-busy', 'true');
-  const split = !!(document.getElementById('browseListArea')||{}).classList?.contains('browse-split');
-  const pad = split ? 'p-2.5' : 'p-3.5';
+  const pad = 'p-3.5';
   const count = Math.max(1, Math.min(12, n|0));
   const cards = Array.from({length: count}, (_, i) => `
-    <div class="jh-skel-card animate-pulse flex items-start gap-3 ${pad} rounded-xl border bg-slate-900 border-slate-800"${i===0?' role="status" aria-live="polite"':''}>
+    <div class="jh-skel-card animate-pulse flex items-start gap-3 ${pad} rounded-xl"${i===0?' role="status" aria-live="polite"':''}>
       <div class="flex-1 min-w-0">
         <div class="jh-job-head" style="margin-bottom:10px">
-          <div class="jh-skel jh-job-logo rounded-xl bg-slate-700" style="min-height:40px;min-width:40px"></div>
-          <div class="jh-skel h-3.5 bg-slate-700 rounded-full w-[42%]"></div>
-          <div class="jh-skel h-3.5 bg-slate-700 rounded-full w-[68%]"></div>
+          <div class="jh-skel jh-job-logo rounded-xl" style="min-height:40px;min-width:40px"></div>
+          <div class="jh-skel h-3.5 rounded-full w-[42%]"></div>
+          <div class="jh-skel h-3.5 rounded-full w-[68%]"></div>
         </div>
-        <div class="jh-skel h-3 bg-slate-800 rounded-full w-[55%] mb-2.5"></div>
+        <div class="jh-skel h-3 rounded-full w-[55%] mb-2.5"></div>
         <div class="flex gap-1.5 flex-wrap">
-          <div class="jh-skel h-6 w-20 rounded-full bg-slate-800"></div>
-          <div class="jh-skel h-6 w-16 rounded-full bg-slate-800"></div>
+          <div class="jh-skel h-6 w-20 rounded-full"></div>
+          <div class="jh-skel h-6 w-16 rounded-full"></div>
         </div>
       </div>
     </div>`).join('');
@@ -4247,20 +4591,20 @@ function renderJobs(){
   root.removeAttribute('aria-busy');
   if(!JOBS.length){
     root.innerHTML = `<div class="px-1 py-8 text-center text-[14px] text-slate-500">No jobs match these filters. Try clearing filters or another API source.</div>`;
+    hideBrowseDetailFloat();
     return;
   }
-  const split = !!(document.getElementById('browseListArea')||{}).classList?.contains('browse-split');
   root.innerHTML=JOBS.map(j=>{
     const selected = sameJobId(selId, j.id);
-    const chips = (j.tags||[]).slice(0, split ? 3 : 8).map(t=>{
+    const chips = (j.tags||[]).slice(0, 8).map(t=>{
       const cls = jobChipClass(t, j.ats_source);
       return `<span class="${cls}">${esc(t)}</span>`;
     }).join('');
     return `
-    <div class="jh-job-card group flex items-start gap-3 ${split?'p-2.5':'p-3.5'} rounded-xl border cursor-pointer
+    <div class="jh-job-card group flex items-start gap-3 p-3.5 rounded-xl border cursor-pointer
       ${selected
         ? 'is-selected bg-indigo-950/25 border-indigo-500/50 ring-1 ring-indigo-500/20'
-        : 'bg-slate-900 border-slate-800 hover:border-slate-700 hover:bg-slate-800/60 hover:shadow-md'
+        : 'bg-slate-900 border-slate-800 hover:border-slate-700 hover:bg-slate-800/60'
       }" data-job-id="${esc(j.id)}" role="button" tabindex="0">
       <div class="flex-1 min-w-0">
         <div class="jh-job-head">
@@ -4272,11 +4616,92 @@ function renderJobs(){
         <div class="flex gap-1.5 flex-wrap">${chips}</div>
       </div>
       ${j.isNew?`<span class="jh-job-new">New</span>`:''}
+      <svg class="jh-job-chev" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M6 3.5 10.5 8 6 12.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </div>`;
   }).join('');
 }
 
+function paintBrowseDetailFloat(j){
+  const float = document.getElementById('browseDetailFloat');
+  if(!float || !j) return;
+  paintJobLogoEl(document.getElementById('hfLogo'), j);
+  const co = document.getElementById('hfCo');
+  if(co) co.textContent = j.company || '';
+  const title = document.getElementById('hfTitle');
+  if(title) title.textContent = j.title || '';
+  const meta = document.getElementById('hfMeta');
+  if(meta) meta.textContent = [j.loc, j.time].filter(Boolean).join(' · ');
+  const tags = document.getElementById('hfTags');
+  if(tags){
+    tags.innerHTML = (j.tags||[]).slice(0, 6).map(t=>{
+      const cls = jobChipClass(t, j.ats_source);
+      return `<span class="${cls}">${esc(t)}</span>`;
+    }).join('');
+  }
+  const wp = workplaceOf(j);
+  const wpLabel = wp === 'remote' ? 'Remote' : wp === 'hybrid' ? 'Hybrid' : 'Onsite';
+  const hfWp = document.getElementById('hfWorkplace');
+  if(hfWp) hfWp.textContent = wpLabel;
+  const src = j.ats_source || (j.tags && j.tags[0]) || 'Open API';
+  const hfSrc = document.getElementById('hfSource');
+  if(hfSrc) hfSrc.textContent = SOURCE_LABELS[String(src).toLowerCase()] || src;
+  const hfLoc = document.getElementById('hfLoc');
+  if(hfLoc) hfLoc.textContent = j.loc || '-';
+  const excerpt = document.getElementById('hfExcerpt');
+  if(excerpt){
+    const raw = j.desc || '';
+    const plain = stripHtmlText(raw);
+    if(plain.length > 40){
+      excerpt.innerHTML = sanitizeJdHtml(raw);
+    } else {
+      excerpt.innerHTML = sanitizeJdHtml(raw || '<p>No description yet.</p>');
+    }
+  }
+  const open = document.getElementById('hfOpenLink');
+  const url = j.url || j.job_url || j.apply_url || j.link || '';
+  if(open){
+    if(url){
+      open.href = url;
+      open.classList.remove('hidden');
+    } else {
+      open.href = '#';
+      open.classList.add('hidden');
+    }
+  }
+}
+
+function showBrowseDetailFloat(job){
+  const float = document.getElementById('browseDetailFloat');
+  if(!float || !job) return;
+  paintBrowseDetailFloat(job);
+  float.style.top = '';
+  float.hidden = false;
+  float.setAttribute('aria-hidden', 'false');
+  void float.offsetWidth;
+  float.classList.add('is-open');
+}
+
+function hideBrowseDetailFloat(){
+  const float = document.getElementById('browseDetailFloat');
+  if(!float) return;
+  float.classList.remove('is-open');
+  float.hidden = true;
+  float.setAttribute('aria-hidden', 'true');
+  float.style.top = '';
+}
+
+function selJob(id){
+  const j = findJobById(id);
+  if(!j) return;
+  selId = String(j.id);
+  setBrowseSplit(false);
+  renderJobs();
+  showBrowseDetailFloat(j);
+  enrichSelectedJob(j);
+}
+
 function paintJobPreview(j){
+  paintBrowseDetailFloat(j);
   paintJobLogoEl(document.getElementById('jdLogo'), j);
   const jdCo = document.getElementById('jdCo');
   if(jdCo) jdCo.textContent=j.company;
@@ -4299,7 +4724,7 @@ function paintJobPreview(j){
   const jdSrc = document.getElementById('jdSource');
   if(jdSrc) jdSrc.textContent = SOURCE_LABELS[String(src).toLowerCase()] || src;
   const jdLoc = document.getElementById('jdLoc');
-  if(jdLoc) jdLoc.textContent = j.loc || '—';
+  if(jdLoc) jdLoc.textContent = j.loc || '-';
   const jdDesc = document.getElementById('jdDesc');
   if(jdDesc) jdDesc.innerHTML = sanitizeJdHtml(j.desc || '');
   const open = document.getElementById('jdOpenLink');
@@ -4337,25 +4762,17 @@ async function enrichSelectedJob(j){
     replace(ALL_JOBS);
     replace(JOBS);
     if(sameJobId(selId, j.id)){
-      paintJobPreview(merged);
+      paintBrowseDetailFloat(merged);
       renderJobs();
     }
   }catch(_e){}
 }
 
-function selJob(id){
-  const j = findJobById(id);
-  if(!j) return;
-  selId = String(j.id);
-  setBrowseSplit(true);
-  renderJobs();
-  paintJobPreview(j);
-  enrichSelectedJob(j);
-}
-
 function closeJD(){
+  selId = null;
+  hideBrowseDetailFloat();
   setBrowseSplit(false);
-  selId=null; renderJobs();
+  renderJobs();
 }
 
 function qJob(){
@@ -5218,11 +5635,12 @@ function updateProfileProgress(){
   return score;
 }
 
-let _resumePreviewUrl = null;
+let _resumePreviewBytes = null; // cached PDF bytes (ArrayBuffer), rendered via pdf.js canvases
 let _resumePreviewOpen = false;
 let _resumePreviewServerRev = 0;
 let _resumePreviewServerOk = false;
 let _resumePreviewLoadedKey = '';
+let _resumePreviewRenderToken = 0;
 
 function _resumeFileIsPdf(file){
   if(!file) return false;
@@ -5245,11 +5663,7 @@ async function setResumePreviewOpen(open){
     if(_resumePreviewServerRev <= 0 && !pendingResumeFile){
       await restoreSavedResumePreview();
     }
-    await _ensureResumePreviewBlob();
-    // Load after layout so Chromium PDF viewer gets a real non-zero box.
-    requestAnimationFrame(()=>{
-      requestAnimationFrame(()=> refreshResumePreview(true));
-    });
+    await refreshResumePreview(true);
   }
 }
 
@@ -5258,64 +5672,81 @@ function toggleResumePreviewPanel(){
 }
 
 function _clearResumePreviewViewers(){
-  const frame = document.getElementById('resumeOriginalFrame');
-  if(frame){
-    frame.classList.add('hidden');
-    frame.removeAttribute('src');
-  }
-  if(_resumePreviewUrl){
-    try{ URL.revokeObjectURL(_resumePreviewUrl); }catch(_e){}
-    _resumePreviewUrl = null;
+  const pages = document.getElementById('resumeOriginalPages');
+  if(pages){
+    pages.classList.add('hidden');
+    pages.innerHTML = '';
   }
   _resumePreviewLoadedKey = '';
 }
 
-function _resumePreviewSrc(file){
-  // Prefer blob URL so Chromium uses the built-in PDF viewer (path without .pdf
-  // often shows a download chip titled "resume-preview" instead of pages).
-  if(_resumePreviewUrl){
-    return `${_resumePreviewUrl}#toolbar=0&navpanes=0&scrollbar=1&view=FitH`;
-  }
-  if(file && _resumeFileIsPdf(file)){
-    const typed = (file.type && file.type.includes('pdf'))
-      ? file
-      : new Blob([file], { type: 'application/pdf' });
-    _resumePreviewUrl = URL.createObjectURL(typed);
-    return `${_resumePreviewUrl}#toolbar=0&navpanes=0&scrollbar=1&view=FitH`;
-  }
-  // Fallback HTTP URL with .pdf suffix for browsers that key off the path.
-  if(_resumePreviewServerRev > 0){
-    return `${API}/api/profile/resume-preview.pdf?v=${_resumePreviewServerRev}#toolbar=0&navpanes=0&scrollbar=1&view=FitH`;
-  }
-  return '';
-}
-
-async function _ensureResumePreviewBlob(){
-  if(_resumePreviewUrl) return true;
+async function _ensureResumePreviewBytes(){
+  if(_resumePreviewBytes) return true;
   if(pendingResumeFile && _resumeFileIsPdf(pendingResumeFile)){
-    const typed = (pendingResumeFile.type && pendingResumeFile.type.includes('pdf'))
-      ? pendingResumeFile
-      : new Blob([pendingResumeFile], { type: 'application/pdf' });
-    _resumePreviewUrl = URL.createObjectURL(typed);
-    return true;
+    try{
+      _resumePreviewBytes = await pendingResumeFile.arrayBuffer();
+      return true;
+    }catch(_e){
+      return false;
+    }
   }
   if(_resumePreviewServerRev <= 0 && !_resumePreviewServerOk) return false;
   try{
     const res = await fetch(`${API}/api/profile/resume-preview.pdf?v=${_resumePreviewServerRev || Date.now()}`);
     if(!res.ok) return false;
-    const buf = await res.arrayBuffer();
-    const blob = new Blob([buf], { type: 'application/pdf' });
-    _resumePreviewUrl = URL.createObjectURL(blob);
+    _resumePreviewBytes = await res.arrayBuffer();
     return true;
   }catch(_e){
     return false;
   }
 }
 
-function _syncResumePreviewSurfaces(force){
+async function _waitForPdfJs(timeoutMs){
+  const start = Date.now();
+  while(!window.pdfjsLib){
+    if(Date.now() - start > timeoutMs) return false;
+    await new Promise(r => setTimeout(r, 50));
+  }
+  return true;
+}
+
+// Renders each PDF page to its own <canvas> via pdf.js instead of embedding
+// the PDF in an <iframe>: Chrome's native PDF viewer, when navigated to a
+// blob: URL inside an iframe (as opposed to a top-level tab), unreliably
+// falls back to a "download chip" instead of rendering pages — the blob/path
+// tricks tried previously couldn't fix that because the iframe embedding
+// itself is the broken part, not the URL used.
+async function _renderResumePdfPages(){
+  const wrap = document.getElementById('resumeOriginalPages');
+  if(!wrap || !_resumePreviewBytes || !window.pdfjsLib) return false;
+  const token = ++_resumePreviewRenderToken;
+  try{
+    const doc = await window.pdfjsLib.getDocument({ data: _resumePreviewBytes.slice(0) }).promise;
+    if(token !== _resumePreviewRenderToken) return false;
+    wrap.innerHTML = '';
+    const dpr = window.devicePixelRatio || 1;
+    for(let i = 1; i <= doc.numPages; i++){
+      const page = await doc.getPage(i);
+      const viewport = page.getViewport({ scale: 1.4 * dpr });
+      const canvas = document.createElement('canvas');
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+      canvas.style.width = (viewport.width / dpr) + 'px';
+      canvas.style.height = (viewport.height / dpr) + 'px';
+      wrap.appendChild(canvas);
+      await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+      if(token !== _resumePreviewRenderToken) return false;
+    }
+    return true;
+  }catch(_e){
+    return false;
+  }
+}
+
+async function _syncResumePreviewSurfaces(force){
   const file = pendingResumeFile;
   const empty = document.getElementById('resumeOriginalEmpty');
-  const frame = document.getElementById('resumeOriginalFrame');
+  const pages = document.getElementById('resumeOriginalPages');
   const hint = document.getElementById('resumePreviewHint');
   const printBtn = document.getElementById('btnPrintResume');
   const mustForce = !!force;
@@ -5353,7 +5784,7 @@ function _syncResumePreviewSurfaces(force){
     _resumePreviewServerRev,
     _resumePreviewOpen ? 'open' : 'closed'
   ].join('|');
-  if(!mustForce && key === _resumePreviewLoadedKey && frame?.getAttribute('src')){
+  if(!mustForce && key === _resumePreviewLoadedKey && pages && pages.children.length){
     if(printBtn) printBtn.disabled = false;
     return;
   }
@@ -5364,27 +5795,35 @@ function _syncResumePreviewSurfaces(force){
     return;
   }
 
-  const src = _resumePreviewSrc(file);
-  if(!src){
+  const hasBytes = await _ensureResumePreviewBytes();
+  if(!hasBytes){
     showEmpty(
       'Upload a resume to preview the original file here. Layout stays as uploaded.',
       'Shows your original file. Profile fields are for applications.'
     );
     return;
   }
+  const engineReady = await _waitForPdfJs(8000);
+  if(!engineReady){
+    showEmpty(
+      'Preview engine failed to load. Refresh the page and try again.',
+      'PDF renderer did not finish loading.'
+    );
+    return;
+  }
+
+  const rendered = await _renderResumePdfPages();
+  if(!rendered) return; // superseded by a newer call, or a real render failure — leave prior state
 
   if(empty) empty.classList.add('hidden');
-  if(frame){
-    frame.src = src;
-    frame.classList.remove('hidden');
-  }
+  if(pages) pages.classList.remove('hidden');
   if(hint) hint.textContent = (file && file.name ? file.name : 'Resume') + ' · original layout';
   if(printBtn) printBtn.disabled = false;
   _resumePreviewLoadedKey = key;
 }
 
-function refreshResumePreview(force){
-  _syncResumePreviewSurfaces(!!force);
+async function refreshResumePreview(force){
+  await _syncResumePreviewSurfaces(!!force);
 }
 
 async function cacheResumePreviewOnServer(file){
@@ -5398,10 +5837,7 @@ async function cacheResumePreviewOnServer(file){
       _resumePreviewServerOk = true;
       _resumePreviewServerRev = Date.now();
       _resumePreviewLoadedKey = '';
-      if(_resumePreviewUrl){
-        try{ URL.revokeObjectURL(_resumePreviewUrl); }catch(_e){}
-        _resumePreviewUrl = null;
-      }
+      _resumePreviewBytes = null;
       setSavedResumeUi({
         ok: true,
         filename: (data && data.filename) || file.name || 'resume.pdf',
@@ -5448,13 +5884,9 @@ async function restoreSavedResumePreview(){
       _resumePreviewServerOk = true;
       PROFILE_HAS_RESUME = true;
       setSavedResumeUi(meta);
-      if(_resumePreviewUrl){
-        try{ URL.revokeObjectURL(_resumePreviewUrl); }catch(_e){}
-        _resumePreviewUrl = null;
-      }
+      _resumePreviewBytes = null;
       _resumePreviewLoadedKey = '';
-      if(_resumePreviewOpen) await _ensureResumePreviewBlob();
-      refreshResumePreview(true);
+      await refreshResumePreview(true);
       updateProfileProgress();
       return meta;
     }
@@ -5466,17 +5898,20 @@ async function restoreSavedResumePreview(){
 
 function printResumePreview(){
   if(!_resumePreviewOpen) setResumePreviewOpen(true);
-  const frame = document.getElementById('resumeOriginalFrame');
-  if(frame && frame.src && !frame.classList.contains('hidden')){
-    try{
-      frame.contentWindow.focus();
-      frame.contentWindow.print();
-      return;
-    }catch(_e){}
+  // Open the PDF as a top-level tab rather than printing the in-panel canvases:
+  // Chrome's native PDF viewer (with its own print button / Ctrl+P) only
+  // renders reliably as a top-level navigation, not embedded in our preview.
+  if(_resumePreviewServerRev > 0){
+    window.open(`${API}/api/profile/resume-preview.pdf?v=${_resumePreviewServerRev}`, '_blank');
+    return;
   }
-  const src = _resumePreviewSrc(pendingResumeFile);
-  if(src){
-    window.open(src.split('#')[0], '_blank');
+  if(pendingResumeFile && _resumeFileIsPdf(pendingResumeFile)){
+    const typed = (pendingResumeFile.type && pendingResumeFile.type.includes('pdf'))
+      ? pendingResumeFile
+      : new Blob([pendingResumeFile], { type: 'application/pdf' });
+    const url = URL.createObjectURL(typed);
+    window.open(url, '_blank');
+    setTimeout(()=>{ try{ URL.revokeObjectURL(url); }catch(_e){} }, 60000);
     return;
   }
   showT('Upload a PDF resume to print the original file');
