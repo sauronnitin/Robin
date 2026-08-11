@@ -1,5 +1,5 @@
-﻿/*
- * JobHunter AI â€” Infinite canvas dashboard
+/*
+ * JobHunter AI — Infinite canvas dashboard
  * Pan/zoom, draggable editable cards, live DAG edges, sim + tokens.
  */
 (function () {
@@ -201,7 +201,7 @@
     });
   }
 
-  /** Agent routing: thinking â†’ Gemini Flash; tool/mechanical â†’ Groq 8B. Never Pro. */
+  /** Agent routing: thinking → Gemini Flash; tool/mechanical → Groq 8B. Never Pro. */
   const THINKING_AGENT_IDS = new Set([
     "job_fit_analyst",
     "resume_tailor",
@@ -425,6 +425,11 @@
   const liReviewList = document.getElementById("liReviewList");
   const liReviewEmpty = document.getElementById("liReviewEmpty");
   const liReviewBadge = document.getElementById("liReviewBadge");
+  const tabEfficiency = document.getElementById("tabEfficiency");
+  const efficiencyView = document.getElementById("efficiencyView");
+  const efficiencyList = document.getElementById("efficiencyList");
+  const efficiencyEmpty = document.getElementById("efficiencyEmpty");
+  const efficiencyRefreshBtn = document.getElementById("efficiencyRefreshBtn");
   const liReviewRefreshBtn = document.getElementById("liReviewRefreshBtn");
   const tracesView = document.getElementById("tracesView");
   const tracesTreeEl = document.getElementById("tracesTree");
@@ -547,6 +552,7 @@
   let workspaceView = "canvas"; /* canvas | output */
   let runMode = "sim"; /* sim | live */
   let eventCursor = 0;
+  let lastPolledRunId = null;
   let pollTimer = null;
   let liReviewPollTimer = null;
   let awaitingConfirm = false;
@@ -648,8 +654,8 @@
   function setModeLabel(live) {
     if (!modeLabel) return;
     modeLabel.textContent = live
-      ? "Live Â· CrewAI pipeline Â· Editable"
-      : "Simulated Â· Infinite canvas Â· Editable";
+      ? "Live · CrewAI pipeline · Editable"
+      : "Simulated · Infinite canvas · Editable";
   }
 
   function showToast(title, msg, kind) {
@@ -668,7 +674,7 @@
     const text = String(s == null ? "" : s).replace(/\s+/g, " ").trim();
     const limit = n || 160;
     if (text.length <= limit) return text;
-    return text.slice(0, limit - 1) + "â€¦";
+    return text.slice(0, limit - 1) + "…";
   }
 
   function liveWarnDetail(detail, code) {
@@ -737,8 +743,8 @@
     }
     setRunControls("paused");
     activityAgent.textContent = "Paused";
-    statStage.textContent = "Paused Â· edit canvas";
-    logLine(null, "pause dialog dismissed â€” edit canvas, then Play on the card to resume", "system");
+    statStage.textContent = "Paused · edit canvas";
+    logLine(null, "pause dialog dismissed — edit canvas, then Play on the card to resume", "system");
     showToast("Dismissed", "Pipeline still paused. Edit models, then hit Play on the paused card.", "info");
     refreshAllSectionControls();
     postControl("/api/pause").catch(() => {});
@@ -785,6 +791,7 @@
     const activityOn = tab === "activity";
     const tracesOn = tab === "traces";
     const reviewOn = tab === "li-review";
+    const efficiencyOn = tab === "efficiency";
     if (tabActivity) {
       tabActivity.classList.toggle("is-active", activityOn);
       tabActivity.setAttribute("aria-selected", activityOn ? "true" : "false");
@@ -797,12 +804,18 @@
       tabLiReview.classList.toggle("is-active", reviewOn);
       tabLiReview.setAttribute("aria-selected", reviewOn ? "true" : "false");
     }
+    if (tabEfficiency) {
+      tabEfficiency.classList.toggle("is-active", efficiencyOn);
+      tabEfficiency.setAttribute("aria-selected", efficiencyOn ? "true" : "false");
+    }
     if (consoleBody) consoleBody.hidden = !activityOn;
     if (tracesView) tracesView.hidden = !tracesOn;
     if (liReviewView) liReviewView.hidden = !reviewOn;
+    if (efficiencyView) efficiencyView.hidden = !efficiencyOn;
     if (activityOn) renderLog();
     else if (tracesOn) renderTraces();
     else if (reviewOn) loadLiReviewQueue();
+    else if (efficiencyOn) loadEfficiencyHistory();
   }
 
   function setWorkspaceView(view) {
@@ -827,7 +840,7 @@
       status === "failed" || runMeta.failed ? "Failed" :
       status === "done" ? "Done" :
       status === "running" ? "Running" : "Idle";
-    const summary = `${done} of ${total} steps` + (runClockEl ? ` Â· ${runClockEl.textContent}` : "");
+    const summary = `${done} of ${total} steps` + (runClockEl ? ` · ${runClockEl.textContent}` : "");
     if (tracesMeta) tracesMeta.textContent = summary;
     if (tracesBadge) {
       tracesBadge.textContent = badgeText;
@@ -869,9 +882,9 @@
       const head = document.createElement("div");
       head.className = "trace-row is-agent";
       head.innerHTML = `
-        <button type="button" class="trace-toggle" data-collapse="${key}" aria-label="Toggle">${collapsed ? "â–¸" : "â–¾"}</button>
+        <button type="button" class="trace-toggle" data-collapse="${key}" aria-label="Toggle">${collapsed ? "▸" : "▾"}</button>
         <span class="trace-label"><i class="trace-icon agent"></i> ${escapeHtml(block.role)}</span>
-        <span class="trace-timing">${block.durationMs != null ? formatDur(block.durationMs) : ""} Â· ${block.events.length} events</span>
+        <span class="trace-timing">${block.durationMs != null ? formatDur(block.durationMs) : ""} · ${block.events.length} events</span>
       `;
       wrap.appendChild(head);
 
@@ -952,7 +965,7 @@
       const tab = outputTabMode[step.taskKey] || "markdown";
       const st = step.status || "pending";
       const statusCls = st === "done" ? "done" : st === "failed" ? "failed" : st === "running" ? "running" : "pending";
-      const statusGlyph = st === "done" ? "âœ“" : st === "failed" ? "Ã—" : st === "running" ? "â—" : "â—‹";
+      const statusGlyph = st === "done" ? "✓" : st === "failed" ? "×" : st === "running" ? "●" : "○";
       const el = document.createElement("div");
       el.className = "output-step" + (open ? " is-open" : "");
       el.innerHTML = `
@@ -966,7 +979,7 @@
             </div>
           </div>
           <span></span>
-          <button type="button" class="output-expand-btn" data-toggle="${step.taskKey}" aria-label="Expand">${open ? "â†–" : "â†˜"}</button>
+          <button type="button" class="output-expand-btn" data-toggle="${step.taskKey}" aria-label="Expand">${open ? "↖" : "↘"}</button>
         </div>
         <div class="output-step-body">
           <div class="output-tabs">
@@ -1084,7 +1097,7 @@
           persistField(aid, "llm", llm);
           if (fb) persistField(aid, "fallback_llm", fb);
           refreshAllLlmPickers();
-          logLine(aid, `fallback promoted â†’ ${llm}`, "system");
+          logLine(aid, `fallback promoted → ${llm}`, "system");
         }
       }
       return;
@@ -1117,7 +1130,7 @@
       setPausedCard(agentId || null);
       setRunControls("paused");
       activityAgent.textContent = "Paused";
-      statStage.textContent = "Paused Â· break";
+      statStage.textContent = "Paused · break";
       showToast("Pipeline paused", clipLogMsg(errText, 120), "error");
       openConfirmModal({
         error: detail.error,
@@ -1287,8 +1300,17 @@
       if (!res.ok) return;
       const data = await res.json();
       if (typeof data.next === "number") eventCursor = data.next;
-      (data.events || []).forEach(applyLiveEvent);
       const st = (data.run && data.run.state) || {};
+      // Runs started outside this tab's own Start button (e.g. a direct API
+      // call) never went through the reset in that click handler, so the
+      // token tally kept accumulating across unrelated runs indefinitely.
+      // Detect the run_id changing underneath us and reset here too.
+      if (st.run_id && st.run_id !== lastPolledRunId) {
+        lastPolledRunId = st.run_id;
+        tokens = {};
+        renderTokens();
+      }
+      (data.events || []).forEach(applyLiveEvent);
       if (st.status === "awaiting_retry" && !awaitingConfirm && !confirmDismissed) {
         const errText = st.error || "Pipeline paused for retry or abort.";
         logLine("Live", clipLogMsg(errText), "flag", liveWarnDetail({
@@ -1316,7 +1338,7 @@
         }
         setRunControls("paused");
         activityAgent.textContent = "Paused";
-        statStage.textContent = "Paused Â· break";
+        statStage.textContent = "Paused · break";
         refreshAllSectionControls();
       }
       if (st.status === "paused" && controlState !== "paused") {
@@ -1382,7 +1404,7 @@
       : "Main";
     logLine(null, `POST /api/run - ${scopeLabel} plan (${plan.order.length} steps)`, "system");
     if (plan.order.length) {
-      logLine(null, `order: ${plan.order.map((id) => (agentById(id) || {}).short || id).join(" â†’ ")}`, "system");
+      logLine(null, `order: ${plan.order.map((id) => (agentById(id) || {}).short || id).join(" → ")}`, "system");
     }
 
     let started = false;
@@ -1404,7 +1426,7 @@
         started = true;
         runMode = "live";
         setModeLabel(true);
-        logLine(null, `live pid ${data.pid}${data.plan ? " Â· plan saved" : ""}`, "system");
+        logLine(null, `live pid ${data.pid}${data.plan ? " · plan saved" : ""}`, "system");
         if (typeof Notification !== "undefined" && Notification.permission === "default") {
           try { Notification.requestPermission(); } catch (_) {}
         }
@@ -2020,7 +2042,7 @@
       simBtn.classList.toggle("is-running", simBusy);
       simBtn.classList.toggle("is-passed", cleared && !simBusy);
       simBtn.classList.toggle("is-failed", !cleared && simBtn.dataset.failed === "1" && !simBusy);
-      simBtn.textContent = simBusy ? "SIMâ€¦" : "SIM";
+      simBtn.textContent = simBusy ? "SIM…" : "SIM";
     }
     if (pauseBtn) {
       pauseBtn.disabled = !isRunning;
@@ -2226,7 +2248,7 @@
           field: "llm",
           healable: code === "unsupported_llm",
           fix_hint: code === "disconnected_llm"
-            ? `Open Model â†’ Load and paste a ${entry ? entry.provider : "provider"} API key.`
+            ? `Open Model → Load and paste a ${entry ? entry.provider : "provider"} API key.`
             : "Pick an Active model, or restore the agent default.",
           files: ["dashboard/pipeline-data.js"],
         }));
@@ -2281,7 +2303,7 @@
           field: "llm",
           healable: code === "unsupported_llm",
           fix_hint: code === "disconnected_llm"
-            ? `Open Model â†’ Load and paste a ${entry ? entry.provider : "provider"} API key.`
+            ? `Open Model → Load and paste a ${entry ? entry.provider : "provider"} API key.`
             : "Set the custom card LLM to an Active model.",
           files: [],
         }));
@@ -2448,7 +2470,7 @@
     clearLogBuffer();
     const scopeName = sectionId ? ((sectionById(sectionId) || {}).name || sectionId) : "Main";
     logLine("Sim", `Dry-run started for "${scopeName}". Checking every in-loop node before a live Start.`, "sim");
-    activityAgent.textContent = `Sim Â· ${scopeName}`;
+    activityAgent.textContent = `Sim · ${scopeName}`;
     statStage.textContent = "Sim";
     consoleDot.classList.add("live");
 
@@ -2458,7 +2480,7 @@
       const freq = mins != null ? `every ${mins}m` : "schedule incomplete";
       const wire = plan.trigger.wired ? "wired" : "unwired";
       setStatus(plan.trigger.id, "thinking");
-      logLine("Trigger", `Would fire ${freq} (${wire}); runCount=${plan.trigger.runCount === "" ? "âˆž" : plan.trigger.runCount}`, "sim");
+      logLine("Trigger", `Would fire ${freq} (${wire}); runCount=${plan.trigger.runCount === "" ? "∞" : plan.trigger.runCount}`, "sim");
       await sleep(100 / speed(), runToken);
       setStatus(plan.trigger.id, plan.trigger.wired && mins != null ? "done" : "flagged");
       setProgress(plan.trigger.id, 100);
@@ -2466,14 +2488,14 @@
     if (plan.skipped.length) {
       logLine("Sim", `Out of loop (skipped): ${plan.skipped.map((id) => (agentById(id) || {}).short || id).join(", ")}`, "system");
     }
-    logLine("Sim", `In-loop order: ${plan.order.map((id) => (agentById(id) || {}).short || id).join(" â†’ ") || "(empty)"}`, "system");
+    logLine("Sim", `In-loop order: ${plan.order.map((id) => (agentById(id) || {}).short || id).join(" → ") || "(empty)"}`, "system");
 
     for (const id of plan.order) {
       const agent = agentById(id);
       if (!agent) continue;
       setStatus(agent.id, "thinking");
       setProgress(agent.id, 20);
-      logLine(agent.short, `Checking ${agent.role || agent.short}â€¦`, "sim");
+      logLine(agent.short, `Checking ${agent.role || agent.short}…`, "sim");
       await sleep(120 / speed(), runToken);
       setStatus(agent.id, "running");
       setProgress(agent.id, 55);
@@ -2494,7 +2516,7 @@
 
     const healed = issues.length ? autoHealIssues(issues) : [];
     if (healed.length) {
-      logLine("Sim", `Auto-healed ${healed.length} issue${healed.length === 1 ? "" : "s"}. Re-checkingâ€¦`, "ok");
+      logLine("Sim", `Auto-healed ${healed.length} issue${healed.length === 1 ? "" : "s"}. Re-checking…`, "ok");
       await sleep(100 / speed(), runToken);
       issues = validatePipeline(sectionId);
       issues.forEach((issue) => {
@@ -2700,7 +2722,7 @@
         working[a.id].watchMode = a.watchMode || "auto";
         working[a.id].watchScope = a.watchScope || "all";
         working[a.id].viewTab = a.viewTab || "live";
-        working[a.id].summary = a.summary || "Live agent viewport Â· browser, tools, LLM, output";
+        working[a.id].summary = a.summary || "Live agent viewport · browser, tools, LLM, output";
         working[a.id].role = a.role || "Preview";
       }
     });
@@ -2822,7 +2844,7 @@
     // Drop edges whose endpoints no longer exist.
     graphEdges = graphEdges.filter((e) => alive.has(e.from) && alive.has(e.to));
 
-    // Drop stale mainâ†”LI bridges and non-canonical LI/main pipeline edges.
+    // Drop stale main↔LI bridges and non-canonical LI/main pipeline edges.
     graphEdges = graphEdges.filter((e) => {
       const bothPipeline = pipelineIds.has(e.from) && pipelineIds.has(e.to);
       if (!bothPipeline) return true;
@@ -2830,7 +2852,7 @@
       const crosses = (mainIds.has(e.from) && liIds.has(e.to)) || (liIds.has(e.from) && mainIds.has(e.to));
       const liInternal = liIds.has(e.from) && liIds.has(e.to);
       if (crosses || liInternal) return defaultKey.has(key);
-      // Heal old Compileâ†’LI Easyâ†’Apply splice: drop pipeline edges not in current defaults
+      // Heal old Compile→LI Easy→Apply splice: drop pipeline edges not in current defaults
       // only when either end is a LinkedIn agent or linkedin_easy_apply sits on a main path.
       if (liIds.has(e.from) || liIds.has(e.to)) return defaultKey.has(key);
       return true;
@@ -3004,14 +3026,14 @@
     const fromLabel = (a && a.short) || from;
     const toLabel = (b && b.short) || to;
     if (a && a.kind === "trigger") {
-      logLine("Trigger", `Wired into loop â†’ ${toLabel}. Re-run Sim to arm schedule.`, "system");
+      logLine("Trigger", `Wired into loop → ${toLabel}. Re-run Sim to arm schedule.`, "system");
       syncScheduleFromCanvas({ armed: false });
     } else if (b && b.kind === "preview") {
-      logLine("Preview", `Now watching â† ${fromLabel}`, "system");
+      logLine("Preview", `Now watching ◉ ${fromLabel}`, "system");
     } else if (b && b.kind === "custom") {
       logLine(toLabel, "Custom card now in loop (once reachable). Re-run Sim.", "system");
     } else {
-      logLine(null, `edge ${fromLabel} â†’ ${toLabel}`, "system");
+      logLine(null, `edge ${fromLabel} → ${toLabel}`, "system");
     }
     return true;
   }
@@ -3236,7 +3258,7 @@
     }
   }
 
-  /** Reflow all nodes Lâ†’R with 5Ã— gap; used after add / splice / reset layout. */
+  /** Reflow all nodes L→R with 5× gap; used after add / splice / reset layout. */
   function relayoutChain(focusId) {
     applyLayoutOrder(getLayoutOrder());
     savePositions();
@@ -3356,7 +3378,7 @@
     applyView();
   }
 
-  /** Pinch zoom â€” +50% vs prior 0.0025875 (chain: 0.00115 â†’ 0.001725 â†’ 0.0025875 â†’ 0.00388125). */
+  /** Pinch zoom — +50% vs prior 0.0025875 (chain: 0.00115 → 0.001725 → 0.0025875 → 0.00388125). */
   function applyWheelZoom(e) {
     e.preventDefault();
     const factor = Math.exp(-e.deltaY * 0.00388125);
@@ -3578,7 +3600,7 @@
       if (mode === "fallback") {
         trigger.textContent = hasFallbackPick
           ? ((selectedEntry && selectedEntry.label) || selected)
-          : "Pick lower-demandâ€¦";
+          : "Pick lower-demand…";
       } else {
         trigger.textContent = (selectedEntry && selectedEntry.label) || selected || "(no model)";
       }
@@ -3593,9 +3615,9 @@
       const groqOk = !!(modelCatalog.providers && modelCatalog.providers.groq && modelCatalog.providers.groq.connected);
       const gemOk = !!(modelCatalog.providers && modelCatalog.providers.gemini && modelCatalog.providers.gemini.connected);
       header.textContent = mode === "fallback"
-        ? "Lower demand Â· sets Fallback only"
+        ? "Lower demand · sets Fallback only"
         : (modelCatalog.ok
-          ? `Session models Â· Groq ${groqOk ? "on" : "off"} Â· Gemini ${gemOk ? "on" : "off"}`
+          ? `Session models · Groq ${groqOk ? "on" : "off"} · Gemini ${gemOk ? "on" : "off"}`
           : "Session models (offline fallback)");
       menu.appendChild(header);
 
@@ -3677,7 +3699,7 @@
             refreshAllLlmPickers();
             if (mode === "fallback") {
               showToast("Fallback", `Fallback set to ${m.label || m.id}`, "info");
-              logLine(agentId, `fallback_llm â†’ ${m.id}`, "system");
+              logLine(agentId, `fallback_llm → ${m.id}`, "system");
             }
             if (onChange) onChange(working[agentId][fieldKey]);
           });
@@ -3703,7 +3725,7 @@
         e.preventDefault();
         e.stopPropagation();
         refreshBtn.disabled = true;
-        refreshBtn.textContent = "Refreshingâ€¦";
+        refreshBtn.textContent = "Refreshing…";
         await loadModelCatalog({ rebuild: false });
         fillMenu();
         positionPortalMenu();
@@ -3754,7 +3776,7 @@
 
       // Re-fetch if we are still on offline fallback / empty catalog
       if (!modelCatalog.ok || !(modelCatalog.models && modelCatalog.models.length)) {
-        trigger.textContent = "Loading modelsâ€¦";
+        trigger.textContent = "Loading models…";
         await loadModelCatalog({ rebuild: false });
       }
       fillMenu();
@@ -3769,7 +3791,7 @@
     return wrap;
   }
 
-  /** Compact Model â†” Fallback swap control between the two pickers. */
+  /** Compact Model ↔ Fallback swap control between the two pickers. */
   function makeLlmSwapControl(agentId) {
     const row = document.createElement("div");
     row.className = "llm-swap-row";
@@ -3814,8 +3836,8 @@
       refreshAllLlmPickers();
       syncSwap();
       const short = (id) => (id.includes("/") ? id.split("/").pop() : id) || "(empty)";
-      showToast("Swapped", `${short(fb)} â†” ${short(primary)}`, "info");
-      logLine(agentId, `swapped llm â†” fallback_llm`, "system");
+      showToast("Swapped", `${short(fb)} ↔ ${short(primary)}`, "info");
+      logLine(agentId, `swapped llm ↔ fallback_llm`, "system");
     });
 
     row.appendChild(btn);
@@ -4080,7 +4102,7 @@
     if (fromId !== toId) {
       pushHistory();
       if (addEdge(fromId, toId)) {
-        logLine(null, `connected ${agentById(fromId)?.short || fromId} â†’ ${agentById(toId)?.short || toId}`, "system");
+        logLine(null, `connected ${agentById(fromId)?.short || fromId} → ${agentById(toId)?.short || toId}`, "system");
       } else {
         undoStack.pop();
       }
@@ -4108,8 +4130,8 @@
     const chrome = document.createElement("div");
     chrome.className = "card-chrome";
     const idxLabel = isCustom
-      ? `NEW Â· ${agent.short || "Card"}`
-      : `${String(agent.index).padStart(2, "0")} / ${String(pipelineAgents().length).padStart(2, "0")} Â· ${agent.short}`;
+      ? `NEW · ${agent.short || "Card"}`
+      : `${String(agent.index).padStart(2, "0")} / ${String(pipelineAgents().length).padStart(2, "0")} · ${agent.short}`;
     chrome.innerHTML = `
       <span class="card-handle" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
       <span class="card-index">${idxLabel}</span>
@@ -4172,7 +4194,7 @@
     const depsEl = document.createElement("div");
     depsEl.className = "card-meta-deps";
     depsEl.textContent = deps.length
-      ? `In â† ${deps.map((d) => agentById(d)?.short || d).join(" + ")}`
+      ? `In ◉ ${deps.map((d) => agentById(d)?.short || d).join(" + ")}`
       : (isCustom ? "Free-floating (connect ports or drop on an edge)" : "Start of run");
 
     const modelBlock = makeLlmSelect(agent.id, w.llm || DUMMY_COPY.llm, null);
@@ -4225,7 +4247,7 @@
     chrome.className = "card-chrome";
     chrome.innerHTML = `
       <span class="card-handle" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
-      <span class="card-index">TRIGGER Â· Schedule</span>
+      <span class="card-index">TRIGGER · Schedule</span>
       <span class="card-badge">Idle</span>
       <button type="button" class="card-delete" title="Delete (Del)">Delete</button>
     `;
@@ -4343,7 +4365,7 @@
     const depsEl = document.createElement("div");
     depsEl.className = "card-meta-deps";
     depsEl.textContent = outs.length
-      ? `Out â†’ ${outs.map((e) => agentById(e.to)?.short || e.to).join(", ")}`
+      ? `Out → ${outs.map((e) => agentById(e.to)?.short || e.to).join(", ")}`
       : "Connect output port into the pipeline";
 
     const body = document.createElement("div");
@@ -4674,7 +4696,7 @@
         `;
         stage.classList.remove("has-shot", "has-frame");
       } else {
-        stage.innerHTML = `<div class="preview-empty">Waiting for browserâ€¦</div>`;
+        stage.innerHTML = `<div class="preview-empty">Waiting for browser…</div>`;
         stage.classList.remove("has-shot", "has-frame");
       }
 
@@ -4694,7 +4716,7 @@
         <div class="preview-hero-action">
           <span class="preview-action-pill">${escapeHtml(latest.kind || "live")}</span>
           <strong>${escapeHtml(latest.label || "")}</strong>
-          <span class="preview-hero-sub">${escapeHtml(latest.short || "")}${latest.url ? " Â· " + escapeHtml(latest.url) : ""}</span>
+          <span class="preview-hero-sub">${escapeHtml(latest.short || "")}${latest.url ? " · " + escapeHtml(latest.url) : ""}</span>
           ${latest.preview ? `<pre class="preview-hero-text">${escapeHtml(String(latest.preview).slice(0, 600))}</pre>` : ""}
         </div>`;
       stage.classList.remove("has-shot");
@@ -4709,7 +4731,7 @@
       feed.innerHTML = recent.length
         ? recent
             .map((f) => {
-              const tok = f.tokens != null ? ` Â· ${Number(f.tokens).toLocaleString()} tok` : "";
+              const tok = f.tokens != null ? ` · ${Number(f.tokens).toLocaleString()} tok` : "";
               return `<div class="preview-feed-row kind-${escapeHtml(f.kind || "live")}">
                 <span class="preview-feed-kind">${escapeHtml(f.kind || "")}</span>
                 <span class="preview-feed-label">${escapeHtml(f.label || "")}</span>
@@ -4721,7 +4743,7 @@
     }
     if (meta) {
       meta.hidden = false;
-      meta.textContent = `${stream.frames.length} frames Â· ${tab}`;
+      meta.textContent = `${stream.frames.length} frames · ${tab}`;
     }
   }
 
@@ -4731,7 +4753,7 @@
       const total = estimate && estimate.total_tokens != null ? estimate.total_tokens : "~800";
       const model = (estimate && estimate.model) || "gemini/gemini-2.5-flash";
       const cost = estimate && estimate.approx_cost_usd != null
-        ? `â‰ˆ $${Number(estimate.approx_cost_usd).toFixed(5)}`
+        ? `≈ $${Number(estimate.approx_cost_usd).toFixed(5)}`
         : "low cost";
       if (previewTokenBody) {
         previewTokenBody.textContent =
@@ -4809,7 +4831,7 @@
         if (node) node.viewTab = "llm";
         const used = data.tokens || (data.estimate && data.estimate.total_tokens);
         if (used) bumpTokens(previewId, used);
-        logLine("Preview", `AI narration Â· ${used || "?"} tok Â· ${data.model || ""}`, "ok");
+        logLine("Preview", `AI narration · ${used || "?"} tok · ${data.model || ""}`, "ok");
         showToast("Preview narrated", `${used || "?"} tokens used`, "info");
       }
     } catch (err) {
@@ -4829,10 +4851,10 @@
       /apply|scout|linkedin|playwright/.test(role);
     if (!isBrowser) return;
     const steps = [
-      { action: "navigate", label: `Sim Â· open page for ${agent.short}` },
-      { action: "scroll", label: "Sim Â· scroll like a human" },
-      { action: "click", label: "Sim Â· click primary action" },
-      { action: "type", label: "Sim Â· fill visible fields" },
+      { action: "navigate", label: `Sim · open page for ${agent.short}` },
+      { action: "scroll", label: "Sim · scroll like a human" },
+      { action: "click", label: "Sim · click primary action" },
+      { action: "type", label: "Sim · fill visible fields" },
     ];
     steps.forEach((s, i) => {
       setTimeout(() => {
@@ -4870,7 +4892,7 @@
     chrome.className = "card-chrome";
     chrome.innerHTML = `
       <span class="card-handle" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
-      <span class="card-index">${minimal ? "Browser" : "PREVIEW Â· Viewport"}</span>
+      <span class="card-index">${minimal ? "Browser" : "PREVIEW · Viewport"}</span>
       <span class="card-badge">${statusLabel(statuses[agent.id] || "pending")}</span>
       <button type="button" class="card-delete" title="Delete (Del)">Delete</button>
     `;
@@ -4990,8 +5012,8 @@
       const depsEl = document.createElement("div");
       depsEl.className = "card-meta-deps";
       depsEl.textContent = deps.length
-        ? `Watching â† ${deps.map((d) => agentById(d)?.short || d).join(" + ")}`
-        : "Auto-follow Â· wire an agent in to lock source";
+        ? `Watching ◉ ${deps.map((d) => agentById(d)?.short || d).join(" + ")}`
+        : "Auto-follow · wire an agent in to lock source";
 
       body.append(title, summary, watchWrap, tabs, stage, feed, meta, actions, depsEl);
     }
@@ -5229,7 +5251,7 @@
     selectedId = null;
     buildSections();
     syncSelectionClasses();
-    logLine(null, `section "${sec.name}" Â· ${ids.length} cards`, "system");
+    logLine(null, `section "${sec.name}" · ${ids.length} cards`, "system");
     return sec;
   }
 
@@ -5244,7 +5266,7 @@
     buildSections();
     if (kept.length) selectCards(kept, kept[0]);
     else clearSelection();
-    logLine(null, `ungrouped section Â· ${kept.length} cards kept`, "system");
+    logLine(null, `ungrouped section · ${kept.length} cards kept`, "system");
   }
 
   function beginSectionDrag(e, sectionId) {
@@ -5518,7 +5540,7 @@
     const nameEl = document.createElement("div");
     nameEl.className = "section-name";
     nameEl.textContent = sec.name || "Section";
-    nameEl.title = "Double-click to rename Â· Drag to move section";
+    nameEl.title = "Double-click to rename · Drag to move section";
     nameEl.addEventListener("dblclick", (e) => {
       e.preventDefault();
       e.stopPropagation();
@@ -5569,7 +5591,7 @@
     wIn.setAttribute("aria-label", "Section width");
     const sizeSep = document.createElement("span");
     sizeSep.className = "section-size-sep";
-    sizeSep.textContent = "Ã—";
+    sizeSep.textContent = "×";
     const hIn = document.createElement("input");
     hIn.type = "number";
     hIn.className = "section-size-h";
@@ -5951,7 +5973,7 @@
         ev.stopPropagation();
         pushHistory();
         if (removeEdge(e.from, e.to)) {
-          logLine(null, `disconnected ${agentById(e.from)?.short || e.from} â†’ ${agentById(e.to)?.short || e.to}`, "system");
+          logLine(null, `disconnected ${agentById(e.from)?.short || e.from} → ${agentById(e.to)?.short || e.to}`, "system");
           drawEdges();
         } else {
           undoStack.pop();
@@ -6456,7 +6478,7 @@
   }
 
   // ---- pan / zoom ----
-  // Pinch/ctrl+wheel zooms (gentle). Plain wheel pans â€” unless over a card
+  // Pinch/ctrl+wheel zooms (gentle). Plain wheel pans — unless over a card
   // (card handler scrolls fields/body, or pinches via applyWheelZoom).
   viewport.addEventListener("wheel", (e) => {
     if (e.target.closest(".card")) return; // handled on the card
@@ -6729,7 +6751,7 @@
       const titles = { trigger: "Trigger", preview: "Preview", card: "New Card" };
       ghost.innerHTML = `
         <div class="place-ghost-title">${titles[placeMode.kind] || "New Card"}</div>
-        <div class="place-ghost-hint">Click to place Â· Esc cancel</div>
+        <div class="place-ghost-hint">Click to place · Esc cancel</div>
       `;
       viewport.appendChild(ghost);
     }
@@ -6856,7 +6878,7 @@
       index: 200 + customSeq,
       short: "Preview",
       role: "Preview",
-      summary: "Live agent viewport Â· browser, tools, LLM, output",
+      summary: "Live agent viewport · browser, tools, LLM, output",
       watchMode: "auto",
       watchScope: "all",
       viewTab: "live",
@@ -7040,7 +7062,7 @@
       col.className = "tok-col";
       col.dataset.agentId = a.id;
       const active = statuses[a.id] === "running" || statuses[a.id] === "thinking";
-      const valLabel = v ? formatTokens(v) : "Â·";
+      const valLabel = v ? formatTokens(v) : "·";
       col.innerHTML = `
         <span class="tok-val" title="${v ? v.toLocaleString() + " tokens" : ""}">${valLabel}</span>
         <div class="tok-bar-wrap"><div class="tok-bar${active ? " active" : ""}" style="height:${pct}%"></div></div>
@@ -7097,7 +7119,7 @@
     if (detail.files && detail.files.length) parts.push(`Files: ${detail.files.join(", ")}`);
     if (detail.suggestion) parts.push(detail.suggestion);
     if (detail.error && detail.error !== hint && detail.error !== detail.suggestion) {
-      parts.push(detail.error.length > 500 ? detail.error.slice(0, 500) + "â€¦" : detail.error);
+      parts.push(detail.error.length > 500 ? detail.error.slice(0, 500) + "…" : detail.error);
     }
     return parts.join("\n") || "No extra summary.";
   }
@@ -7340,7 +7362,7 @@
     updateRunChrome();
     logLine(null, `kickoff() - canvas plan (${plan.order.length} steps, simulated)`, "system");
     if (plan.trigger) {
-      logLine("Trigger", `schedule every ${plan.trigger.interval_minutes}m Â· runCount=${plan.trigger.runCount === "" ? "âˆž" : plan.trigger.runCount}`, "system");
+      logLine("Trigger", `schedule every ${plan.trigger.interval_minutes}m · runCount=${plan.trigger.runCount === "" ? "∞" : plan.trigger.runCount}`, "system");
     }
 
     let prev = null;
@@ -7421,7 +7443,7 @@
     else simClearedBySection = {};
     renderTokens();
     clearLogBuffer();
-    logLine(null, sectionId ? `run reset Â· ${(sectionById(sectionId) || {}).name || sectionId}` : "run reset", "system");
+    logLine(null, sectionId ? `run reset · ${(sectionById(sectionId) || {}).name || sectionId}` : "run reset", "system");
     setRunControls("idle");
     updateStartGate();
     postControl("/api/abort").catch(() => {});
@@ -7510,7 +7532,7 @@
       title.textContent = item.job_title || item.company || item.job_url || item.id;
       const meta = document.createElement("div");
       meta.className = "li-review-item-meta";
-      meta.textContent = [item.company, item.location, item.job_url].filter(Boolean).join(" Â· ");
+      meta.textContent = [item.company, item.location, item.job_url].filter(Boolean).join(" · ");
       const reason = document.createElement("div");
       reason.className = "li-review-item-reason";
       reason.textContent = item.flag_reason || "Flagged for review";
@@ -7800,7 +7822,7 @@
           const sid = action.section != null ? resolveChatSectionId(action.section) : (selectedSectionId || null);
           resetRun(sid);
           const name = sid ? ((sectionById(sid) || {}).name || sid) : "canvas";
-          notes.push(`Reset run Â· ${name}`);
+          notes.push(`Reset run · ${name}`);
         } else if (type === "reset_layout") {
           resetLayout();
           notes.push("Reset layout");
@@ -7852,7 +7874,7 @@
     appendChatBubble("user", message);
     chatHistory.push({ role: "user", content: message });
     saveChatHistory();
-    const pending = appendChatBubble("assistant", "â€¦", { pending: true });
+    const pending = appendChatBubble("assistant", "…", { pending: true });
     try {
       await refreshChatErrorsCache();
       const res = await fetch("/api/chat", {
@@ -8127,7 +8149,7 @@
   applyView();
   loadModelCatalog({ rebuild: true }).then((cat) => {
     const n = (cat.active_ids || []).length;
-    if (cat.ok) logLine("Models", `${n} active Â· Groq/Gemini session catalog loaded`, "ok");
+    if (cat.ok) logLine("Models", `${n} active · Groq/Gemini session catalog loaded`, "ok");
     else logLine("Models", "Using Disconnected fallback. Open Model menu and Refresh, or restart dashboard server.", "flag");
     // Re-seed blank llm/fallback against the live catalog (does not clobber edits).
     seedWorking();

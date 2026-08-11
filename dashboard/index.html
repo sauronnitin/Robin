@@ -112,20 +112,6 @@
       </div>
 
       <div class="stage-footer glass">
-        <div class="chat-dock" id="chatDock">
-          <div class="chat-head">
-            <div class="chat-head-title">
-              <span class="chat-title">JobHunter assistant</span>
-              <span class="chat-sub" id="chatStatus">JobHunter assistant · ready</span>
-            </div>
-            <button type="button" class="chat-clear" id="chatClearBtn" title="Clear chat" aria-label="Clear chat">Clear</button>
-          </div>
-          <div class="chat-messages" id="chatMessages" role="log" aria-live="polite"></div>
-          <form class="chat-compose" id="chatForm">
-            <textarea id="chatInput" rows="1" placeholder="Ask or run: Sim Main, open errors, Stop…" autocomplete="off" spellcheck="true"></textarea>
-            <button type="submit" class="btn btn-primary chat-send" id="chatSendBtn" title="Send">Send</button>
-          </form>
-        </div>
         <div class="tokens-dock" id="tokensDock">
           <div class="tokens-head">
             <span>Tokens by agent</span>
@@ -155,6 +141,7 @@
                 LI Review
                 <span class="rail-badge" id="liReviewBadge" hidden>0</span>
               </button>
+              <button type="button" class="rail-pill" id="tabEfficiency" role="tab" aria-selected="false">Efficiency</button>
             </div>
             <span class="panel-sub" id="activityAgent">Ready</span>
           </div>
@@ -184,6 +171,16 @@
           </div>
           <div class="li-review-list" id="liReviewList">
             <div class="li-review-empty" id="liReviewEmpty">No flagged LinkedIn items.</div>
+          </div>
+        </div>
+        <div class="efficiency-view" id="efficiencyView" hidden>
+          <div class="efficiency-head">
+            <span class="efficiency-title">Run history</span>
+            <span class="efficiency-sub">Estimates - not exact billing</span>
+            <button type="button" class="btn btn-sm" id="efficiencyRefreshBtn" title="Refresh run history">Refresh</button>
+          </div>
+          <div class="efficiency-list" id="efficiencyList">
+            <div class="efficiency-empty" id="efficiencyEmpty">No completed runs yet.</div>
           </div>
         </div>
       </div>

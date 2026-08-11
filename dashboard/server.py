@@ -96,6 +96,7 @@ PORT = 5959
 DASHBOARD_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = DASHBOARD_DIR.parent
 EVENTS_FILE = DASHBOARD_DIR / "events.jsonl"
+HISTORY_FILE = DASHBOARD_DIR / "run_history.jsonl"
 CONTROL_FILE = DASHBOARD_DIR / "run_control.json"
 STATE_FILE = DASHBOARD_DIR / "run_state.json"
 RUN_PLAN_FILE = DASHBOARD_DIR / "run_plan.json"
@@ -456,9 +457,14 @@ def _resolve_runner() -> list[str]:
     return [sys.executable, "-m", "jobhunter_ai.main"]
 
 
-def _watch_proc(proc: subprocess.Popen) -> None:
+def _watch_proc(proc: subprocess.Popen, stdout_log=None) -> None:
     global _run_proc, _run_meta
     code = proc.wait()
+    if stdout_log is not None:
+        try:
+            stdout_log.close()
+        except Exception:
+            pass
     with _run_lock:
         if _run_proc is proc:
             _run_proc = None
@@ -525,17 +531,41 @@ def _start_run_unlocked(plan: dict | None = None, force: bool = False) -> dict:
     if plan_path is not None:
         env["JH_RUN_PLAN"] = str(plan_path)
 
+    # On Windows, a python.exe child launched without an inherited console
+    # still gets its own new console window allocated by default even though
+    # stdout/stderr are piped here. crewai's Rich-based console event
+    # listener (always-on internally, independent of verbose=) probes that
+    # console via the legacy Win32 console API and can deadlock against
+    # stdlib logging when writing to it from a background/hidden process.
+    # CREATE_NO_WINDOW skips allocating a console at all, so Rich falls back
+    # to plain non-interactive output instead of hanging.
+    popen_kwargs = {}
+    if os.name == "nt":
+        popen_kwargs["creationflags"] = subprocess.CREATE_NO_WINDOW
+
+    # stdout=PIPE was never actually read anywhere (_watch_proc only calls
+    # proc.wait()) - once the child wrote enough (crewai's Rich console
+    # output is always-on internally regardless of verbose=) to fill the OS
+    # pipe buffer, its next write() blocked forever with nobody draining it,
+    # deadlocking the whole run partway through. Redirect to a real file
+    # instead - nothing needs to actively read it, and it's still there for
+    # debugging (the dashboard's own progress comes from output_log_file +
+    # the task/step callbacks -> events.jsonl, not this raw stream).
+    stdout_log = open(DASHBOARD_DIR / "crew_stdout.log", "w", encoding="utf-8", errors="replace")
+
     try:
         proc = subprocess.Popen(
             cmd,
             cwd=str(PROJECT_ROOT),
             env=env,
-            stdout=subprocess.PIPE,
+            stdout=stdout_log,
             stderr=subprocess.STDOUT,
             text=True,
             bufsize=1,
+            **popen_kwargs,
         )
     except OSError as exc:
+        stdout_log.close()
         _run_meta = {"status": "failed", "pid": None, "started_at": None, "exit_code": None}
         return {"ok": False, "error": str(exc)}
 
@@ -550,13 +580,7 @@ def _start_run_unlocked(plan: dict | None = None, force: bool = False) -> dict:
     }
     _write_json(STATE_FILE, {"status": "running", "pid": proc.pid, "started_at": time.time()})
 
-    def _pump_stdout() -> None:
-        assert proc.stdout is not None
-        for line in proc.stdout:
-            print(f"[crew] {line.rstrip()}")
-
-    threading.Thread(target=_pump_stdout, daemon=True).start()
-    threading.Thread(target=_watch_proc, args=(proc,), daemon=True).start()
+    threading.Thread(target=_watch_proc, args=(proc, stdout_log), daemon=True).start()
     return {
         "ok": True,
         "status": "running",
@@ -678,6 +702,27 @@ def read_events_since(since: int = 0) -> dict:
         "events": events,
         "run": run_status(),
     }
+
+
+def read_run_history(limit: int = 50) -> dict[str, Any]:
+    """Per-run token/cost/retry summaries appended by events_bus.end_run(),
+    newest first, for the dashboard's efficiency trend view."""
+    records: list[dict[str, Any]] = []
+    if HISTORY_FILE.exists():
+        try:
+            with HISTORY_FILE.open("r", encoding="utf-8") as fh:
+                for line in fh:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        records.append(json.loads(line))
+                    except json.JSONDecodeError:
+                        continue
+        except OSError:
+            pass
+    records.reverse()
+    return {"runs": records[:limit], "count": len(records)}
 
 
 _PARSER_BRAND_RE = re.compile(
@@ -938,6 +983,9 @@ class DashboardHandler(SimpleHTTPRequestHandler):
         if path.startswith("/api/events"):
             since = int(params.get("since") or 0)
             return self._json(read_events_since(since))
+        if path.startswith("/api/history"):
+            limit = int(params.get("limit") or 50)
+            return self._json(read_run_history(limit))
         if path.startswith("/api/run/status"):
             return self._json(run_status())
         if path.startswith("/api/schedule"):

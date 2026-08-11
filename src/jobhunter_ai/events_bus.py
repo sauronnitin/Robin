@@ -8,6 +8,7 @@ crew can resume or abort after user confirmation.
 from __future__ import annotations
 
 import json
+import os
 import threading
 import time
 import uuid
@@ -20,6 +21,17 @@ DASHBOARD_DIR = _PROJECT_ROOT / "dashboard"
 EVENTS_FILE = DASHBOARD_DIR / "events.jsonl"
 CONTROL_FILE = DASHBOARD_DIR / "run_control.json"
 STATE_FILE = DASHBOARD_DIR / "run_state.json"
+HISTORY_FILE = DASHBOARD_DIR / "run_history.jsonl"
+
+# Rough blended $/1M-token estimates for the dashboard's efficiency/trend UI.
+# Not exact billing (ignores tiered/cached pricing) - good enough to compare
+# runs against each other and spot regressions, not to reconcile an invoice.
+_MODEL_COST_PER_M_TOKENS: dict[str, tuple[float, float]] = {
+    "groq/llama-3.1-8b-instant": (0.05, 0.08),
+    "groq/llama-3.3-70b-versatile": (0.59, 0.79),
+    "gemini/gemini-2.5-flash": (0.30, 2.50),
+    "gemini/gemini-2.5-flash-lite": (0.10, 0.40),
+}
 
 _lock = threading.Lock()
 _run_id: str | None = None
@@ -299,7 +311,80 @@ def begin_run(run_id: str | None = None) -> str:
     return rid
 
 
+def _compute_run_summary(run_id: str, status: str) -> dict[str, Any]:
+    """Aggregate this run's events.jsonl into a per-agent token/retry/cost
+    summary. Must run before the NEXT begin_run() truncates the file."""
+    tokens_by_agent: dict[str, int] = {}
+    retries_by_agent: dict[str, int] = {}
+    total_tokens = 0
+    total_retries = 0
+    cost_usd = 0.0
+    if EVENTS_FILE.exists():
+        try:
+            with EVENTS_FILE.open("r", encoding="utf-8") as fh:
+                for line in fh:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        e = json.loads(line)
+                    except json.JSONDecodeError:
+                        continue
+                    if e.get("type") != "llm":
+                        continue
+                    agent_id = e.get("agent_id")
+                    if not agent_id:
+                        continue
+                    detail = e.get("detail") or {}
+                    if e.get("status") == "done":
+                        tok = detail.get("total_tokens") or detail.get("tokens") or 0
+                        tokens_by_agent[agent_id] = tokens_by_agent.get(agent_id, 0) + tok
+                        total_tokens += tok
+                        rates = _MODEL_COST_PER_M_TOKENS.get(detail.get("model"))
+                        if rates:
+                            in_rate, out_rate = rates
+                            p = detail.get("prompt_tokens") or 0
+                            c = detail.get("completion_tokens") or 0
+                            cost_usd += (p / 1_000_000) * in_rate + (c / 1_000_000) * out_rate
+                    elif e.get("status") == "retrying":
+                        retries_by_agent[agent_id] = retries_by_agent.get(agent_id, 0) + 1
+                        total_retries += 1
+        except OSError:
+            pass
+    return {
+        "run_id": run_id,
+        "status": status,
+        "ended_at": time.time(),
+        "duration_s": (
+            round(time.monotonic() - _run_started_monotonic, 1)
+            if _run_started_monotonic is not None
+            else None
+        ),
+        "dry_run": str(os.environ.get("DRY_RUN", "True")).strip().lower()
+        in ("1", "true", "yes", "on"),
+        "total_tokens": total_tokens,
+        "tokens_by_agent": tokens_by_agent,
+        "total_retries": total_retries,
+        "retries_by_agent": retries_by_agent,
+        "estimated_cost_usd": round(cost_usd, 4),
+    }
+
+
+def _append_history(record: dict[str, Any]) -> None:
+    try:
+        DASHBOARD_DIR.mkdir(parents=True, exist_ok=True)
+        with HISTORY_FILE.open("a", encoding="utf-8") as fh:
+            fh.write(json.dumps(record) + "\n")
+    except OSError as exc:  # pragma: no cover
+        print(f"[events_bus] history append failed: {exc}")
+
+
 def end_run(status: str = "done", detail: dict[str, Any] | None = None) -> None:
+    if _run_id:
+        try:
+            _append_history(_compute_run_summary(_run_id, status))
+        except Exception as exc:  # pragma: no cover
+            print(f"[events_bus] run summary failed: {exc}")
     emit("run", status=status, detail=detail or {})
     write_state(status=status)
     write_control("none", user_paused=False)
