@@ -3,15 +3,13 @@
     "greenhouse,anthropic",
     "greenhouse,stripe",
     "greenhouse,vercel",
-    "greenhouse,linear",
-    "greenhouse,notion",
     "greenhouse,figma",
-    "lever,vercel",
-    "lever,loom",
-    "lever,pitch",
     "ashby,linear",
     "ashby,vercel",
-    "workable,gitlab"
+    "ashby,notion",
+    "ashby,loom",
+    "workable,gitlab",
+    "workable,pitch"
   ],
   "free_source_targets": [
     "github:product designer hiring help wanted",

@@ -43,7 +43,6 @@ _ATS_CANDIDATES: list[tuple[str, str]] = [
     ("greenhouse", "anthropic"),
     ("greenhouse", "stripe"),
     ("greenhouse", "figma"),
-    ("greenhouse", "notion"),
     ("greenhouse", "airtable"),
     ("greenhouse", "webflow"),
     ("greenhouse", "miro"),
@@ -74,14 +73,12 @@ _ATS_CANDIDATES: list[tuple[str, str]] = [
     ("lever", "eventbrite"),
     ("lever", "coursera"),
     ("lever", "duolingo"),
-    ("lever", "loom"),
-    ("lever", "pitch"),
-    ("lever", "vercel"),
     ("lever", "figma"),
     ("ashby", "linear"),
     ("ashby", "vercel"),
     ("ashby", "ramp"),
     ("ashby", "notion"),
+    ("ashby", "loom"),
     ("ashby", "openai"),
     ("ashby", "anthropic"),
     ("ashby", "rippling"),
@@ -94,6 +91,7 @@ _ATS_CANDIDATES: list[tuple[str, str]] = [
     ("workable", "gitlab"),
     ("workable", "buffer"),
     ("workable", "typeform"),
+    ("workable", "pitch"),
 ]
 
 # Free JSON endpoints we can enable in the Browse API filter.

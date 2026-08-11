@@ -903,7 +903,7 @@ def _fetch_jobicy_tag(tag: str) -> list[dict[str, Any]]:
 def _fetch_jobicy() -> list[dict[str, Any]]:
     out: list[dict[str, Any]] = []
     seen: set[str] = set()
-    for tag in ("design", "ux", "product-design"):
+    for tag in ("design", "ui-ux", "product-design"):
         for card in _fetch_jobicy_tag(tag):
             sid = str(card.get("id") or "")
             if sid and sid in seen:
@@ -985,6 +985,42 @@ def _fetch_himalayas() -> list[dict[str, Any]]:
                 label="Himalayas",
                 color="#0d9488",
                 posted_at=str(item.get("pubDate") or ""),
+                desc=desc,
+                remote=True,
+            )
+        )
+    return out
+
+
+def _fetch_workingnomads() -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    try:
+        data = _get_json("https://www.workingnomads.com/api/exposed_jobs/")
+    except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, OSError):
+        return []
+    if not isinstance(data, list):
+        return []
+    for item in data:
+        if not isinstance(item, dict):
+            continue
+        title = str(item.get("title") or "")
+        desc = str(item.get("description") or "")
+        category = str(item.get("category_name") or "")
+        # Working Nomads has no per-request category filter; trust its own
+        # "Design" bucket outright, otherwise fall back to title/desc keywords.
+        if category.lower() != "design" and not _keep_title(title, desc):
+            continue
+        out.append(
+            _card(
+                sid=f"wn-{item.get('url') or title}",
+                title=title,
+                company=str(item.get("company_name") or ""),
+                location=str(item.get("location") or "Remote"),
+                job_url=str(item.get("url") or ""),
+                source="workingnomads",
+                label="Working Nomads",
+                color="#0891b2",
+                posted_at=str(item.get("pub_date") or ""),
                 desc=desc,
                 remote=True,
             )
@@ -1333,6 +1369,7 @@ _OPEN_FETCHERS = {
     "jobicy": _fetch_jobicy,
     "arbeitnow": _fetch_arbeitnow,
     "himalayas": _fetch_himalayas,
+    "workingnomads": _fetch_workingnomads,
     "themuse": _fetch_themuse,
     "freehire": _fetch_freehire,
     "rise": _fetch_rise,
@@ -1627,7 +1664,7 @@ def _fetch_jobs_inner(
         for cat in ("design", "product"):
             tasks.append(("remotive", (lambda c=cat: _fetch_remotive_cat(c))))
     if "jobicy" in wanted:
-        for tag in ("design", "ux", "product-design"):
+        for tag in ("design", "ui-ux", "product-design"):
             tasks.append(("jobicy", (lambda t=tag: _fetch_jobicy_tag(t))))
     for key, fetcher in _OPEN_FETCHERS.items():
         if key in wanted and key not in ("remoteok", "remotive", "jobicy"):
