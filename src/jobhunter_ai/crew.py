@@ -1,3 +1,4 @@
+import copy
 import json
 import re
 import time
@@ -42,7 +43,7 @@ from jobhunter_ai.tools.linkedin_external_apply import LinkedInExternalSimplifyA
 import yaml
 
 _RETRY_AFTER_RE = re.compile(r"try again in (?:(\d+)m)?([\d.]+)s", re.IGNORECASE)
-_MAX_RETRY_WAIT_S = 90.0  # beyond this, it's a daily-quota wall, not a transient TPM blip -- fail fast
+_MAX_RETRY_WAIT_S = 3600.0  # beyond this, it's a daily-quota wall, not a transient TPM blip -- fail fast (increased to allow for hourly/daily quota resets)
 
 
 def _usage_snapshot(llm: LLM) -> dict[str, int]:
@@ -63,8 +64,14 @@ def _usage_delta(before: dict[str, int], after: dict[str, int]) -> dict[str, int
         ),
     }
 
-# Batch-of-3 queue: tailor at most this many scored jobs per run; overflow persists.
-_TAILOR_BATCH_SIZE = 3
+# Batch queue: tailor at most this many scored jobs per run; overflow persists.
+# Was 3 - at batch=3 a single resume_tailor call emits ~24-25K tokens
+# (prompt+completion), over Groq 70b's 12K TPM ceiling, causing an
+# immediate permanent 429 every attempt (not a transient rate limit) and
+# forcing a slow Gemini fallback. batch=1 keeps each call under ~10K
+# tokens so Groq succeeds directly. Overflow jobs persist in job_queue.json
+# and get picked up on the next run.
+_TAILOR_BATCH_SIZE = 1
 _PROJECT_ROOT = Path(__file__).resolve().parents[2]
 _JOB_QUEUE_PATH = _PROJECT_ROOT / "logs" / "job_queue.json"
 _FIELD_RE = re.compile(
@@ -507,12 +514,24 @@ class GroqLLM(LLM):
                 events_bus.emit("llm", status="done", detail=detail)
                 return result
             except litellm.RateLimitError as exc:
+                print(f"[GroqLLM] rate-limit raw: {str(exc)[:300]}")
                 match = _RETRY_AFTER_RE.search(str(exc))
+                # A 429 with no "try again in Xs" that mentions the request
+                # being too large is a permanent rejection of THIS payload
+                # against the TPM ceiling, not a transient rate limit -
+                # sleeping through the normal ladder just re-learns the same
+                # rejection 5 times (~100s wasted) before falling back.
+                payload_too_large = not match and "too large" in str(exc).lower()
                 if match:
                     minutes = float(match.group(1)) if match.group(1) else 0.0
                     wait_s = minutes * 60 + float(match.group(2)) + 2
                 else:
                     wait_s = 20.0
+                if payload_too_large:
+                    print(
+                        "[GroqLLM] Request exceeds TPM ceiling (permanent for this "
+                        "payload) - skipping retry ladder, falling back directly."
+                    )
                 if wait_s > _MAX_RETRY_WAIT_S:
                     # A multi-minute wait means we've hit a daily/hourly
                     # token quota (TPD), not a per-minute (TPM) blip --
@@ -535,7 +554,43 @@ class GroqLLM(LLM):
                         ),
                     )
                     continue
-                if attempt == max_attempts:
+                if attempt == max_attempts or payload_too_large:
+                    fallback = getattr(self, "fallback_llm", None)
+                    if fallback is not None:
+                        print(
+                            f"[GroqLLM] TPM exhausted after {max_attempts} attempts, "
+                            f"falling back to {fallback.model}..."
+                        )
+                        events_bus.emit(
+                            "llm",
+                            status="retrying",
+                            detail={
+                                "label": "LLM call (promoted to fallback)",
+                                "model": fallback.model,
+                            },
+                        )
+                        try:
+                            # Deep-copy only the tools schema list (plain
+                            # JSON-shaped dicts) before handing it to a
+                            # different provider's call(): if Gemini's own
+                            # tool-schema sanitization mutates those dicts in
+                            # place, the SAME objects get reused by crewai's
+                            # retry loop for the next Groq call in this task,
+                            # corrupting its schema (seen live:
+                            # additionalProperties silently missing on the
+                            # next Groq attempt). Everything else in kwargs
+                            # (callables, executor context, etc.) isn't
+                            # deepcopy-safe and doesn't need protecting.
+                            fb_kwargs = dict(kwargs)
+                            if fb_kwargs.get("tools") is not None:
+                                fb_kwargs["tools"] = copy.deepcopy(fb_kwargs["tools"])
+                            return fallback.call(*args, **fb_kwargs)
+                        except Exception as fb_exc:
+                            print(f"[GroqLLM] Fallback also failed: {fb_exc!r}")
+                            # Fall through to the normal pause-for-user path
+                            # below using the ORIGINAL Groq error, since that's
+                            # the actionable one (fallback errors are logged
+                            # to console for debugging but not surfaced here).
                     events_bus.emit(
                         "error",
                         status="failed",
@@ -734,6 +789,37 @@ class GeminiLLM(LLM):
                 else:
                     time.sleep(min(4.0 * attempt, 12.0))
                 continue
+            except litellm.Timeout as exc:
+                # A slow-but-honest Gemini response (large LaTeX generations
+                # measured at 50-75s) can exceed our client-side timeout
+                # without the model actually being stuck. Pausing for user
+                # confirmation here (as the generic handler below does)
+                # burns minutes of the task's execution budget waiting on a
+                # human for something that's often fine on a plain retry.
+                # Only pause on the final attempt.
+                if attempt == max_attempts:
+                    msg = f"Gemini timed out after {max_attempts} attempts: {str(exc)[:300]}"
+                    print(f"[GeminiLLM] {msg} Pausing for user confirmation.")
+                    events_bus.emit(
+                        "error",
+                        status="failed",
+                        detail={"error": msg, "raw": str(exc)[:800]},
+                    )
+                    self._pause_for_user(
+                        error=msg,
+                        suggestion="Gemini repeatedly timed out; retry or reduce batch size.",
+                    )
+                    continue
+                print(
+                    f"[GeminiLLM] Timeout (attempt {attempt}/{max_attempts}), "
+                    "retrying without a user pause..."
+                )
+                events_bus.emit(
+                    "llm",
+                    status="retrying",
+                    detail={"label": "LLM call (timeout)", "attempt": attempt},
+                )
+                time.sleep(5)
             except Exception as exc:
                 err = str(exc)[:800]
                 events_bus.emit(
@@ -796,9 +882,7 @@ class InjectionScreenerAgent(Agent):
 
 
 # Hybrid routing: Groq 8B for tool/mechanical agents; Groq 70B for thinking
-# agents (Gemini Flash kept configured as the fallback_llm target, promoted
-# by AutoFix on transient Groq errors -- see graph_crew.py/auto_fix.py).
-# Never gemini-2.5-pro (Studio cost trap).
+# agents. Never gemini-2.5-pro (Studio cost trap).
 _GEMINI_FLASH = "gemini/gemini-2.5-flash"
 _GROQ_8B = "groq/llama-3.1-8b-instant"
 _GROQ_70B = "groq/llama-3.3-70b-versatile"
@@ -807,7 +891,20 @@ _groq_8b = GroqLLM(model=_GROQ_8B, temperature=0.1)
 _groq_70b = GroqLLM(model=_GROQ_70B, temperature=0.2)
 # is_litellm=True keeps our GeminiLLM subclass (retry/events) instead of
 # CrewAI swapping in native GeminiCompletion.
-_gemini_flash = GeminiLLM(model=_GEMINI_FLASH, temperature=0.2, is_litellm=True)
+# timeout: the primary Groq path has its own retry-loop timing, but when
+# used as the fallback target its call() sits directly under the executor's
+# blocking future.result() with no wrapper timeout of its own - a stalled
+# Gemini response (seen live: 7+ minutes with no error, no timeout) would
+# otherwise hang the whole task forever instead of failing fast so the
+# pause-for-user path can kick in.
+_gemini_flash = GeminiLLM(model=_GEMINI_FLASH, temperature=0.2, is_litellm=True, timeout=240)
+
+# dashboard/run_plan.json's fallback_llm field is display-only (AutoFix
+# "promote fallback" only ever edited that JSON for the UI, never anything
+# a live agent actually reads) - this .fallback_llm attribute is what
+# GroqLLM.call() actually invokes when Groq's TPM rate limit is exhausted.
+_groq_8b.fallback_llm = _gemini_flash
+_groq_70b.fallback_llm = _gemini_flash
 
 _SHARED_AGENT_KWARGS = {
     "allow_delegation": False,
@@ -816,7 +913,25 @@ _SHARED_AGENT_KWARGS = {
     # Keep well under free-tier TPM: each tool-round can be several thousand tokens.
     "max_rpm": 2,
     "max_execution_time": 600,
+    # crewai 1.15.4's default experimental.agent_executor.AgentExecutor can
+    # deadlock (MainThread blocks on a ThreadPoolExecutor future whose asyncio
+    # loop never gets anything scheduled back onto it, silently hanging past
+    # a completed tool call with no error and no timeout firing). The legacy
+    # CrewAgentExecutor is deprecated but has none of this async/thread
+    # bridging and runs synchronously and reliably.
+    "executor_class": "CrewAgentExecutor",
 }
+
+
+def _agent_kwargs(**overrides):
+    """Shared agent kwargs with per-agent overrides.
+
+    _SHARED_AGENT_KWARGS is normally splatted directly (**_SHARED_AGENT_KWARGS);
+    passing e.g. max_execution_time= in the same Agent(...) call alongside that
+    splat raises "got multiple values for keyword argument". Use this helper
+    instead whenever an agent needs to override a shared default.
+    """
+    return {**_SHARED_AGENT_KWARGS, **overrides}
 
 
 @CrewBase
@@ -849,7 +964,9 @@ class JobhunterAiCrew:
             config=self.agents_config["job_fit_analyst"],
             tools=[],
             max_iter=1,
-            llm=_groq_70b,
+            # Gemini default - Groq's 12K TPM ceiling on 70b has proven
+            # unreliable across this pipeline tonight.
+            llm=_gemini_flash,
             **_SHARED_AGENT_KWARGS,
         )
 
@@ -858,9 +975,13 @@ class JobhunterAiCrew:
         return Agent(
             config=self.agents_config["resume_tailor"],
             tools=[GoogleDocsCreateTool()],
-            max_iter=3,
-            llm=_groq_70b,
-            **_SHARED_AGENT_KWARGS,
+            # At _TAILOR_BATCH_SIZE=1 this needs one generation; max_iter=3
+            # only invited retry-context accumulation without adding value.
+            max_iter=2,
+            # Gemini default - Groq's 12K TPM ceiling on 70b has proven
+            # unreliable across this pipeline tonight.
+            llm=_gemini_flash,
+            **_agent_kwargs(max_execution_time=1200),
         )
 
     @agent
@@ -869,7 +990,10 @@ class JobhunterAiCrew:
             config=self.agents_config["cover_letter_writer"],
             tools=[GoogleDocsCreateTool(), GoogleDocsGetTool(), GoogleDocsReplaceTool()],
             max_iter=3,
-            llm=_groq_70b,
+            # On Gemini (not Groq) so this stage doesn't risk a long Groq
+            # hourly/daily quota wait - most jobs don't require a cover
+            # letter anyway, so this call is usually cheap either way.
+            llm=_gemini_flash,
             **_SHARED_AGENT_KWARGS,
         )
 
@@ -878,9 +1002,13 @@ class JobhunterAiCrew:
         return Agent(
             config=self.agents_config["content_humanizer_ai_detection_specialist"],
             tools=[GoogleDocsGetTool(), GoogleDocsReplaceTool()],
-            max_iter=3,
-            llm=_groq_70b,
-            **_SHARED_AGENT_KWARGS,
+            # At batch=1 this needs one generation + DocsGet + DocsReplace;
+            # 5 gives headroom without letting accumulated retry context run away.
+            max_iter=5,
+            # Gemini default - Groq's 12K TPM ceiling on 70b has proven
+            # unreliable across this pipeline tonight.
+            llm=_gemini_flash,
+            **_agent_kwargs(max_execution_time=1200, max_rpm=6),
         )
 
     @agent
@@ -888,9 +1016,24 @@ class JobhunterAiCrew:
         return Agent(
             config=self.agents_config["latex_resume_compiler_drive_publisher"],
             tools=[LatexToPdfCompiler(), GoogleDrivePdfUploadTool()],
-            max_iter=2,
-            llm=_groq_8b,
-            **_SHARED_AGENT_KWARGS,
+            # max_iter=2 could only ever complete one job's compile+upload
+            # tool-call pair (2 calls) before being forced to give a final
+            # answer - this, not prompt formatting, is why only 1 of 3 jobs
+            # ever got a real PDF across every earlier fix attempt tonight.
+            # Kept at 10 (not reduced for batch=1) so restoring the full
+            # batch size later still works without another max_iter fix.
+            # 3 jobs x 2 tool calls each + headroom for retries/reasoning.
+            max_iter=10,
+            # llama-3.1-8b-instant deterministically fails to format the full
+            # LaTeX resume source as a tool-call argument ("Failed to call a
+            # function", GroqLLM exhausted retries every attempt, not
+            # transient), so this needs a stronger model than 8b. Gemini
+            # default - Groq's 70b has proven unreliable (12K TPM ceiling)
+            # across this pipeline tonight, and Gemini already handled this
+            # exact task cleanly earlier.
+            llm=_gemini_flash,
+            # pdflatex alone can take up to 60s/job; give real headroom.
+            **_agent_kwargs(max_execution_time=1200, max_rpm=8),
         )
 
     @agent
@@ -996,8 +1139,18 @@ class JobhunterAiCrew:
             config=self.agents_config["human_like_application_specialist"],
             tools=[GoogleSheetsSearchTool(), PlaywrightApplyTool()],
             max_iter=3,
-            llm=_groq_8b,
-            **_SHARED_AGENT_KWARGS,
+            # 8b was calling PlaywrightApplyTool with the same job repeatedly
+            # (observed live: 7x identical "DRY_RUN: would apply" for one
+            # job) instead of accepting the tool's definitive result as a
+            # Final Answer, even past CrewAI's max_iter forced-final-answer
+            # nudge. Groq has proven unreliable across this whole pipeline
+            # tonight (TPM ceiling, quota waits, this loop) - default to
+            # Gemini here too rather than trading one Groq model for another.
+            llm=_gemini_flash,
+            # Not an LLM-latency problem: human-paced Playwright form fill is
+            # minutes per job, and the tool's own email-verification wait can
+            # alone approach the old 600s budget.
+            **_agent_kwargs(max_execution_time=2400, max_rpm=6),
         )
 
     @agent
@@ -1012,9 +1165,12 @@ class JobhunterAiCrew:
                 GoogleDocsGetTool(),
                 GoogleDocsReplaceTool(),
             ],
+            # 20 iters genuinely needed across 3 log destinations (~10-14
+            # tool calls); at the shared max_rpm=2 that alone is ~600s of
+            # pure sleep before any real work, so raise rpm here too.
             max_iter=20,
             llm=_groq_8b,
-            **_SHARED_AGENT_KWARGS,
+            **_agent_kwargs(max_execution_time=1200, max_rpm=10),
         )
 
     @task
@@ -1127,7 +1283,14 @@ class JobhunterAiCrew:
             agents=main_agents,
             tasks=main_tasks,
             process=Process.sequential,
-            verbose=True,
+            # verbose=True's Rich console output deadlocks on Windows when this
+            # runs as a hidden/background process: Rich's legacy console
+            # renderer (rich/_win32_console.py) and stdlib logging's handler
+            # lock both write to the same (non-interactive) console handle
+            # from different threads with no safe interleaving, hanging
+            # forever with no error and no timeout. The dashboard already gets
+            # everything it needs from output_log_file + the callbacks below.
+            verbose=False,
             memory=False,
             output_log_file="logs/run.log",
             task_callback=_dashboard_task_callback,

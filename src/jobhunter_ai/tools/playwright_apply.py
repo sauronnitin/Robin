@@ -219,7 +219,10 @@ class PlaywrightApplyTool(BaseTool):
                         f"Waiting for email verification ({ats})",
                         page=page,
                     )
-                    verified = wait_for_email_verified(job_id=job_id, timeout_s=600.0)
+                    # Was 600s - on its own that alone could consume the
+                    # agent's entire max_execution_time budget before any
+                    # other job in the batch gets a turn.
+                    verified = wait_for_email_verified(job_id=job_id, timeout_s=180.0)
                     if not verified:
                         return (
                             f"SKIPPED - Email verification timeout for "

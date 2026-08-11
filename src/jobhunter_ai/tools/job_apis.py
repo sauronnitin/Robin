@@ -2,7 +2,7 @@
 
 Fetches job listings from free/freemium public REST APIs:
   - RemoteOK, Remotive, Jobicy, Freehire, Rise (no auth)
-  - Arbeitnow, Himalayas, The Muse (open JSON APIs)
+  - Arbeitnow, Himalayas, Working Nomads, The Muse (open JSON APIs)
   - GitHub Issues (hiring labels), Hacker News (Algolia)
   - SerpAPI Google Jobs (SERPAPI_API_KEY, 100 free searches/month)
 
@@ -175,7 +175,7 @@ def _fetch_remotive() -> list[dict]:
 def _fetch_jobicy() -> list[dict]:
     """Jobicy public API - design tagged remote jobs."""
     results: list[dict] = []
-    for tag in ["design", "ux", "product-design"]:
+    for tag in ["design", "ui-ux", "product-design"]:
         if len(results) >= _MAX_TOTAL:
             break
         try:
@@ -305,6 +305,34 @@ def _fetch_himalayas() -> list[dict]:
             locs = item.get("locationRestrictions") or []
             loc = ", ".join(str(x) for x in locs) if isinstance(locs, list) and locs else "Remote"
             results.append(_normalize(title, company, loc, url, desc))
+            if len(results) >= _MAX_TOTAL:
+                break
+    except Exception:
+        pass
+    return results
+
+
+def _fetch_workingnomads() -> list[dict]:
+    """Working Nomads public jobs API (no auth). No server-side category
+    filter; trust its own "Design" bucket, else fall back to keyword check."""
+    results: list[dict] = []
+    try:
+        data = _fetch_json("https://www.workingnomads.com/api/exposed_jobs/")
+        items = data if isinstance(data, list) else []
+        for item in items:
+            title = item.get("title") or ""
+            desc = item.get("description") or ""
+            category = str(item.get("category_name") or "")
+            trust = category.lower() == "design"
+            if not _is_design_role(title, desc, trust_source_category=trust) or _is_hard_excluded(title):
+                continue
+            results.append(_normalize(
+                title,
+                item.get("company_name") or "",
+                item.get("location") or "Remote",
+                item.get("url") or "",
+                desc,
+            ))
             if len(results) >= _MAX_TOTAL:
                 break
     except Exception:
@@ -469,20 +497,17 @@ def _fetch_serpapi_google_jobs(queries: list[str]) -> list[dict]:
 # ---------------------------------------------------------------------------
 
 class JobApisToolInput(BaseModel):
-    queries: list[str] = Field(
-        default_factory=list,
-        description=(
-            "Optional list of search terms (used by SerpAPI only). "
-            "Leave empty to use defaults. Do NOT include API keys here."
-        ),
-    )
-    sources: list[str] = Field(
-        default_factory=list,
-        description=(
-            "Optional subset of sources to query. Allowed: remoteok, remotive, "
-            "jobicy, freehire, rise, arbeitnow, himalayas, themuse, github, hn, "
-            "serpapi. Leave empty to use all."
-        ),
+    # A single trivial required field, not zero fields: CrewAI hardcodes
+    # strict:true on every tool call and forces every declared field into
+    # "required" regardless of pydantic defaults, so a genuinely empty
+    # schema ({"properties": {}, "required": []}) is unavoidable with zero
+    # fields — and Groq's strict-mode API rejects that shape server-side
+    # ("'required' present but 'properties' is missing"). One boolean the
+    # model always sets true is far more reliable for a small/fast model to
+    # supply correctly than the previous two-empty-array requirement was.
+    confirm: bool = Field(
+        default=True,
+        description="Always pass true. This tool takes no real arguments.",
     )
 
 
@@ -490,7 +515,7 @@ class JobApisTool(BaseTool):
     """Fetch product-design job listings from multiple free REST APIs.
 
     Sources: RemoteOK, Remotive, Jobicy, Freehire, Rise, Arbeitnow, Himalayas,
-    The Muse, GitHub hiring issues, Hacker News, SerpAPI Google Jobs.
+    Working Nomads, The Muse, GitHub hiring issues, Hacker News, SerpAPI Google Jobs.
     Returns a compact JSON list of up to 20 listings (title, company, location,
     url, description). Any source that fails or returns no matches is silently
     skipped. SerpAPI is only called when SERPAPI_API_KEY is set in the environment.
@@ -500,13 +525,13 @@ class JobApisTool(BaseTool):
     description: str = (
         "Fetch product-design job listings from multiple free public REST APIs "
         "(RemoteOK, Remotive, Jobicy, Freehire, Rise, Arbeitnow, Himalayas, "
-        "The Muse, GitHub, Hacker News, SerpAPI). "
+        "Working Nomads, The Muse, GitHub, Hacker News, SerpAPI). "
         "Returns a compact JSON list of up to 20 listings. "
-        "No arguments required - leave queries and sources empty to use all defaults."
+        "Takes one argument: confirm=true."
     )
     args_schema: Type[BaseModel] = JobApisToolInput
 
-    def _run(self, queries: list[str] | None = None, sources: list[str] | None = None) -> str:
+    def _run(self, confirm: bool = True, queries: list[str] | None = None, sources: list[str] | None = None) -> str:
         queries = queries or []
         allowed = set(sources) if sources else set()
 
@@ -530,6 +555,7 @@ class JobApisTool(BaseTool):
             "rise": _fetch_rise,
             "arbeitnow": _fetch_arbeitnow,
             "himalayas": _fetch_himalayas,
+            "workingnomads": _fetch_workingnomads,
             "themuse": _fetch_themuse,
             "github": lambda: _fetch_github_hiring(queries),
             "hn": lambda: _fetch_hn_hiring(queries),

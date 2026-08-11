@@ -31,9 +31,17 @@ def get_credentials():
         creds = Credentials.from_authorized_user_file(str(_TOKEN_PATH), SCOPES)
 
     if not creds or not creds.valid:
+        refreshed = False
         if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
-        else:
+            try:
+                creds.refresh(Request())
+                refreshed = True
+            except Exception:
+                # Refresh token itself expired/revoked (e.g. unverified OAuth
+                # client's 7-day testing-mode token lifetime) - fall through
+                # to a fresh interactive consent instead of crashing here.
+                creds = None
+        if not refreshed:
             flow = InstalledAppFlow.from_client_secrets_file(client_secret_path, SCOPES)
             creds = flow.run_local_server(port=0)
         _TOKEN_PATH.write_text(creds.to_json(), encoding="utf-8")
