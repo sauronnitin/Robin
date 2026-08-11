@@ -1082,11 +1082,13 @@ class JobhunterAiCrew:
         return Agent(
             config=self.agents_config["latex_resume_compiler_drive_publisher"],
             tools=[LatexToPdfCompiler(), GoogleDrivePdfUploadTool()],
-            # Each job needs exactly 2 tool calls (compile + upload). Scale with
-            # the batch instead of a flat 10: at batch=1 the old ceiling let the
-            # agent burn all 10 rounds re-sending accumulated context (158k
-            # tokens, 50% of a whole run) rather than finishing in 2.
-            max_iter=2 * _TAILOR_BATCH_SIZE + 2,
+            # 2 tool calls per job (compile + upload) and the job count comes
+            # from the queue drain, NOT _TAILOR_BATCH_SIZE - a run with batch=1
+            # was observed compiling 3 jobs, so a batch-derived ceiling would
+            # silently truncate them. Headroom is cheap now that humanize_content
+            # offloads LaTeX to FILE: refs: this agent's iterations went from
+            # ~15.8k tokens each (re-sending accumulated resume blobs) to ~1.1k.
+            max_iter=10,
             # llama-3.1-8b-instant deterministically fails to format the full
             # LaTeX resume source as a tool-call argument ("Failed to call a
             # function", GroqLLM exhausted retries every attempt, not
