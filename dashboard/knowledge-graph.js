@@ -1028,7 +1028,7 @@
           let dy = a.y - b.y;
           let dz = a.z - b.z;
           let dist = Math.sqrt(dx * dx + dy * dy + dz * dz) || 0.01;
-          const rep = 90 / (dist * dist);
+          const rep = 170 / (dist * dist);
           dx = (dx / dist) * rep;
           dy = (dy / dist) * rep;
           dz = (dz / dist) * rep;
@@ -1042,7 +1042,7 @@
           let dy = b.y - a.y;
           let dz = b.z - a.z;
           const dist = Math.sqrt(dx * dx + dy * dy + dz * dz) || 0.01;
-          const force = (dist - 28) * 0.02;
+          const force = (dist - 42) * 0.02;
           dx = (dx / dist) * force;
           dy = (dy / dist) * force;
           dz = (dz / dist) * force;
