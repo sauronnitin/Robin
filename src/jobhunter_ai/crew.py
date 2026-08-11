@@ -19,6 +19,7 @@ from jobhunter_ai.tools.scrape_website_truncated import TruncatedScrapeWebsiteTo
 from jobhunter_ai.tools.job_apis import JobApisTool
 from jobhunter_ai import events_bus
 from jobhunter_ai import latex_sanitize
+from jobhunter_ai import pipeline_sync
 from jobhunter_ai.screening import screen_listings
 
 from jobhunter_ai.tools.google_docs import (
@@ -421,6 +422,28 @@ def _select_tailor_batch(
     return batch, remaining, formatted
 
 
+def _persist_pipeline_state(task_key: str | None, raw_output: str) -> None:
+    """Mirror a completed task into the SQLite pipeline (SPEC.md §3).
+
+    Same defensive posture as ``_offload_latex_guardrail``: a bookkeeping write
+    must never take a live run down with it, so every failure is logged and
+    swallowed.
+    """
+    if not task_key:
+        return
+    try:
+        summary = pipeline_sync.sync_task_output(
+            task_key, raw_output, events_bus.current_run_id()
+        )
+        if summary.get("applications"):
+            print(
+                f"[pipeline] {task_key}: persisted {summary['applications']} "
+                f"application(s) {summary.get('statuses') or ''}"
+            )
+    except Exception as exc:  # noqa: BLE001 - persistence is never fatal
+        print(f"[pipeline] skipped persisting {task_key}: {exc!r}")
+
+
 def _dashboard_task_callback(task_output) -> None:
     """Emit task completion + output for the dashboard Output / Traces views."""
     raw_name = getattr(task_output, "name", None) or getattr(task_output, "description", "") or ""
@@ -430,11 +453,13 @@ def _dashboard_task_callback(task_output) -> None:
         agent = getattr(task_output, "agent", None)
         agent_id = events_bus.resolve_agent_id(getattr(agent, "role", None) if agent else None)
     events_bus.set_context(agent_id=agent_id, task_key=task_key)
-    output_text = events_bus.truncate_output(
+    raw_output = (
         getattr(task_output, "raw", None)
         or getattr(task_output, "exported_output", None)
         or str(task_output)
     )
+    output_text = events_bus.truncate_output(raw_output)
+    _persist_pipeline_state(task_key, raw_output)
     events_bus.emit(
         "task",
         agent_id=agent_id,
