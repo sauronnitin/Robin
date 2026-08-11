@@ -9,7 +9,10 @@ import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
 
-DB_PATH = Path("dashboard/jobhunter.db")
+# Anchored to the repo, not the CWD: the dashboard server runs with cwd=dashboard/
+# and a relative path silently opened a second DB at dashboard/dashboard/.
+_PROJECT_ROOT = Path(__file__).resolve().parents[2]
+DB_PATH = _PROJECT_ROOT / "dashboard" / "jobhunter.db"
 
 # Append-only. NEVER edit a migration that has shipped - add a new one.
 _MIGRATIONS: list[str] = [
