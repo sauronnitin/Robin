@@ -7,6 +7,7 @@ excluded (use LinkedIn Lab).
 
 from __future__ import annotations
 
+import hashlib
 import html as html_lib
 import json
 import re
@@ -16,10 +17,11 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from collections import deque
-from concurrent.futures import ThreadPoolExecutor, wait
-from pathlib import Path
-from typing import Any, Callable
+from concurrent.futures import ThreadPoolExecutor
+from typing import Any
 
+from jobhunter_ai.job_sources import fetch_all
+from jobhunter_ai.job_sources.base import NormalizedJob
 from jobhunter_ai.job_sources_config import (
     DEFAULT_ENABLED,
     free_queries,
@@ -559,10 +561,6 @@ def _card(
     }
 
 
-# ---------------------------------------------------------------------------
-# ATS boards (watchlist)
-# ---------------------------------------------------------------------------
-
 def _lever_desc(raw: dict[str, Any]) -> str:
     parts = [
         str(raw.get("description") or ""),
@@ -585,803 +583,94 @@ def _lever_desc(raw: dict[str, Any]) -> str:
     return _join_text(*parts)
 
 
-def _fetch_greenhouse(slug: str) -> list[dict[str, Any]]:
-    url = f"https://boards-api.greenhouse.io/v1/boards/{slug}/jobs"
-    try:
-        data = _get_json(url)
-    except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, OSError):
-        return []
-    jobs = data.get("jobs") if isinstance(data, dict) else None
-    if not isinstance(jobs, list):
-        return []
-    company = slug.replace("-", " ").title()
-    out: list[dict[str, Any]] = []
-    for raw in jobs:
-        if not isinstance(raw, dict):
-            continue
-        loc = ""
-        loc_obj = raw.get("location")
-        if isinstance(loc_obj, dict):
-            loc = str(loc_obj.get("name") or "")
-        elif isinstance(loc_obj, str):
-            loc = loc_obj
-        title = str(raw.get("title") or "Untitled")
-        jid = raw.get("id")
-        job_url = str(raw.get("absolute_url") or f"https://boards.greenhouse.io/{slug}/jobs/{jid}")
-        company_name = str(raw.get("company_name") or company)
-        content = str(raw.get("content") or "")
-        out.append(
-            _card(
-                sid=f"gh-{slug}-{jid}",
-                title=title,
-                company=company_name,
-                location=loc or "Remote",
-                job_url=job_url,
-                source="greenhouse",
-                label="Greenhouse",
-                color="#27a644",
-                posted_at=str(raw.get("updated_at") or raw.get("created_at") or ""),
-                desc=content,
-                detail={"board": "greenhouse", "slug": slug, "job_id": str(jid or "")},
-            )
-        )
-    return out
+_ATS_PROVIDERS = (
+    "greenhouse",
+    "lever",
+    "ashby",
+    "workable",
+    "smartrecruiters",
+)
+_DETAIL_ATS = frozenset({"greenhouse", "lever", "ashby", "workable"})
 
-
-def _fetch_lever(slug: str) -> list[dict[str, Any]]:
-    url = f"https://api.lever.co/v0/postings/{slug}?mode=json"
-    try:
-        data = _get_json(url)
-    except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, OSError):
-        return []
-    if not isinstance(data, list):
-        return []
-    company = slug.replace("-", " ").title()
-    out: list[dict[str, Any]] = []
-    for raw in data:
-        if not isinstance(raw, dict):
-            continue
-        workplace = str(raw.get("workplaceType") or "")
-        loc = workplace
-        cats = raw.get("categories") if isinstance(raw.get("categories"), dict) else {}
-        if cats.get("location"):
-            loc = str(cats.get("location"))
-        title = str(raw.get("text") or "Untitled")
-        jid = raw.get("id") or raw.get("leverId") or title
-        job_url = str(raw.get("hostedUrl") or raw.get("applyUrl") or "")
-        out.append(
-            _card(
-                sid=f"lv-{slug}-{jid}",
-                title=title,
-                company=company,
-                location=loc or "Remote",
-                job_url=job_url,
-                source="lever",
-                label="Lever",
-                color="#8b5cf6",
-                posted_at=str(raw.get("createdAt") or ""),
-                desc=_lever_desc(raw),
-                workplace=workplace,
-                detail={"board": "lever", "slug": slug, "job_id": str(jid or "")},
-            )
-        )
-    return out
-
-
-def _fetch_ashby(slug: str) -> list[dict[str, Any]]:
-    url = f"https://api.ashbyhq.com/posting-api/job-board/{slug}"
-    try:
-        data = _get_json(url)
-    except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, OSError):
-        return []
-    jobs = data.get("jobs") if isinstance(data, dict) else None
-    if not isinstance(jobs, list):
-        return []
-    company = slug.replace("-", " ").title()
-    out: list[dict[str, Any]] = []
-    for raw in jobs:
-        if not isinstance(raw, dict):
-            continue
-        loc = str(raw.get("location") or "")
-        title = str(raw.get("title") or "Untitled")
-        jid = raw.get("id") or title
-        job_url = str(raw.get("jobUrl") or raw.get("applyUrl") or "")
-        desc = _join_text(
-            str(raw.get("descriptionHtml") or ""),
-            str(raw.get("descriptionPlain") or ""),
-            str(raw.get("description") or ""),
-        )
-        workplace = str(raw.get("workplaceType") or "")
-        is_remote = bool(raw.get("isRemote")) or _is_remote(loc) or workplace.lower() == "remote"
-        out.append(
-            _card(
-                sid=f"as-{slug}-{jid}",
-                title=title,
-                company=company,
-                location=loc or "Remote",
-                job_url=job_url,
-                source="ashby",
-                label="Ashby",
-                color="#0ea5e9",
-                posted_at=str(raw.get("publishedAt") or ""),
-                desc=desc,
-                remote=is_remote,
-                workplace=workplace,
-                detail={"board": "ashby", "slug": slug, "job_id": str(jid or "")},
-            )
-        )
-    return out
-
-
-def _fetch_workable(slug: str) -> list[dict[str, Any]]:
-    """Workable public widget (often empty for larger boards; best-effort)."""
-    url = f"https://apply.workable.com/api/v1/widget/accounts/{slug}"
-    try:
-        data = _get_json(url)
-    except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, OSError):
-        return []
-    jobs = data.get("jobs") if isinstance(data, dict) else None
-    if not isinstance(jobs, list):
-        return []
-    company = str((data.get("name") if isinstance(data, dict) else None) or slug.replace("-", " ").title())
-    out: list[dict[str, Any]] = []
-    for raw in jobs:
-        if not isinstance(raw, dict):
-            continue
-        title = str(raw.get("title") or "Untitled")
-        jid = raw.get("shortcode") or raw.get("id") or title
-        loc = str(raw.get("location") or raw.get("city") or "Remote")
-        if isinstance(raw.get("location"), dict):
-            loc = str(raw["location"].get("city") or raw["location"].get("country") or "Remote")
-            telecommuting = bool(raw["location"].get("telecommuting") or raw["location"].get("remote"))
-        else:
-            telecommuting = bool(raw.get("telecommuting") or raw.get("remote"))
-        job_url = str(raw.get("url") or f"https://apply.workable.com/{slug}/j/{jid}/")
-        desc = _join_text(
-            str(raw.get("description") or ""),
-            str(raw.get("full_description") or ""),
-            str(raw.get("snippet") or ""),
-        )
-        out.append(
-            _card(
-                sid=f"wk-{slug}-{jid}",
-                title=title,
-                company=company,
-                location=loc,
-                job_url=job_url,
-                source="workable",
-                label="Workable",
-                color="#2d9cdb",
-                desc=desc,
-                remote=telecommuting or _is_remote(loc),
-                detail={"board": "workable", "slug": slug, "job_id": str(jid or "")},
-            )
-        )
-    return out
-
-
-# ---------------------------------------------------------------------------
-# Open / community APIs
-# ---------------------------------------------------------------------------
-
-def _fetch_remoteok_tag(tag: str) -> list[dict[str, Any]]:
-    try:
-        data = _get_json(f"https://remoteok.com/api?tags={tag}")
-    except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, OSError):
-        return []
-    if not isinstance(data, list):
-        return []
-    out: list[dict[str, Any]] = []
-    for item in data:
-        if not isinstance(item, dict):
-            continue
-        title = str(item.get("position") or item.get("title") or "")
-        company = str(item.get("company") or "")
-        if not title and not company:
-            continue
-        if not _keep_title(title, str(item.get("description") or "")):
-            continue
-        jid = item.get("id") or item.get("slug") or title
-        out.append(
-            _card(
-                sid=f"rok-{jid}",
-                title=title,
-                company=company,
-                location=str(item.get("location") or "Remote"),
-                job_url=str(item.get("url") or ""),
-                source="remoteok",
-                label="RemoteOK",
-                color="#ff6600",
-                posted_at=str(item.get("date") or ""),
-                desc=str(item.get("description") or ""),
-                remote=True,
-            )
-        )
-        if len(out) >= 40:
-            break
-    return out
-
-
-def _fetch_remoteok() -> list[dict[str, Any]]:
-    out: list[dict[str, Any]] = []
-    seen: set[str] = set()
-    for tag in ("product-designer", "design", "ux"):
-        for card in _fetch_remoteok_tag(tag):
-            sid = str(card.get("id") or "")
-            if sid and sid in seen:
-                continue
-            if sid:
-                seen.add(sid)
-            out.append(card)
-            if len(out) >= 40:
-                return out
-    return out
-
-
-def _fetch_remotive_cat(cat: str) -> list[dict[str, Any]]:
-    try:
-        data = _get_json(f"https://remotive.com/api/remote-jobs?category={cat}")
-    except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, OSError):
-        return []
-    jobs = data.get("jobs") if isinstance(data, dict) else []
-    if not isinstance(jobs, list):
-        return []
-    out: list[dict[str, Any]] = []
-    for item in jobs:
-        if not isinstance(item, dict):
-            continue
-        title = str(item.get("title") or "")
-        desc = str(item.get("description") or "")
-        if not _keep_title(title, desc):
-            continue
-        out.append(
-            _card(
-                sid=f"rmt-{item.get('id') or title}",
-                title=title,
-                company=str(item.get("company_name") or ""),
-                location=str(item.get("candidate_required_location") or "Remote"),
-                job_url=str(item.get("url") or ""),
-                source="remotive",
-                label="Remotive",
-                color="#16a34a",
-                posted_at=str(item.get("publication_date") or ""),
-                desc=desc,
-                remote=True,
-            )
-        )
-    return out
-
-
-def _fetch_remotive() -> list[dict[str, Any]]:
-    out: list[dict[str, Any]] = []
-    seen: set[str] = set()
-    for cat in ("design", "product"):
-        for card in _fetch_remotive_cat(cat):
-            sid = str(card.get("id") or "")
-            if sid and sid in seen:
-                continue
-            if sid:
-                seen.add(sid)
-            out.append(card)
-    return out
-
-
-def _fetch_jobicy_tag(tag: str) -> list[dict[str, Any]]:
-    try:
-        data = _get_json(f"https://jobicy.com/api/v2/remote-jobs?count=20&tag={tag}")
-    except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, OSError):
-        return []
-    jobs = data if isinstance(data, list) else (data.get("jobs") if isinstance(data, dict) else [])
-    if not isinstance(jobs, list):
-        return []
-    out: list[dict[str, Any]] = []
-    for item in jobs:
-        if not isinstance(item, dict):
-            continue
-        title = str(item.get("jobTitle") or "")
-        desc = str(item.get("jobDescription") or item.get("jobExcerpt") or "")
-        if not _keep_title(title, desc):
-            continue
-        out.append(
-            _card(
-                sid=f"jcy-{item.get('id') or title}",
-                title=title,
-                company=str(item.get("companyName") or ""),
-                location=str(item.get("jobGeo") or "Remote"),
-                job_url=str(item.get("url") or ""),
-                source="jobicy",
-                label="Jobicy",
-                color="#6366f1",
-                posted_at=str(item.get("pubDate") or ""),
-                desc=desc,
-                remote=True,
-            )
-        )
-    return out
-
-
-def _fetch_jobicy() -> list[dict[str, Any]]:
-    out: list[dict[str, Any]] = []
-    seen: set[str] = set()
-    for tag in ("design", "ui-ux", "product-design"):
-        for card in _fetch_jobicy_tag(tag):
-            sid = str(card.get("id") or "")
-            if sid and sid in seen:
-                continue
-            if sid:
-                seen.add(sid)
-            out.append(card)
-    return out
-
-
-def _fetch_arbeitnow() -> list[dict[str, Any]]:
-    out: list[dict[str, Any]] = []
-    try:
-        data = _get_json("https://www.arbeitnow.com/api/job-board-api")
-    except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, OSError):
-        return []
-    items = data.get("data") if isinstance(data, dict) else []
-    if not isinstance(items, list):
-        return []
-    for item in items:
-        if not isinstance(item, dict):
-            continue
-        title = str(item.get("title") or "")
-        desc = str(item.get("description") or "")
-        if not _keep_title(title, desc):
-            continue
-        loc = str(item.get("location") or "Europe")
-        remote = bool(item.get("remote")) or _is_remote(loc)
-        out.append(
-            _card(
-                sid=f"arb-{item.get('slug') or title}",
-                title=title,
-                company=str(item.get("company_name") or ""),
-                location=loc,
-                job_url=str(item.get("url") or ""),
-                source="arbeitnow",
-                label="Arbeitnow",
-                color="#dc2626",
-                posted_at=str(item.get("created_at") or ""),
-                desc=desc,
-                remote=remote,
-            )
-        )
-        if len(out) >= 40:
-            break
-    return out
-
-
-def _fetch_himalayas() -> list[dict[str, Any]]:
-    out: list[dict[str, Any]] = []
-    try:
-        data = _get_json("https://himalayas.app/jobs/api?limit=40&offset=0")
-    except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, OSError):
-        return []
-    jobs = data.get("jobs") if isinstance(data, dict) else []
-    if not isinstance(jobs, list):
-        return []
-    for item in jobs:
-        if not isinstance(item, dict):
-            continue
-        title = str(item.get("title") or "")
-        desc = str(item.get("description") or item.get("excerpt") or "")
-        if not _keep_title(title, desc):
-            continue
-        company = str(item.get("companyName") or "")
-        slug = item.get("companySlug") or "job"
-        guid = item.get("guid") or item.get("title")
-        job_url = f"https://himalayas.app/companies/{slug}/jobs/{urllib.parse.quote(str(guid))}"
-        locs = item.get("locationRestrictions") or []
-        loc = ", ".join(str(x) for x in locs) if isinstance(locs, list) and locs else "Remote"
-        out.append(
-            _card(
-                sid=f"him-{guid}",
-                title=title,
-                company=company,
-                location=loc,
-                job_url=job_url,
-                source="himalayas",
-                label="Himalayas",
-                color="#0d9488",
-                posted_at=str(item.get("pubDate") or ""),
-                desc=desc,
-                remote=True,
-            )
-        )
-    return out
-
-
-def _fetch_workingnomads() -> list[dict[str, Any]]:
-    out: list[dict[str, Any]] = []
-    try:
-        data = _get_json("https://www.workingnomads.com/api/exposed_jobs/")
-    except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, OSError):
-        return []
-    if not isinstance(data, list):
-        return []
-    for item in data:
-        if not isinstance(item, dict):
-            continue
-        title = str(item.get("title") or "")
-        desc = str(item.get("description") or "")
-        category = str(item.get("category_name") or "")
-        # Working Nomads has no per-request category filter; trust its own
-        # "Design" bucket outright, otherwise fall back to title/desc keywords.
-        if category.lower() != "design" and not _keep_title(title, desc):
-            continue
-        out.append(
-            _card(
-                sid=f"wn-{item.get('url') or title}",
-                title=title,
-                company=str(item.get("company_name") or ""),
-                location=str(item.get("location") or "Remote"),
-                job_url=str(item.get("url") or ""),
-                source="workingnomads",
-                label="Working Nomads",
-                color="#0891b2",
-                posted_at=str(item.get("pub_date") or ""),
-                desc=desc,
-                remote=True,
-            )
-        )
-    return out
-
-
-def _fetch_themuse() -> list[dict[str, Any]]:
-    out: list[dict[str, Any]] = []
-    q = urllib.parse.urlencode(
-        {
-            "page": 0,
-            "category": "Design and UX",
-            "location": "United States",
-        }
-    )
-    try:
-        data = _get_json(f"https://www.themuse.com/api/public/jobs?{q}")
-    except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, OSError):
-        return []
-    results = data.get("results") if isinstance(data, dict) else []
-    if not isinstance(results, list):
-        return []
-    for item in results:
-        if not isinstance(item, dict):
-            continue
-        title = str(item.get("name") or "")
-        desc = str(item.get("contents") or "")
-        if not _keep_title(title, desc):
-            continue
-        company_obj = item.get("company") if isinstance(item.get("company"), dict) else {}
-        company = str(company_obj.get("name") or "")
-        locs = item.get("locations") if isinstance(item.get("locations"), list) else []
-        loc = ", ".join(str(x.get("name") or "") for x in locs if isinstance(x, dict)) or "United States"
-        refs = item.get("refs") if isinstance(item.get("refs"), dict) else {}
-        job_url = str(refs.get("landing_page") or "")
-        out.append(
-            _card(
-                sid=f"muse-{item.get('id') or title}",
-                title=title,
-                company=company,
-                location=loc,
-                job_url=job_url,
-                source="themuse",
-                label="The Muse",
-                color="#ec4899",
-                posted_at=str(item.get("publication_date") or ""),
-                desc=desc,
-                remote=_is_remote(loc),
-            )
-        )
-    return out
-
-
-def _fetch_freehire() -> list[dict[str, Any]]:
-    out: list[dict[str, Any]] = []
-    for q in ("product designer", "ux designer"):
-        encoded = urllib.parse.quote_plus(q)
-        try:
-            data = _get_json(
-                f"https://freehire.dev/api/v1/jobs/search?q={encoded}&work_mode=remote&limit=10"
-            )
-        except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, OSError):
-            continue
-        items = data if isinstance(data, list) else (data.get("data") if isinstance(data, dict) else [])
-        if not isinstance(items, list):
-            continue
-        for item in items:
-            if not isinstance(item, dict):
-                continue
-            title = str(item.get("title") or "")
-            if not _keep_title(title, str(item.get("description") or "")):
-                continue
-            out.append(
-                _card(
-                    sid=f"fh-{item.get('id') or title}",
-                    title=title,
-                    company=str(item.get("company") or ""),
-                    location=str(item.get("location") or "Remote"),
-                    job_url=str(item.get("url") or ""),
-                    source="freehire",
-                    label="Freehire",
-                    color="#14b8a6",
-                    desc=str(item.get("description") or ""),
-                    remote=True,
-                )
-            )
-    return out
-
-
-def _fetch_rise() -> list[dict[str, Any]]:
-    out: list[dict[str, Any]] = []
-    for q in ("product designer", "ux designer"):
-        encoded = urllib.parse.quote_plus(q)
-        url = (
-            "https://api.joinrise.io/api/v1/jobs/public"
-            f"?page=1&limit=10&sort=desc&sortedBy=createdAt&q={encoded}"
-        )
-        try:
-            data = _get_json(url)
-        except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, OSError):
-            continue
-        items = data if isinstance(data, list) else (
-            data.get("data") if isinstance(data, dict) else data.get("jobs", []) if isinstance(data, dict) else []
-        )
-        if not isinstance(items, list):
-            continue
-        for item in items:
-            if not isinstance(item, dict):
-                continue
-            title = str(item.get("title") or item.get("jobTitle") or "")
-            desc = str(item.get("description") or item.get("jobDescription") or "")
-            if not _keep_title(title, desc):
-                continue
-            out.append(
-                _card(
-                    sid=f"rise-{item.get('id') or title}",
-                    title=title,
-                    company=str(item.get("company") or item.get("companyName") or ""),
-                    location=str(item.get("location") or item.get("jobLoc") or "Remote"),
-                    job_url=str(item.get("url") or item.get("applyUrl") or ""),
-                    source="rise",
-                    label="Rise",
-                    color="#f59e0b",
-                    desc=desc,
-                    remote=True,
-                )
-            )
-    return out
-
-
-def _fetch_fourdayweek() -> list[dict[str, Any]]:
-    out: list[dict[str, Any]] = []
-    try:
-        data = _get_json("https://4dayweek.io/api/jobs")
-    except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, OSError):
-        return []
-    jobs = data.get("jobs") if isinstance(data, dict) else (data if isinstance(data, list) else [])
-    if not isinstance(jobs, list):
-        return []
-    for item in jobs:
-        if not isinstance(item, dict):
-            continue
-        title = str(item.get("title") or "")
-        desc = str(item.get("description") or item.get("excerpt") or "")
-        if not _keep_title(title, desc):
-            continue
-        company = str(item.get("company") or item.get("company_name") or "")
-        if isinstance(item.get("company"), dict):
-            company = str(item["company"].get("name") or company)
-        slug = item.get("slug") or item.get("id") or title
-        job_url = str(item.get("url") or item.get("apply_url") or f"https://4dayweek.io/jobs/{slug}")
-        loc = str(item.get("location") or item.get("locations") or "Remote")
-        if isinstance(item.get("locations"), list):
-            loc = ", ".join(str(x) for x in item["locations"][:3]) or "Remote"
-        out.append(
-            _card(
-                sid=f"4dw-{slug}",
-                title=title,
-                company=company,
-                location=loc,
-                job_url=job_url,
-                source="fourdayweek",
-                label="4 Day Week",
-                color="#22c55e",
-                posted_at=str(item.get("published_at") or item.get("created_at") or ""),
-                desc=desc,
-                remote=True,
-            )
-        )
-        if len(out) >= 40:
-            break
-    return out
-
-
-def _fetch_github_query(q: str) -> list[dict[str, Any]]:
-    search = urllib.parse.quote_plus(f"{q} label:hiring state:open")
-    url = f"https://api.github.com/search/issues?q={search}&per_page=15&sort=updated"
-    try:
-        data = _get_json(url)
-    except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, OSError):
-        return []
-    items = data.get("items") if isinstance(data, dict) else []
-    if not isinstance(items, list):
-        return []
-    batch: list[dict[str, Any]] = []
-    for item in items:
-        if not isinstance(item, dict):
-            continue
-        title = str(item.get("title") or "")
-        body = str(item.get("body") or "")
-        if not _keep_title(title, body, prefer_design=True) and "design" not in (title + body).lower():
-            if "design" not in q.lower() and "ux" not in q.lower() and "product" not in q.lower():
-                continue
-        repo = ""
-        repo_url = item.get("repository_url") or ""
-        if isinstance(repo_url, str) and "/repos/" in repo_url:
-            repo = repo_url.split("/repos/")[-1]
-        batch.append(
-            _card(
-                sid=f"ghissue-{item.get('id') or title}",
-                title=title,
-                company=repo or "GitHub",
-                location="Remote / OSS",
-                job_url=str(item.get("html_url") or ""),
-                source="github",
-                label="GitHub",
-                color="#24292f",
-                posted_at=str(item.get("created_at") or ""),
-                desc=body,
-                remote=True,
-            )
-        )
-    return batch
-
-
-def _fetch_github(queries: list[str] | None = None) -> list[dict[str, Any]]:
-    out: list[dict[str, Any]] = []
-    seen: set[str] = set()
-    for q in list(queries or ["product designer hiring help wanted"])[:3]:
-        for card in _fetch_github_query(q):
-            sid = str(card.get("id") or "")
-            if sid and sid in seen:
-                continue
-            if sid:
-                seen.add(sid)
-            out.append(card)
-    return out
-
-
-def _fetch_hn_query(q: str) -> list[dict[str, Any]]:
-    encoded = urllib.parse.quote_plus(q)
-    url = (
-        "https://hn.algolia.com/api/v1/search_by_date"
-        f"?query={encoded}&tags=story&hitsPerPage=20"
-    )
-    try:
-        data = _get_json(url)
-    except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, OSError):
-        return []
-    hits = data.get("hits") if isinstance(data, dict) else []
-    if not isinstance(hits, list):
-        return []
-    batch: list[dict[str, Any]] = []
-    for item in hits:
-        if not isinstance(item, dict):
-            continue
-        title = str(item.get("title") or "")
-        text = str(item.get("story_text") or item.get("comment_text") or "")
-        blob = f"{title} {text}".lower()
-        if "hiring" not in blob and "job" not in blob and "designer" not in blob:
-            continue
-        if not _keep_title(title, text) and "design" not in blob and "ux" not in blob:
-            continue
-        object_id = item.get("objectID") or item.get("story_id") or title
-        job_url = str(item.get("url") or f"https://news.ycombinator.com/item?id={object_id}")
-        batch.append(
-            _card(
-                sid=f"hn-{object_id}",
-                title=title,
-                company="Hacker News",
-                location="Remote / Global",
-                job_url=job_url,
-                source="hn",
-                label="Hacker News",
-                color="#ff6600",
-                posted_at=str(item.get("created_at") or ""),
-                desc=text,
-                remote=True,
-            )
-        )
-    return batch
-
-
-def _fetch_hn(queries: list[str] | None = None) -> list[dict[str, Any]]:
-    out: list[dict[str, Any]] = []
-    seen: set[str] = set()
-    for q in list(queries or ["product designer remote hiring"])[:3]:
-        for card in _fetch_hn_query(q):
-            sid = str(card.get("id") or "")
-            if sid and sid in seen:
-                continue
-            if sid:
-                seen.add(sid)
-            out.append(card)
-    return out
-
-
-def _fetch_reddit(queries: list[str] | None = None) -> list[dict[str, Any]]:
-    """Best-effort Reddit JSON (often blocked without cookies; returns [])."""
-    out: list[dict[str, Any]] = []
-    qs = queries or ["forhire:product designer hiring remote"]
-    headers = {
-        **_UA,
-        "User-Agent": "Mozilla/5.0 JobHunterAI/1.0 (local dashboard; contact: local)",
-    }
-    for raw in qs[:2]:
-        sub, _, query = raw.partition(":")
-        sub = (sub or "forhire").strip()
-        query = (query or raw).strip()
-        encoded = urllib.parse.quote_plus(query)
-        url = (
-            f"https://www.reddit.com/r/{urllib.parse.quote(sub)}/search.json"
-            f"?q={encoded}&restrict_sr=1&sort=new&limit=15"
-        )
-        try:
-            data = _get_json(url, headers=headers)
-        except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, OSError):
-            continue
-        children = (
-            data.get("data", {}).get("children")
-            if isinstance(data, dict)
-            else []
-        )
-        if not isinstance(children, list):
-            continue
-        for child in children:
-            post = child.get("data") if isinstance(child, dict) else None
-            if not isinstance(post, dict):
-                continue
-            title = str(post.get("title") or "")
-            body = str(post.get("selftext") or "")
-            if not _keep_title(title, body) and "hiring" not in title.lower():
-                continue
-            out.append(
-                _card(
-                    sid=f"rd-{post.get('id') or title}",
-                    title=title,
-                    company=f"r/{sub}",
-                    location="Remote",
-                    job_url=str(post.get("url") or f"https://www.reddit.com{post.get('permalink') or ''}"),
-                    source="reddit",
-                    label="Reddit",
-                    color="#ff4500",
-                    posted_at="",
-                    desc=body,
-                    remote=True,
-                )
-            )
-    return out
-
-
-_OPEN_FETCHERS = {
-    "remoteok": _fetch_remoteok,
-    "remotive": _fetch_remotive,
-    "jobicy": _fetch_jobicy,
-    "arbeitnow": _fetch_arbeitnow,
-    "himalayas": _fetch_himalayas,
-    "workingnomads": _fetch_workingnomads,
-    "themuse": _fetch_themuse,
-    "freehire": _fetch_freehire,
-    "rise": _fetch_rise,
-    "fourdayweek": _fetch_fourdayweek,
+_SOURCE_META = {
+    "greenhouse": ("Greenhouse", "#27a644", "gh"),
+    "lever": ("Lever", "#8b5cf6", "lv"),
+    "ashby": ("Ashby", "#0ea5e9", "as"),
+    "workable": ("Workable", "#2d9cdb", "wk"),
+    "smartrecruiters": ("SmartRecruiters", "#1f7aec", "sr"),
+    "remoteok": ("RemoteOK", "#ff6600", "rok"),
+    "remotive": ("Remotive", "#1e90ff", "rmt"),
+    "jobicy": ("Jobicy", "#7c3aed", "jcy"),
+    "arbeitnow": ("Arbeitnow", "#0d9488", "abn"),
+    "himalayas": ("Himalayas", "#059669", "him"),
+    "workingnomads": ("Working Nomads", "#ea580c", "wn"),
+    "themuse": ("The Muse", "#db2777", "muse"),
+    "freehire": ("Freehire", "#4f46e5", "fh"),
+    "rise": ("Rise", "#0891b2", "rise"),
+    "fourdayweek": ("4 Day Week", "#65a30d", "fdw"),
+    "github": ("GitHub Jobs", "#111827", "ghb"),
+    "hn": ("Hacker News", "#f97316", "hn"),
+    "reddit": ("Reddit", "#ef4444", "rdt"),
+    "serpapi": ("Google Jobs", "#4285f4", "ggl"),
 }
 
 
-def _safe_fetch(fn: Callable[[], list[dict[str, Any]]]) -> list[dict[str, Any]]:
-    try:
-        return fn() or []
-    except Exception:
-        return []
+def _url_job_id(url: str) -> str:
+    path = urllib.parse.urlparse(url or "").path.rstrip("/")
+    seg = path.rsplit("/", 1)[-1] if path else ""
+    seg = (seg or "").split("?")[0].strip()
+    if seg:
+        return seg
+    seed = (url or "").encode("utf-8")
+    return hashlib.md5(seed).hexdigest()[:12]
+
+
+def _normalized_to_card(job: NormalizedJob) -> dict[str, Any]:
+    provider = (job.provider or "").strip().lower()
+    meta = _SOURCE_META.get(provider)
+    if meta:
+        label, color, code = meta
+    else:
+        label = (provider or "source").replace("_", " ").title() or "Source"
+        color = "#64748b"
+        code = (provider or "xx")[:3] or "xx"
+    slug = (job.slug or "").strip()
+    url = job.url or ""
+    detail: dict[str, str] | None = None
+    if provider in _DETAIL_ATS and slug:
+        job_id = _url_job_id(url) if url else hashlib.md5(
+            f"{slug}|{job.title}|{job.company}".encode("utf-8")
+        ).hexdigest()[:12]
+        sid = f"{code}-{slug}-{job_id}"
+        detail = {"board": provider, "slug": slug, "job_id": str(job_id)}
+    else:
+        seed = url or f"{provider}|{job.company}|{job.title}"
+        digest = hashlib.md5(seed.encode("utf-8")).hexdigest()[:12]
+        sid = f"{code}-{digest}"
+
+    work_mode = (job.work_mode or "").strip().lower()
+    remote: bool | None = None
+    if work_mode == "remote":
+        remote = True
+    elif work_mode == "onsite":
+        remote = False
+    workplace = work_mode if work_mode in {"remote", "hybrid", "onsite"} else ""
+
+    return _card(
+        sid=sid,
+        title=job.title,
+        company=job.company,
+        location=job.location or "Remote",
+        job_url=url,
+        source=provider,
+        label=label,
+        color=color,
+        posted_at=job.posted_at or "",
+        desc=job.description or "",
+        remote=remote,
+        workplace=workplace,
+        detail=detail,
+    )
 
 
 def _parse_detail_from_sid(sid: str) -> dict[str, str] | None:
@@ -1604,13 +893,13 @@ def fetch_jobs(
     begin_scan_log()
     _scan_note("browse", "/api/jobs", "start")
     try:
-        return _fetch_jobs_inner(q=q, sources=sources, remote=remote, limit=limit)
+        return _build_jobs_response(q=q, sources=sources, remote=remote, limit=limit)
     finally:
         _scan_note("browse", "/api/jobs", "done")
         end_scan_log()
 
 
-def _fetch_jobs_inner(
+def _build_jobs_response(
     *,
     q: str = "",
     sources: list[str] | None = None,
@@ -1625,96 +914,78 @@ def _fetch_jobs_inner(
     slugs = watchlist_slugs(cfg)
     queries = free_queries(cfg)
 
+    source_pairs: list[tuple[str, str]] = []
+    for provider in _ATS_PROVIDERS:
+        if provider not in wanted:
+            continue
+        for slug in slugs.get(provider) or []:
+            s = str(slug).strip()
+            if s:
+                source_pairs.append((provider, s))
+
+    for provider in _SOURCE_META:
+        if provider in _ATS_PROVIDERS:
+            continue
+        if provider in wanted:
+            source_pairs.append((provider, ""))
+
+    query_candidates = list(queries.get("github") or []) + list(queries.get("hn") or [])
+    fetch_query = (query_candidates[0] if query_candidates else "") or "product designer"
+
+    jobs_norm, stats = fetch_all(source_pairs, query=fetch_query, max_workers=8)
+
+    for st in stats:
+        provider = str(st.get("provider") or "api")
+        slug = str(st.get("slug") or "")
+        status_raw = str(st.get("status") or "")
+        count = st.get("count")
+        err = st.get("error") or None
+        url = f"registry://{provider}" + (f"/{slug}" if slug else "")
+        if st.get("skipped"):
+            note_status = "skip"
+        elif status_raw in ("ok", "empty"):
+            note_status = "ok"
+        else:
+            note_status = "err"
+        _scan_note(
+            provider,
+            url,
+            note_status,
+            count=int(count) if isinstance(count, int) else None,
+            error=str(err) if err else None,
+        )
+
+    cards = [_normalized_to_card(j) for j in jobs_norm]
+
+    per_source_cap = max(8, min(20, int(limit or 20)))
+    by_source: dict[str, list[dict[str, Any]]] = {}
+    for card in cards:
+        src = str(card.get("ats_source") or "other")
+        by_source.setdefault(src, []).append(card)
+
     jobs: list[dict[str, Any]] = []
     used_sources: list[str] = []
-    per_source_cap = max(8, min(20, int(limit or 20)))
 
     def _extend(source_id: str, batch: list[dict[str, Any]]) -> None:
         if not batch:
             return
-        # Prefer design/product titles inside each source before capping.
         designish = [j for j in batch if _DESIGN_RE.search(j.get("title") or "")]
         rest = [j for j in batch if j not in designish]
         ordered = designish + rest
         used_sources.append(source_id)
         jobs.extend(ordered[:per_source_cap])
 
-    # Fan out ATS board + open API HTTP calls in parallel (was sequential: ~30-50s).
-    tasks: list[tuple[str, Callable[[], list[dict[str, Any]]]]] = []
-    ats_fetchers: dict[str, Callable[[str], list[dict[str, Any]]]] = {
-        "greenhouse": _fetch_greenhouse,
-        "lever": _fetch_lever,
-        "ashby": _fetch_ashby,
-        "workable": _fetch_workable,
-    }
-    for source_id, fetcher in ats_fetchers.items():
-        if source_id not in wanted:
-            continue
-        for slug in slugs.get(source_id) or []:
-            s = str(slug).strip()
-            if not s:
-                continue
-            tasks.append((source_id, (lambda fn=fetcher, board=s: fn(board))))
-
-    # Expand multi-endpoint open sources into one HTTP call per task (no nested pools).
-    if "remoteok" in wanted:
-        for tag in ("product-designer", "design", "ux"):
-            tasks.append(("remoteok", (lambda t=tag: _fetch_remoteok_tag(t))))
-    if "remotive" in wanted:
-        for cat in ("design", "product"):
-            tasks.append(("remotive", (lambda c=cat: _fetch_remotive_cat(c))))
-    if "jobicy" in wanted:
-        for tag in ("design", "ui-ux", "product-design"):
-            tasks.append(("jobicy", (lambda t=tag: _fetch_jobicy_tag(t))))
-    for key, fetcher in _OPEN_FETCHERS.items():
-        if key in wanted and key not in ("remoteok", "remotive", "jobicy"):
-            tasks.append((key, fetcher))
-
-    if "github" in wanted:
-        gh_qs = list(queries.get("github") or ["product designer hiring help wanted"])[:3]
-        for qtext in gh_qs:
-            tasks.append(("github", (lambda q=qtext: _fetch_github_query(q))))
-    if "hn" in wanted:
-        hn_qs = list(queries.get("hn") or ["product designer remote hiring"])[:3]
-        for qtext in hn_qs:
-            tasks.append(("hn", (lambda q=qtext: _fetch_hn_query(q))))
-    if "reddit" in wanted:
-        rd_q = queries.get("reddit")
-        tasks.append(("reddit", (lambda q=rd_q: _fetch_reddit(q))))
-
-    by_source: dict[str, list[dict[str, Any]]] = {}
-    if tasks:
-        workers = min(64, max(8, len(tasks)))
-        deadline_s = 8.0
-        pool = ThreadPoolExecutor(max_workers=workers)
-        try:
-            futures = {pool.submit(_safe_fetch, fn): source_id for source_id, fn in tasks}
-            done, not_done = wait(futures.keys(), timeout=deadline_s)
-            for fut in done:
-                source_id = futures[fut]
-                try:
-                    batch = fut.result() or []
-                except Exception:
-                    batch = []
-                if batch:
-                    by_source.setdefault(source_id, []).extend(batch)
-        finally:
-            # Do not wait for hung hosts; leave workers to expire on their own timeouts.
-            pool.shutdown(wait=False, cancel_futures=True)
-
-    source_order = (
-        list(ats_fetchers.keys())
-        + list(_OPEN_FETCHERS.keys())
-        + ["github", "hn", "reddit"]
-    )
+    source_order = list(_SOURCE_META.keys())
     for source_id in source_order:
         if source_id in by_source:
             _extend(source_id, by_source[source_id])
+    for source_id, batch in by_source.items():
+        if source_id not in used_sources:
+            _extend(source_id, batch)
 
     if q:
         jobs = [j for j in jobs if _match_query(j, q)]
     else:
-        # Prefer design titles, but keep source diversity (round-robin buckets).
         designish = [j for j in jobs if _DESIGN_RE.search(j.get("title") or "")]
         others = [j for j in jobs if j not in designish]
         by_src: dict[str, list[dict[str, Any]]] = {}
@@ -1736,7 +1007,11 @@ def _fetch_jobs_inner(
     seen: set[str] = set()
     unique: list[dict[str, Any]] = []
     for j in jobs:
-        key = f"{(j.get('company') or '').lower()}|{(j.get('title') or '').lower()}|{(j.get('ats_source') or '')}"
+        key = (
+            f"{(j.get('company') or '').lower()}|"
+            f"{(j.get('title') or '').lower()}|"
+            f"{(j.get('ats_source') or '')}"
+        )
         url = (j.get("job_url") or "").lower()
         dedupe = url or key
         if dedupe in seen:
@@ -1744,8 +1019,8 @@ def _fetch_jobs_inner(
         seen.add(dedupe)
         unique.append(j)
 
-    limit = max(1, min(int(limit or 20), 120))
-    clipped = unique[:limit]
+    limit_n = max(1, min(int(limit or 20), 120))
+    clipped = unique[:limit_n]
     _hydrate_job_descriptions(clipped)
     return {
         "jobs": clipped,

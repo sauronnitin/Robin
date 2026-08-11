@@ -31,6 +31,7 @@ SOURCE_CATALOG: list[dict[str, str]] = [
     {"id": "lever", "label": "Lever", "group": "ats"},
     {"id": "ashby", "label": "Ashby", "group": "ats"},
     {"id": "workable", "label": "Workable", "group": "ats"},
+    {"id": "smartrecruiters", "label": "SmartRecruiters", "group": "ats"},
     {"id": "remoteok", "label": "RemoteOK", "group": "open"},
     {"id": "remotive", "label": "Remotive", "group": "open"},
     {"id": "jobicy", "label": "Jobicy", "group": "open"},

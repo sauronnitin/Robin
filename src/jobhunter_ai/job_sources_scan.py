@@ -22,6 +22,7 @@ from jobhunter_ai.job_sources_config import (
     normalize_config,
     save_job_sources,
 )
+from jobhunter_ai.job_sources.registry import REGISTRY
 
 _UA = {
     "User-Agent": "JobHunterAI/1.0 (+local source scanner)",
@@ -172,31 +173,29 @@ def _ats_probe_url(provider: str, slug: str) -> str:
 
 
 def _ats_has_jobs(provider: str, slug: str) -> bool:
-    url = _ats_probe_url(provider, slug)
-    if not url:
+    """Probe via the unified registry adapter (Rule 6)."""
+    adapter = REGISTRY.get((provider or "").strip().lower())
+    if adapter is None:
         return False
-    try:
-        status, raw, ctype = _get(url, timeout=8.0)
-        if status != 200:
-            return False
-        data = json.loads(raw.decode("utf-8", errors="replace"))
-    except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, OSError, ValueError):
-        return False
-    if provider == "greenhouse":
-        jobs = data.get("jobs") if isinstance(data, dict) else None
-        return isinstance(jobs, list) and len(jobs) > 0
-    if provider == "lever":
-        return isinstance(data, list) and len(data) > 0
-    if provider == "ashby":
-        jobs = data.get("jobs") if isinstance(data, dict) else None
-        return isinstance(jobs, list) and len(jobs) > 0
-    if provider == "workable":
-        jobs = data.get("jobs") if isinstance(data, dict) else None
-        return isinstance(jobs, list) and len(jobs) > 0
-    return False
+    result = adapter.fetch(slug=(slug or "").strip())
+    return result.status == "ok" and bool(result.jobs)
 
 
 def _probe_open_api(entry: dict[str, str]) -> dict[str, Any] | None:
+    """Live-check an open API via registry when possible, else URL probe."""
+    provider = str(entry.get("id") or "").strip().lower()
+    adapter = REGISTRY.get(provider)
+    if adapter is not None and not getattr(adapter, "requires_slug", False):
+        result = adapter.fetch(query="product designer")
+        if result.status == "ok" and result.jobs:
+            return {
+                "id": entry["id"],
+                "label": entry.get("label") or entry["id"],
+                "group": entry.get("group") or "open",
+                "url": entry.get("url") or "",
+                "live": True,
+            }
+        return None
     try:
         status, raw, ctype = _get(entry["url"], timeout=10.0)
         if status != 200:

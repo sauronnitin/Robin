@@ -15,6 +15,10 @@ Serves dashboard/ static files and run-control APIs:
   GET  /api/job-sources
   POST /api/job-sources
   POST /api/job-sources/scan
+  GET  /api/sources
+  POST /api/sources/toggle
+  POST /api/sources/discover
+  POST /api/sources/probe
   GET  /api/gmail/status
   GET  /api/gmail/connect
   GET  /api/skills
@@ -118,6 +122,10 @@ from jobhunter_ai import error_bus  # noqa: E402
 from jobhunter_ai import gmail_verify  # noqa: E402
 from jobhunter_ai import job_sources_config  # noqa: E402
 from jobhunter_ai import job_sources_scan  # noqa: E402
+from jobhunter_ai.job_sources import discover as job_sources_discover  # noqa: E402
+from jobhunter_ai.job_sources import health as job_sources_health  # noqa: E402
+from jobhunter_ai.job_sources import seed as job_sources_seed  # noqa: E402
+from jobhunter_ai.job_sources.registry import REGISTRY as JOB_SOURCE_REGISTRY  # noqa: E402
 from jobhunter_ai import kg_store  # noqa: E402
 from jobhunter_ai import model_catalog  # noqa: E402
 from jobhunter_ai import linkedin_review  # noqa: E402
@@ -1032,6 +1040,14 @@ class DashboardHandler(SimpleHTTPRequestHandler):
             except Exception as exc:
                 print(f"[dashboard] jobs error: {exc!r}")
                 return self._json({"jobs": [], "total": 0, "error": str(exc)}, status=500)
+        if path == "/api/sources":
+            try:
+                job_sources_seed.seed_sources()
+                sources = job_sources_health.list_sources_with_health()
+                return self._json({"ok": True, "sources": sources, "total": len(sources)})
+            except Exception as exc:
+                print(f"[dashboard] sources error: {exc!r}")
+                return self._json({"ok": False, "error": str(exc)}, status=500)
         if path.startswith("/api/job-sources"):
             try:
                 return self._json(job_sources_config.catalog_payload())
@@ -1311,6 +1327,63 @@ class DashboardHandler(SimpleHTTPRequestHandler):
                 return self._json({"ok": True, **catalog, "scan": report})
             except Exception as exc:
                 print(f"[dashboard] job-sources scan failed: {exc!r}")
+                return self._json({"ok": False, "error": str(exc)}, status=500)
+        if path == "/api/sources/toggle":
+            try:
+                if not isinstance(body, dict):
+                    return self._json({"ok": False, "error": "JSON object required"}, status=400)
+                source_id = int(body.get("source_id") or 0)
+                enabled = bool(body.get("enabled"))
+                result = job_sources_health.set_enabled(source_id, enabled)
+                status = 200 if result.get("ok") else 404
+                return self._json(result, status=status)
+            except Exception as exc:
+                print(f"[dashboard] sources/toggle failed: {exc!r}")
+                return self._json({"ok": False, "error": str(exc)}, status=500)
+        if path == "/api/sources/discover":
+            try:
+                print("[dashboard] sources/discover starting (may take 30s+)...")
+                report = job_sources_discover.discover(limit=int((body or {}).get("limit") or 50) if isinstance(body, dict) else 50)
+                print(f"[dashboard] sources/discover done: {report}")
+                return self._json({"ok": True, **report})
+            except Exception as exc:
+                print(f"[dashboard] sources/discover failed: {exc!r}")
+                return self._json({"ok": False, "error": str(exc)}, status=500)
+        if path == "/api/sources/probe":
+            try:
+                if isinstance(body, dict) and body.get("source_id"):
+                    # Force re-check one source by id → look up provider/slug then fetch.
+                    conn_sources = job_sources_health.list_sources_with_health()
+                    match = next((s for s in conn_sources if int(s["id"]) == int(body["source_id"])), None)
+                    if not match:
+                        return self._json({"ok": False, "error": "source not found"}, status=404)
+                    adapter = JOB_SOURCE_REGISTRY.get(match["provider"])
+                    if adapter is None:
+                        return self._json({"ok": False, "error": "no adapter"}, status=400)
+                    result = adapter.fetch(slug=match.get("slug") or "")
+                    job_sources_health.record(
+                        match["provider"],
+                        match.get("slug") or "",
+                        result,
+                        label=match.get("label") or "",
+                        group=match.get("group") or "open",
+                    )
+                    return self._json(
+                        {
+                            "ok": True,
+                            "provider": match["provider"],
+                            "slug": match.get("slug") or "",
+                            "status": result.status,
+                            "count": len(result.jobs or []),
+                            "quarantined": job_sources_health.is_quarantined(
+                                match["provider"], match.get("slug") or ""
+                            ),
+                        }
+                    )
+                report = job_sources_health.probe_quarantined()
+                return self._json(report)
+            except Exception as exc:
+                print(f"[dashboard] sources/probe failed: {exc!r}")
                 return self._json({"ok": False, "error": str(exc)}, status=500)
         if path == "/api/run":
             plan = body.get("plan") if isinstance(body, dict) else None
