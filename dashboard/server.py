@@ -15,6 +15,11 @@ Serves dashboard/ static files and run-control APIs:
   GET  /api/job-sources
   POST /api/job-sources
   POST /api/job-sources/scan
+  GET  /api/pipeline
+  GET  /api/pipeline/detail?id=N
+  POST /api/pipeline/status
+  GET  /api/outcomes/scan?days=N
+  POST /api/outcomes/confirm
   GET  /api/sources
   POST /api/sources/toggle
   POST /api/sources/discover
@@ -129,6 +134,8 @@ from jobhunter_ai.job_sources.registry import REGISTRY as JOB_SOURCE_REGISTRY  #
 from jobhunter_ai import kg_store  # noqa: E402
 from jobhunter_ai import model_catalog  # noqa: E402
 from jobhunter_ai import linkedin_review  # noqa: E402
+from jobhunter_ai import outcomes  # noqa: E402
+from jobhunter_ai import pipeline_store  # noqa: E402
 from jobhunter_ai import profile as jobcrew_profile  # noqa: E402
 from jobhunter_ai import resume_parse  # noqa: E402
 
@@ -1048,6 +1055,43 @@ class DashboardHandler(SimpleHTTPRequestHandler):
             except Exception as exc:
                 print(f"[dashboard] sources error: {exc!r}")
                 return self._json({"ok": False, "error": str(exc)}, status=500)
+        if path == "/api/pipeline":
+            try:
+                grouped = pipeline_store.list_pipeline()
+                return self._json(
+                    {
+                        "ok": True,
+                        "order": list(pipeline_store.PIPELINE_ORDER),
+                        "pipeline": grouped,
+                        "counts": {k: len(v) for k, v in grouped.items()},
+                        "pending": pipeline_store.pending_confirmations(),
+                    }
+                )
+            except Exception as exc:
+                print(f"[dashboard] pipeline error: {exc!r}")
+                return self._json({"ok": False, "error": str(exc)}, status=500)
+        if path == "/api/pipeline/detail":
+            try:
+                application_id = int(params.get("id") or 0)
+                item = pipeline_store.get_application(application_id)
+                if item is None:
+                    return self._json({"ok": False, "error": "not found"}, status=404)
+                return self._json({"ok": True, "application": item})
+            except (TypeError, ValueError):
+                return self._json({"ok": False, "error": "id must be an integer"}, status=400)
+            except Exception as exc:
+                print(f"[dashboard] pipeline/detail error: {exc!r}")
+                return self._json({"ok": False, "error": str(exc)}, status=500)
+        if path == "/api/outcomes/scan":
+            try:
+                days = int(params.get("days") or 30)
+            except (TypeError, ValueError):
+                days = 30
+            try:
+                return self._json(outcomes.scan_inbox(days))
+            except Exception as exc:
+                print(f"[dashboard] outcomes/scan failed: {exc!r}")
+                return self._json({"ok": False, "error": str(exc)}, status=500)
         if path.startswith("/api/job-sources"):
             try:
                 return self._json(job_sources_config.catalog_payload())
@@ -1327,6 +1371,37 @@ class DashboardHandler(SimpleHTTPRequestHandler):
                 return self._json({"ok": True, **catalog, "scan": report})
             except Exception as exc:
                 print(f"[dashboard] job-sources scan failed: {exc!r}")
+                return self._json({"ok": False, "error": str(exc)}, status=500)
+        if path == "/api/pipeline/status":
+            try:
+                if not isinstance(body, dict):
+                    return self._json({"ok": False, "error": "JSON object required"}, status=400)
+                application_id = int(body.get("application_id") or 0)
+                status_value = str(body.get("status") or "")
+                note = str(body.get("note") or "")
+                pipeline_store.set_status(application_id, status_value, "user", note)
+                return self._json(
+                    {"ok": True, "application": pipeline_store.get_application(application_id)}
+                )
+            except ValueError as exc:
+                # Unknown status or unknown application - the caller's mistake.
+                return self._json({"ok": False, "error": str(exc)}, status=400)
+            except Exception as exc:
+                print(f"[dashboard] pipeline/status failed: {exc!r}")
+                return self._json({"ok": False, "error": str(exc)}, status=500)
+        if path == "/api/outcomes/confirm":
+            try:
+                if not isinstance(body, dict):
+                    return self._json({"ok": False, "error": "JSON object required"}, status=400)
+                result = outcomes.confirm(
+                    int(body.get("inbound_message_id") or 0),
+                    str(body.get("classification") or ""),
+                )
+                return self._json(result)
+            except ValueError as exc:
+                return self._json({"ok": False, "error": str(exc)}, status=400)
+            except Exception as exc:
+                print(f"[dashboard] outcomes/confirm failed: {exc!r}")
                 return self._json({"ok": False, "error": str(exc)}, status=500)
         if path == "/api/sources/toggle":
             try:
