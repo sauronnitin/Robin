@@ -47,6 +47,7 @@ dashboard/*.log
 dashboard/errors/*.log
 dashboard/errors/*.pid
 dashboard/errors/autofix_state.json
+dashboard/run_history.jsonl
 dashboard/_srv_*.log
 dashboard/server.*.log
 
