@@ -6681,6 +6681,8 @@
   if (tabActivity) tabActivity.addEventListener("click", () => setRailTab("activity"));
   if (tabTraces) tabTraces.addEventListener("click", () => setRailTab("traces"));
   if (tabLiReview) tabLiReview.addEventListener("click", () => setRailTab("li-review"));
+  if (tabEfficiency) tabEfficiency.addEventListener("click", () => setRailTab("efficiency"));
+  if (efficiencyRefreshBtn) efficiencyRefreshBtn.addEventListener("click", () => loadEfficiencyHistory());
   if (outputCta) outputCta.addEventListener("click", () => setWorkspaceView("output"));
   if (backToCanvasBtn) backToCanvasBtn.addEventListener("click", () => setWorkspaceView("canvas"));
 
