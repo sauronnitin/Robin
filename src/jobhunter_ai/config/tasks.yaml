@@ -22,15 +22,17 @@ scrape_and_filter_job_listings:
 
     TARGET: Collect a MAXIMUM of 20 job listings total (aim for 15-20). Stop as soon as you have 20.
 
-    Search terms to match (LOOSE - a title only needs to be design-related): "Product Designer",
-    "UX Designer", "UI Designer", "Senior Product Designer", "Design Systems Designer",
-    "Experience Designer", "Digital Designer", "Interaction Designer".
+    Search terms to match -- these come from the candidate's own resume, not a fixed list:
+    {search_titles}
+    The candidate is a {seniority}-level {primary_role}. A title only needs to be a
+    recognisable variant of that role; do not substitute a different profession.
 
     Regions: Remote-friendly roles globally, priority on USA / Canada / Europe.
 
     Rules:
     - Hard cap: 20 listings maximum. Stop early if reached.
-    - EXCLUDE only jobs whose title clearly indicates above-Senior seniority: Head, Director, Staff, Principal, or VP.
+    - EXCLUDE jobs more than one level away from {seniority}: Head, Director, VP, Chief, Staff, Principal above; Junior, Associate, Intern below. Lead is acceptable.
+    - EXCLUDE any job that is not a {primary_role} or a direct variant of it. A Product Manager, engineer, or recruiter posting is never a match, however design-adjacent the company is.
     - For each job extract: Title, Company, Location, Work Mode (Remote/Hybrid/On-site), Job Board URL, and Job Description text.
     - Deduplicate: if the same job URL appears twice across sources, keep only one.
     - Do NOT attempt to log in anywhere.

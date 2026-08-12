@@ -24,10 +24,25 @@ def run():
     events_bus.write_state(pid=os.getpid(), status="running")
     print(f"[jobhunter] run_id={run_id} starting kickoff (DRY_RUN={os.environ.get('DRY_RUN', 'True')})")
 
+    # The search describes the candidate, not a list in a config file. These
+    # come from the roles on their own resume (see role_profile).
+    from jobhunter_ai import profile as jobcrew_profile
+    from jobhunter_ai import role_profile
+
+    role = role_profile.ensure(jobcrew_profile.load_profile())
+    titles = jobcrew_profile.search_titles()
+    print(
+        f"[jobhunter] searching as {role.get('primary_title') or 'unknown role'}"
+        f" ({role.get('seniority')}): {', '.join(titles) or 'no titles derived'}"
+    )
+
     inputs = {
         "resume_text": resume_latex,
         "resume_latex": resume_latex,
         "spreadsheet_id": sheet_id,
+        "search_titles": ", ".join(f'"{t}"' for t in titles),
+        "primary_role": role.get("primary_title") or "",
+        "seniority": role.get("seniority") or "senior",
     }
     try:
         graph_crew = crew_from_env_or_default()

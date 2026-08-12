@@ -22,6 +22,7 @@ from jobhunter_ai import events_bus
 from jobhunter_ai import latex_sanitize
 from jobhunter_ai import pipeline_store
 from jobhunter_ai import pipeline_sync
+from jobhunter_ai import role_profile
 from jobhunter_ai.screening import screen_listings
 
 from jobhunter_ai.tools.google_docs import (
@@ -631,11 +632,47 @@ def _offload_latex_guardrail(task_output) -> tuple[bool, Any]:
         return True, raw
 
 
+def _drop_off_role(jobs: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Remove listings that are not the candidate's profession or level.
+
+    The prompt already says so, but a prompt is a request. This is the check:
+    an agent that returns a Product Manager posting for a product designer gets
+    it dropped here rather than tailored, applied to, and counted.
+    """
+    try:
+        role = role_profile.load()
+        if not role.get("core_titles"):
+            return jobs
+    except Exception:  # noqa: BLE001
+        return jobs
+
+    kept: list[dict[str, Any]] = []
+    dropped: list[str] = []
+    for job in jobs:
+        title = str(job.get("job_title") or "")
+        # Adjacent roles are the user's call from Browse, never the crew's.
+        if role_profile.classify_title(title, role) == "core":
+            kept.append(job)
+        else:
+            dropped.append(title)
+
+    if dropped:
+        print(f"[role] dropped {len(dropped)} off-role listing(s): {'; '.join(dropped[:5])}")
+        events_bus.emit(
+            "step",
+            agent_id="job_fit_analyst",
+            task_key="score_and_prioritise_jobs",
+            status="done",
+            detail={"label": "off_role_dropped", "count": len(dropped), "titles": dropped[:8]},
+        )
+    return kept
+
+
 def _select_tailor_batch(
     scored_text: str,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], str]:
     """Merge newly scored jobs with the durable queue; take top N for this run."""
-    scored = _parse_scored_jobs(scored_text)
+    scored = _drop_off_role(_parse_scored_jobs(scored_text))
     pooled = _merge_jobs(_load_job_queue(), scored)
     batch = pooled[:_TAILOR_BATCH_SIZE]
     remaining = pooled[_TAILOR_BATCH_SIZE:]

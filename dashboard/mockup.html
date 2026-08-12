@@ -1581,6 +1581,66 @@ html.dark #jList .jh-job-logo-img { background: var(--st-fog); }
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/* Adjacent roles — same field, different craft. Quieter than the main list on
+   purpose: these are for the user to judge, not for the crew to act on. */
+#jList .jh-adj-wrap {
+  margin-top: 18px;
+  border-top: 1px solid var(--st-border);
+  padding-top: 14px;
+}
+
+#jList .jh-adj-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  list-style: none;
+  font-family: var(--st-sans);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--st-ink);
+}
+
+#jList .jh-adj-head::-webkit-details-marker { display: none; }
+#jList .jh-adj-head::before { content: '▸'; color: var(--st-ash); font-size: 10px; }
+#jList .jh-adj-wrap[open] .jh-adj-head::before { content: '▾'; }
+
+#jList .jh-adj-count {
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+  color: var(--st-slate);
+  background: var(--st-fog);
+  border: 1px solid var(--st-border);
+  border-radius: 999px;
+  padding: 1px 8px;
+}
+
+#jList .jh-adj-note {
+  font-family: var(--st-sans);
+  font-size: 12px;
+  color: var(--st-slate);
+  line-height: 1.5;
+  margin: 8px 0 10px;
+  max-width: 62ch;
+}
+
+#jList .jh-adj-list { display: flex; flex-direction: column; gap: 8px; }
+#jList .jh-job-card--adjacent { opacity: 0.92; }
+
+#jList .jh-adj-tag {
+  flex-shrink: 0;
+  font-family: var(--st-sans);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--st-slate);
+  border: 1px solid var(--st-border);
+  border-radius: 5px;
+  padding: 1px 6px;
+  align-self: flex-start;
+}
+
 #jList .jh-job-new {
   font-size: 14px !important;
   font-weight: 500 !important;
@@ -3646,6 +3706,9 @@ let SOURCE_CATALOG_UI = [];
 let selId=null;
 let pendingResumeFile=null;
 let ALL_JOBS = [];
+let ADJACENT_JOBS = [];
+let ROLE_INFO = null;
+let DROPPED_OFF_ROLE = 0;
 let jobsLoading = false;
 let scanLogTimer = null;
 let scanLogSince = 0;
@@ -3998,6 +4061,9 @@ function findJobById(id){
   if(id == null || id === '') return null;
   return JOBS.find(x => sameJobId(x.id, id))
     || ALL_JOBS.find(x => sameJobId(x.id, id))
+    // Adjacent roles live outside the main list but are still openable and
+    // queueable — the whole point of showing them.
+    || ADJACENT_JOBS.find(x => sameJobId(x.id, id))
     || null;
 }
 
@@ -4457,6 +4523,12 @@ async function loadJobs(q=''){
     if(!res.ok) throw new Error('jobs '+res.status);
     const data = await res.json();
     apiCount = Array.isArray(data.jobs) ? data.jobs.length : -1;
+    // Adjacent roles are real design work in a different craft. They are kept
+    // out of the main list on purpose — the crew never pursues them — but the
+    // user should still see them and be able to queue one deliberately.
+    ADJACENT_JOBS = Array.isArray(data.adjacent) ? data.adjacent.map(normalizeJob) : [];
+    ROLE_INFO = data.role || null;
+    DROPPED_OFF_ROLE = Number(data.dropped || 0);
     if(Array.isArray(data.jobs) && data.jobs.length){
       ALL_JOBS = data.jobs.map(normalizeJob);
       sample = ALL_JOBS.slice(0,3).map(j=>({id:String(j.id||'').slice(0,40),company:j.company,title:String(j.title||'').slice(0,50),descLen:String(j.desc||'').length,demo:String(j.desc||'').includes('Demo fallback')}));
@@ -4676,7 +4748,44 @@ function renderJobs(){
       ${j.isNew?`<span class="jh-job-new">New</span>`:''}
       <svg class="jh-job-chev" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M6 3.5 10.5 8 6 12.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </div>`;
-  }).join('');
+  }).join('') + renderAdjacentJobs();
+}
+
+// Adjacent roles: same field, different craft. Collapsed by default so the
+// main list stays the candidate's own role, per the queue rule — the crew only
+// works on what the user deliberately queues, and never on these by default.
+function renderAdjacentJobs(){
+  if(!ADJACENT_JOBS.length && !DROPPED_OFF_ROLE) return '';
+  const roleName = (ROLE_INFO && ROLE_INFO.primary_title) || 'your role';
+  const dropped = DROPPED_OFF_ROLE
+    ? `<div class="jh-adj-note">${DROPPED_OFF_ROLE} listing${DROPPED_OFF_ROLE===1?'':'s'} outside ${esc(roleName)} were hidden.</div>`
+    : '';
+  if(!ADJACENT_JOBS.length){
+    return `<div class="jh-adj-wrap">${dropped}</div>`;
+  }
+  const cards = ADJACENT_JOBS.map(j=>`
+    <div class="jh-job-card jh-job-card--adjacent group flex items-start gap-3 p-3.5 rounded-xl border cursor-pointer bg-slate-900 border-slate-800 hover:border-slate-700"
+      data-job-id="${esc(j.id)}" role="button" tabindex="0">
+      <div class="flex-1 min-w-0">
+        <div class="jh-job-head">
+          ${jobLogoHtml(j)}
+          <div class="jh-job-company">${esc(j.company)}</div>
+          <div class="jh-job-title">${esc(j.title)}</div>
+        </div>
+        <div class="jh-job-meta">${esc(j.loc)} · ${esc(j.time)}</div>
+      </div>
+      <span class="jh-adj-tag">Adjacent</span>
+    </div>`).join('');
+  return `
+    <details class="jh-adj-wrap">
+      <summary class="jh-adj-head">
+        Adjacent roles
+        <span class="jh-adj-count">${ADJACENT_JOBS.length}</span>
+      </summary>
+      <div class="jh-adj-note">Design work in a different craft to ${esc(roleName)} — brand, visual, motion, graphic. The crew never applies to these on its own; queue one if you want it.</div>
+      <div class="jh-adj-list">${cards}</div>
+      ${dropped}
+    </details>`;
 }
 
 function paintBrowseDetailFloat(j){
