@@ -268,8 +268,10 @@
 /* Every metric the pipeline holds for this job, in one row. */
 .jh-apply-metrics {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 4px;
+  /* Wraps to two rows when the column narrows — four fixed columns collided
+     with the detail panel open. */
+  grid-template-columns: repeat(auto-fit, minmax(56px, 1fr));
+  gap: 6px 4px;
   margin-top: 8px;
   padding-top: 8px;
   border-top: 1px solid var(--st-border);
@@ -289,6 +291,9 @@
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--st-ash);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .jh-apply-metric-value {
@@ -632,6 +637,74 @@ html.dark .jh-apply-btn.is-primary { color: var(--st-page); }
   letter-spacing: 0.06em;
   color: var(--st-ash);
   margin: 0 0 6px;
+}
+
+/* Run phases — what the crew actually covered for this job. A pending row is
+   dimmed rather than hidden: the shape of the whole pipeline stays visible. */
+.jh-apply-phase-count {
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  color: var(--st-slate);
+  border: 1px solid var(--st-border);
+  border-radius: 999px;
+  padding: 0 6px;
+  margin-left: 6px;
+  letter-spacing: 0;
+}
+
+.jh-apply-phase-run {
+  font-family: var(--st-sans);
+  font-size: 11px;
+  color: var(--st-ash);
+  margin: -2px 0 8px;
+}
+
+.jh-apply-phases {
+  list-style: none;
+  margin: 0 0 16px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.jh-apply-phases li {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  font-family: var(--st-sans);
+  font-size: 12px;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--st-border);
+}
+
+.jh-apply-phases li:last-child { border-bottom: none; }
+
+.jh-apply-phase-dot {
+  width: 14px;
+  flex-shrink: 0;
+  text-align: center;
+  font-size: 11px;
+}
+
+.jh-apply-phases li.is-done .jh-apply-phase-dot { color: #0ca30c; }
+.jh-apply-phases li.is-done .jh-apply-phase-label { color: var(--st-ink); }
+.jh-apply-phases li.is-pending { opacity: 0.55; }
+.jh-apply-phases li.is-pending .jh-apply-phase-dot { color: var(--st-ash); }
+
+.jh-apply-phase-label { color: var(--st-slate); }
+
+.jh-apply-phase-note {
+  color: var(--st-ash);
+  font-size: 11px;
+  flex: 1;
+  min-width: 0;
+}
+
+.jh-apply-phase-when {
+  color: var(--st-ash);
+  font-size: 11px;
+  flex-shrink: 0;
 }
 
 .jh-apply-events {

@@ -358,6 +358,91 @@
       + groupHtml('applyGroupClosed', 'Closed', CLOSED);
   }
 
+  // Which crew phases this job actually went through. Derived only from what
+  // the pipeline persisted - a phase is "done" because there is evidence of it
+  // (an event, a score, a PDF link), never because an earlier phase implies it.
+  function phasesFor(app) {
+    var events = app.events || [];
+    function eventFor(status) {
+      for (var i = 0; i < events.length; i++) {
+        if (events[i].to_status === status) return events[i];
+      }
+      return null;
+    }
+    var replyEvent = eventFor('replied') || eventFor('interview') || eventFor('offer')
+      || eventFor('rejected');
+
+    return [
+      {
+        label: 'Queued',
+        done: !!eventFor('discovered'),
+        at: (eventFor('discovered') || {}).created_at,
+        note: (eventFor('discovered') || {}).source === 'user' ? 'you picked it' : 'found by Scout'
+      },
+      {
+        label: 'Scored',
+        done: app.fit_score != null || !!eventFor('scored'),
+        at: (eventFor('scored') || {}).created_at,
+        note: app.fit_score != null ? 'fit ' + Math.round(app.fit_score) : ''
+      },
+      {
+        label: 'Tailored',
+        done: !!app.tailored || !!eventFor('tailored') || app.ats_after != null,
+        at: (eventFor('tailored') || {}).created_at,
+        note: app.ats_after != null
+          ? 'ATS ' + (app.ats_before != null ? Math.round(app.ats_before) + ' → ' : '')
+            + Math.round(app.ats_after)
+          : (app.tailored ? 'resume rewritten' : '')
+      },
+      {
+        label: 'Cover letter',
+        done: !!app.cover_letter || !!app.cover_doc_url,
+        at: null,
+        note: app.cover_doc_url ? 'drafted' : ''
+      },
+      {
+        label: 'Resume PDF',
+        done: !!app.resume_pdf_url,
+        at: null,
+        note: app.resume_pdf_url ? 'compiled and uploaded' : ''
+      },
+      {
+        label: 'Applied',
+        done: !!app.applied_at || !!eventFor('applied'),
+        at: app.applied_at || (eventFor('applied') || {}).created_at,
+        note: app.dry_run ? 'dry run — not submitted' : (app.applied_at ? 'submitted' : '')
+      },
+      {
+        label: 'Reply',
+        done: !!replyEvent || (app.messages || []).length > 0,
+        at: (replyEvent || {}).created_at,
+        note: replyEvent ? meta(replyEvent.to_status).label : ''
+      }
+    ];
+  }
+
+  function phasesHtml(app) {
+    var phases = phasesFor(app);
+    var doneCount = phases.filter(function (p) { return p.done; }).length;
+    var rows = phases.map(function (p) {
+      return '<li class="' + (p.done ? 'is-done' : 'is-pending') + '">'
+        + '<span class="jh-apply-phase-dot" aria-hidden="true">' + (p.done ? '✓' : '·') + '</span>'
+        + '<span class="jh-apply-phase-label">' + esc(p.label) + '</span>'
+        + (p.note ? '<span class="jh-apply-phase-note">' + esc(p.note) + '</span>' : '')
+        + (p.at ? '<span class="jh-apply-phase-when">' + esc(humanDate(p.at)) + '</span>' : '')
+        + '</li>';
+    }).join('');
+
+    return ''
+      + '<div class="jh-apply-detail-label">Run phases'
+      + '  <span class="jh-apply-phase-count">' + doneCount + '/' + phases.length + '</span>'
+      + '</div>'
+      + (app.run_id
+          ? '<div class="jh-apply-phase-run">run ' + esc(String(app.run_id).slice(0, 12)) + '</div>'
+          : '<div class="jh-apply-phase-run">no crew run yet — queued only</div>')
+      + '<ol class="jh-apply-phases">' + rows + '</ol>';
+  }
+
   function detailHtml(app) {
     var links = [];
     if (app.url) links.push('<a href="' + esc(app.url) + '" target="_blank" rel="noopener">Job posting</a>');
@@ -397,6 +482,7 @@
       + (app.fit_score != null ? '<span class="jh-apply-score">' + Math.round(app.fit_score) + '</span>' : '')
       + '</div>'
       + (links.length ? '<div class="jh-apply-detail-links">' + links.join('') + '</div>' : '')
+      + phasesHtml(app)
       + '<label class="jh-apply-detail-label" for="applyStatusSelect">Change status</label>'
       + '<select id="applyStatusSelect" class="jh-apply-select" data-app="' + app.id + '">' + options + '</select>'
       + '<div class="jh-apply-detail-label">History</div>'
