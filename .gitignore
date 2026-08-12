@@ -37,6 +37,7 @@ uv.lock
 # Dashboard live state
 dashboard/events.jsonl
 dashboard/run_control.json
+dashboard/run_control.json.tmp
 dashboard/run_state.json
 dashboard/errors/latest.json
 dashboard/errors/history.jsonl

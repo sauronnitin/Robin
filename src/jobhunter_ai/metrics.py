@@ -13,14 +13,28 @@ import statistics
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
+from jobhunter_ai import benchmarks
 from jobhunter_ai.app_settings import (
     DEFAULT_MANUAL_MINUTES_PER_APPLICATION,
     load_user_settings,
 )
 from jobhunter_ai.db import connect
+from jobhunter_ai.role_profile import classify_title, load as load_role_profile
 
 DEFAULT_MANUAL_MINUTES = DEFAULT_MANUAL_MINUTES_PER_APPLICATION
 FIT_THRESHOLD = 25.0
+MIN_SAMPLE_FOR_RATE = 10
+MIN_SAMPLE_TO_SHOW_AT_ALL = 4
+
+_SILENCE_BUCKETS = (
+    ("early", 0, 7),
+    ("typical", 8, 14),
+    ("fading", 15, 21),
+    ("dead", 22, None),
+)
+_LIVE_STATUSES = frozenset({"applied", "replied", "interview"})
+_CLOSED_STATUSES = frozenset({"rejected", "skipped"})
+
 
 # Funnel stages shown on the outcome chart (ordinal order).
 FUNNEL_STAGES: tuple[str, ...] = (
@@ -428,6 +442,12 @@ def funnel_metrics(range_days: int | None) -> dict[str, Any]:
                 "rejection_rate": None,
                 "time_to_first_reply_median_hours": None,
                 "applied": None,
+                "dry_run_applied": 0,
+                "rate_suppressed": True,
+                "rate_hidden": True,
+                "rate_suppressed_reason": (
+                    "0 applications is too few for a rate to mean anything"
+                ),
             }
 
         counts = {s: int(counts_raw.get(s, 0)) for s in FUNNEL_STAGES}
@@ -437,7 +457,9 @@ def funnel_metrics(range_days: int | None) -> dict[str, Any]:
                 counts[status] = n
 
         applied_n = len(_applied_app_ids(conn, cutoff))
-        if applied_n == 0:
+        rate_suppressed = applied_n < MIN_SAMPLE_FOR_RATE
+        rate_hidden = applied_n < MIN_SAMPLE_TO_SHOW_AT_ALL
+        if applied_n == 0 or rate_suppressed:
             response_rate = interview_rate = offer_rate = rejection_rate = None
         else:
             response_n = _apps_reaching(conn, _RESPONSE_STATUSES, cutoff)
@@ -477,7 +499,22 @@ def funnel_metrics(range_days: int | None) -> dict[str, Any]:
             except (TypeError, ValueError):
                 continue
 
-        return {
+        dry_applied = int(
+            conn.execute(
+                """
+                SELECT COUNT(DISTINCT e.application_id) AS n
+                FROM application_event e
+                JOIN application a ON a.id = e.application_id
+                WHERE e.to_status = 'applied'
+                  AND COALESCE(a.dry_run, 0) = 1
+                """
+                + (" AND e.created_at >= ?" if cutoff is not None else ""),
+                [cutoff] if cutoff is not None else [],
+            ).fetchone()["n"]
+            or 0
+        )
+
+        out: dict[str, Any] = {
             "has_data": True,
             "counts": counts,
             "stages": list(FUNNEL_STAGES),
@@ -489,7 +526,15 @@ def funnel_metrics(range_days: int | None) -> dict[str, Any]:
                 statistics.median(hours) if hours else None
             ),
             "applied": applied_n,
+            "dry_run_applied": dry_applied,
+            "rate_suppressed": rate_suppressed,
+            "rate_hidden": rate_hidden,
         }
+        if rate_suppressed:
+            out["rate_suppressed_reason"] = (
+                f"{applied_n} applications is too few for a rate to mean anything"
+            )
+        return out
     finally:
         conn.close()
 
@@ -551,16 +596,577 @@ def referral_metrics(range_days: int | None) -> dict[str, Any]:
     }
 
 
+def _job_count(conn, cutoff: str | None) -> int:
+    sql = "SELECT COUNT(*) AS n FROM job"
+    params: list[Any] = []
+    if cutoff is not None:
+        sql += " WHERE first_seen_at >= ?"
+        params.append(cutoff)
+    return int(conn.execute(sql, params).fetchone()["n"] or 0)
+
+
+def _parse_ts(raw: Any) -> datetime | None:
+    if raw is None:
+        return None
+    try:
+        return datetime.fromisoformat(str(raw).replace("Z", "+00:00"))
+    except (TypeError, ValueError):
+        return None
+
+
+def _days_since(ts: datetime, now: datetime) -> int:
+    if ts.tzinfo is None:
+        ts = ts.replace(tzinfo=timezone.utc)
+    if now.tzinfo is None:
+        now = now.replace(tzinfo=timezone.utc)
+    return max(0, int((now - ts).total_seconds() // 86400))
+
+
+def _silence_bucket(days: int) -> str:
+    for name, lo, hi in _SILENCE_BUCKETS:
+        if hi is None:
+            if days >= lo:
+                return name
+        elif lo <= days <= hi:
+            return name
+    return "dead"
+
+
+def _resume_profession() -> tuple[str, str | None]:
+    role = load_role_profile()
+    family = role.get("family")
+    profession = benchmarks.profession_from_family(
+        str(family) if family else None
+    )
+    return profession, str(family) if family else None
+
+
+def dashboard_state(range_days: int | None) -> str:
+    """S0 empty · S1 discovered · S2 applying (1-9) · S3 mature (10+)."""
+    cutoff = _cutoff_iso(range_days)
+    conn = connect()
+    try:
+        jobs_n = _job_count(conn, cutoff)
+        applied_n = len(_applied_app_ids(conn, cutoff))
+    finally:
+        conn.close()
+    if jobs_n <= 0:
+        return "S0"
+    if applied_n <= 0:
+        return "S1"
+    if applied_n < MIN_SAMPLE_FOR_RATE:
+        return "S2"
+    return "S3"
+
+
+def pace_metrics(range_days: int | None) -> dict[str, Any]:
+    cutoff = _cutoff_iso(range_days)
+    profession, family = _resume_profession()
+    benchmark = benchmarks.applications_per_interview(profession)
+    state = dashboard_state(range_days)
+    conn = connect()
+    try:
+        applied_ids = _applied_app_ids(conn, cutoff)
+        sent = len(applied_ids)
+
+        first_interview_at_application: int | None = None
+        interview_sql = """
+            SELECT MIN(e.created_at) AS first_at
+            FROM application_event e
+            JOIN application a ON a.id = e.application_id
+            WHERE e.to_status IN ('interview', 'offer')
+              AND COALESCE(a.dry_run, 0) = 0
+        """
+        interview_params: list[Any] = []
+        if cutoff is not None:
+            interview_sql += " AND e.created_at >= ?"
+            interview_params.append(cutoff)
+        first_at = conn.execute(interview_sql, interview_params).fetchone()["first_at"]
+        if first_at:
+            count_sql = """
+                SELECT COUNT(DISTINCT e.application_id) AS n
+                FROM application_event e
+                JOIN application a ON a.id = e.application_id
+                WHERE e.to_status = 'applied'
+                  AND COALESCE(a.dry_run, 0) = 0
+                  AND e.created_at <= ?
+            """
+            count_params: list[Any] = [first_at]
+            if cutoff is not None:
+                count_sql += " AND e.created_at >= ?"
+                count_params.append(cutoff)
+            first_interview_at_application = int(
+                conn.execute(count_sql, count_params).fetchone()["n"] or 0
+            )
+    finally:
+        conn.close()
+
+    return {
+        "has_data": sent > 0,
+        "sent": sent,
+        "benchmark": benchmark,
+        "profession": profession,
+        "family": family,
+        "first_interview_at_application": first_interview_at_application,
+        "state": state,
+        "interview_rate_benchmark": benchmarks.INTERVIEW_RATE,
+        "interview_to_hire": benchmarks.INTERVIEW_TO_HIRE,
+        "applicants_per_hire": benchmarks.applicants_per_hire(profession),
+        "source": benchmarks.SOURCES["applications_per_interview"],
+    }
+
+
+def silence_metrics(range_days: int | None) -> dict[str, Any]:
+    cutoff = _cutoff_iso(range_days)
+    now = datetime.now(timezone.utc)
+    conn = connect()
+    try:
+        sql = """
+            SELECT a.id AS application_id,
+                   COALESCE(a.applied_at, ae_app.created_at) AS applied_ts,
+                   (
+                     SELECT MIN(e2.created_at)
+                     FROM application_event e2
+                     WHERE e2.application_id = a.id
+                       AND e2.to_status IN ('replied', 'interview', 'offer', 'rejected')
+                   ) AS response_ts
+            FROM application a
+            JOIN application_event ae_app
+              ON ae_app.application_id = a.id AND ae_app.to_status = 'applied'
+            WHERE COALESCE(a.dry_run, 0) = 0
+        """
+        params: list[Any] = []
+        if cutoff is not None:
+            sql += " AND ae_app.created_at >= ?"
+            params.append(cutoff)
+
+        buckets = {name: 0 for name, _, _ in _SILENCE_BUCKETS}
+        awaiting = 0
+        for row in conn.execute(sql, params):
+            if row["response_ts"]:
+                continue
+            applied_ts = _parse_ts(row["applied_ts"])
+            if applied_ts is None:
+                continue
+            days = _days_since(applied_ts, now)
+            buckets[_silence_bucket(days)] += 1
+            awaiting += 1
+
+        follow_up_count = int(buckets["dead"])
+        return {
+            "has_data": awaiting > 0 or len(_applied_app_ids(conn, cutoff)) > 0,
+            "awaiting": awaiting,
+            "buckets": buckets,
+            "follow_up_count": follow_up_count,
+            "no_response_low": benchmarks.NO_RESPONSE_RATE_LOW,
+            "no_response_high": benchmarks.NO_RESPONSE_RATE_HIGH,
+            "source": benchmarks.SOURCES["no_response"],
+        }
+    finally:
+        conn.close()
+
+
+def cadence_metrics(range_days: int | None) -> dict[str, Any]:
+    cutoff = _cutoff_iso(range_days)
+    conn = connect()
+    try:
+        sql = """
+            SELECT e.application_id, MIN(e.created_at) AS applied_ts
+            FROM application_event e
+            JOIN application a ON a.id = e.application_id
+            WHERE e.to_status = 'applied'
+              AND COALESCE(a.dry_run, 0) = 0
+        """
+        params: list[Any] = []
+        if cutoff is not None:
+            sql += " AND e.created_at >= ?"
+            params.append(cutoff)
+        sql += " GROUP BY e.application_id"
+
+        by_week: dict[str, int] = {}
+        for row in conn.execute(sql, params):
+            ts = _parse_ts(row["applied_ts"])
+            if ts is None:
+                continue
+            iso = ts.isocalendar()
+            key = f"{iso.year}-W{iso.week:02d}"
+            by_week[key] = by_week.get(key, 0) + 1
+
+        if not by_week:
+            return {
+                "has_data": False,
+                "weeks": [],
+                "current_streak_weeks": 0,
+                "best_week": None,
+                "per_week_avg": None,
+            }
+
+        weeks_sorted = sorted(by_week.items())
+        best_week = max(weeks_sorted, key=lambda item: item[1])
+        counts = [n for _, n in weeks_sorted]
+        # Streak: consecutive ISO weeks ending at the latest week with activity.
+        streak = 0
+        if weeks_sorted:
+            year, week = (
+                int(weeks_sorted[-1][0].split("-W")[0]),
+                int(weeks_sorted[-1][0].split("-W")[1]),
+            )
+            week_set = set(by_week)
+            while f"{year}-W{week:02d}" in week_set:
+                streak += 1
+                week -= 1
+                if week < 1:
+                    year -= 1
+                    week = 52
+
+        return {
+            "has_data": True,
+            "weeks": [{"week": w, "count": n} for w, n in weeks_sorted],
+            "current_streak_weeks": streak,
+            "best_week": {"week": best_week[0], "count": best_week[1]},
+            "per_week_avg": statistics.mean(counts) if counts else None,
+        }
+    finally:
+        conn.close()
+
+
+def pipeline_metrics(range_days: int | None) -> dict[str, Any]:
+    cutoff = _cutoff_iso(range_days)
+    conn = connect()
+    try:
+        sql = """
+            SELECT a.id,
+                   (
+                     SELECT e.to_status
+                     FROM application_event e
+                     WHERE e.application_id = a.id
+                     ORDER BY e.created_at DESC, e.id DESC
+                     LIMIT 1
+                   ) AS latest_status
+            FROM application a
+            WHERE COALESCE(a.dry_run, 0) = 0
+        """
+        params: list[Any] = []
+        if cutoff is not None:
+            sql += " AND a.created_at >= ?"
+            params.append(cutoff)
+
+        live = 0
+        closed = 0
+        for row in conn.execute(sql, params):
+            status = row["latest_status"]
+            if status in _LIVE_STATUSES:
+                live += 1
+            elif status in _CLOSED_STATUSES:
+                closed += 1
+
+        return {
+            "has_data": live > 0 or closed > 0,
+            "live": live,
+            "closed": closed,
+        }
+    finally:
+        conn.close()
+
+
+def targeting_metrics(range_days: int | None) -> dict[str, Any]:
+    cutoff = _cutoff_iso(range_days)
+    role = load_role_profile()
+    conn = connect()
+    try:
+        sql = "SELECT id, title FROM job"
+        params: list[Any] = []
+        if cutoff is not None:
+            sql += " WHERE first_seen_at >= ?"
+            params.append(cutoff)
+        core = 0
+        adjacent = 0
+        dropped = 0
+        dropped_job_ids: list[int] = []
+        for row in conn.execute(sql, params):
+            band = classify_title(row["title"] or "", role)
+            if band == "core":
+                core += 1
+            elif band == "adjacent":
+                adjacent += 1
+            else:
+                dropped += 1
+                dropped_job_ids.append(int(row["id"]))
+
+        total = core + adjacent + dropped
+        return {
+            "has_data": total > 0,
+            "core": core if total else None,
+            "adjacent": adjacent if total else None,
+            "dropped": dropped if total else None,
+            "dropped_job_ids": dropped_job_ids,
+        }
+    finally:
+        conn.close()
+
+
+def proof_of_work_metrics(range_days: int | None) -> dict[str, Any]:
+    """Ledger over application rows. Gaps stay gaps; never inferred."""
+    cutoff = _cutoff_iso(range_days)
+    conn = connect()
+    try:
+        sql = """
+            SELECT tailored, cover_letter, resume_pdf_url, cover_doc_url
+            FROM application
+            WHERE 1=1
+        """
+        params: list[Any] = []
+        if cutoff is not None:
+            sql += " AND created_at >= ?"
+            params.append(cutoff)
+        rows = list(conn.execute(sql, params))
+        total = len(rows)
+        if total == 0:
+            return {
+                "has_data": False,
+                "total": 0,
+                "tailored": 0,
+                "cover_letters": 0,
+                "resume_pdfs": 0,
+            }
+
+        tailored = sum(1 for r in rows if int(r["tailored"] or 0) == 1)
+        cover_letters = sum(
+            1
+            for r in rows
+            if int(r["cover_letter"] or 0) == 1
+            or (str(r["cover_doc_url"] or "").strip() != "")
+        )
+        resume_pdfs = sum(
+            1 for r in rows if str(r["resume_pdf_url"] or "").strip() != ""
+        )
+        return {
+            "has_data": True,
+            "total": total,
+            "tailored": tailored,
+            "cover_letters": cover_letters,
+            "resume_pdfs": resume_pdfs,
+        }
+    finally:
+        conn.close()
+
+
+def ats_lift_metrics(range_days: int | None) -> dict[str, Any]:
+    cutoff = _cutoff_iso(range_days)
+    threshold = benchmarks.ATS_KEYWORD_THRESHOLD
+    conn = connect()
+    try:
+        sql = """
+            SELECT id, ats_before, ats_after
+            FROM application
+            WHERE 1=1
+        """
+        params: list[Any] = []
+        if cutoff is not None:
+            sql += " AND created_at >= ?"
+            params.append(cutoff)
+        rows = list(conn.execute(sql, params))
+        pairs = [
+            {
+                "application_id": int(r["id"]),
+                "ats_before": float(r["ats_before"]),
+                "ats_after": float(r["ats_after"]),
+            }
+            for r in rows
+            if r["ats_before"] is not None and r["ats_after"] is not None
+        ]
+        if not pairs:
+            return {
+                "has_data": False,
+                "blocked_reason": "Runs after your first tailored application",
+                "median_before": None,
+                "median_after": None,
+                "delta": None,
+                "pairs": [],
+                "above_keyword_threshold": None,
+                "threshold": threshold,
+                "callback_optimized": benchmarks.ATS_CALLBACK_OPTIMIZED,
+                "callback_generic": benchmarks.ATS_CALLBACK_GENERIC,
+                "tailored_multiplier": benchmarks.TAILORED_MULTIPLIER,
+                "source": benchmarks.SOURCES["ats_callback"],
+            }
+
+        befores = [p["ats_before"] for p in pairs]
+        afters = [p["ats_after"] for p in pairs]
+        median_before = statistics.median(befores)
+        median_after = statistics.median(afters)
+        above = sum(1 for v in afters if v >= threshold * 100 or v >= threshold)
+        # Scores may be 0-1 or 0-100; treat values > 1 as percent points.
+        if all(v <= 1.0 for v in afters):
+            above = sum(1 for v in afters if v >= threshold)
+        else:
+            above = sum(1 for v in afters if v >= threshold * 100)
+
+        return {
+            "has_data": True,
+            "blocked_reason": None,
+            "median_before": median_before,
+            "median_after": median_after,
+            "delta": median_after - median_before,
+            "pairs": pairs,
+            "above_keyword_threshold": above,
+            "pair_count": len(pairs),
+            "threshold": threshold,
+            "callback_optimized": benchmarks.ATS_CALLBACK_OPTIMIZED,
+            "callback_generic": benchmarks.ATS_CALLBACK_GENERIC,
+            "tailored_multiplier": benchmarks.TAILORED_MULTIPLIER,
+            "source": benchmarks.SOURCES["ats_callback"],
+        }
+    finally:
+        conn.close()
+
+
+def next_actions(range_days: int | None) -> list[dict[str, Any]]:
+    """Ranked rail items from redesign spec §10. Zero-count rows are omitted."""
+    cutoff = _cutoff_iso(range_days)
+    items: list[dict[str, Any]] = []
+    silence = silence_metrics(range_days)
+    follow_up = int(silence.get("follow_up_count") or 0)
+    if follow_up > 0:
+        items.append(
+            {
+                "key": "follow_up_dead",
+                "count": follow_up,
+                "why": "applications past 21 days",
+                "action_label": "Follow up",
+                "action_endpoint": "/api/pipeline",
+            }
+        )
+
+    conn = connect()
+    try:
+        queued_sql = """
+            SELECT COUNT(*) AS n FROM application
+            WHERE status = 'discovered' AND COALESCE(dry_run, 0) = 0
+        """
+        queued_params: list[Any] = []
+        if cutoff is not None:
+            queued_sql += " AND created_at >= ?"
+            queued_params.append(cutoff)
+        queued = int(conn.execute(queued_sql, queued_params).fetchone()["n"] or 0)
+        if queued > 0:
+            items.append(
+                {
+                    "key": "queued_never_run",
+                    "count": queued,
+                    "why": "queued jobs never run",
+                    "action_label": "Run the crew",
+                    "action_endpoint": "/api/run",
+                }
+            )
+
+        no_cover_sql = """
+            SELECT COUNT(DISTINCT e.application_id) AS n
+            FROM application_event e
+            JOIN application a ON a.id = e.application_id
+            WHERE e.to_status = 'applied'
+              AND COALESCE(a.dry_run, 0) = 0
+              AND COALESCE(a.cover_letter, 0) = 0
+              AND (a.cover_doc_url IS NULL OR TRIM(a.cover_doc_url) = '')
+        """
+        no_cover_params: list[Any] = []
+        if cutoff is not None:
+            no_cover_sql += " AND e.created_at >= ?"
+            no_cover_params.append(cutoff)
+        no_cover = int(conn.execute(no_cover_sql, no_cover_params).fetchone()["n"] or 0)
+        if no_cover > 0:
+            items.append(
+                {
+                    "key": "applied_no_cover",
+                    "count": no_cover,
+                    "why": "applications sent with no cover letter",
+                    "action_label": "Generate",
+                    "action_endpoint": "/api/run",
+                }
+            )
+
+        never_tailored_sql = """
+            SELECT COUNT(*) AS n FROM application
+            WHERE status = 'scored'
+              AND fit_score IS NOT NULL
+              AND fit_score >= ?
+              AND COALESCE(tailored, 0) = 0
+              AND COALESCE(dry_run, 0) = 0
+        """
+        never_tailored_params: list[Any] = [FIT_THRESHOLD]
+        if cutoff is not None:
+            never_tailored_sql += " AND created_at >= ?"
+            never_tailored_params.append(cutoff)
+        never_tailored = int(
+            conn.execute(never_tailored_sql, never_tailored_params).fetchone()["n"] or 0
+        )
+        if never_tailored > 0:
+            items.append(
+                {
+                    "key": "scored_never_tailored",
+                    "count": never_tailored,
+                    "why": "jobs scored above threshold, never tailored",
+                    "action_label": "Tailor",
+                    "action_endpoint": "/api/run",
+                }
+            )
+
+        quar = int(
+            conn.execute(
+                """
+                SELECT COUNT(*) AS n FROM source_health
+                WHERE COALESCE(quarantined, 0) = 1
+                """
+            ).fetchone()["n"]
+            or 0
+        )
+        if quar > 0:
+            items.append(
+                {
+                    "key": "sources_quarantined",
+                    "count": quar,
+                    "why": "sources quarantined",
+                    "action_label": "Re-probe",
+                    "action_endpoint": "/api/sources/discover",
+                }
+            )
+    finally:
+        conn.close()
+
+    ats = ats_lift_metrics(range_days)
+    if not ats.get("has_data"):
+        items.append(
+            {
+                "key": "ats_after_missing",
+                "count": 1,
+                "why": "tailoring never wrote ats_after",
+                "action_label": "Fix ATS lift",
+                "action_endpoint": "/api/run",
+            }
+        )
+
+    return items
+
+
 def all_metrics(range_days: int | None) -> dict[str, Any]:
     return {
         "ok": True,
         "range_days": range_days,
+        "state": dashboard_state(range_days),
         "efficiency": efficiency_metrics(range_days),
         "reach": reach_metrics(range_days),
         "quality": quality_metrics(range_days),
         "funnel": funnel_metrics(range_days),
         "time_saved": time_saved_metrics(range_days),
         "referral": referral_metrics(range_days),
+        "pace": pace_metrics(range_days),
+        "silence": silence_metrics(range_days),
+        "cadence": cadence_metrics(range_days),
+        "pipeline": pipeline_metrics(range_days),
+        "targeting": targeting_metrics(range_days),
+        "proof_of_work": proof_of_work_metrics(range_days),
+        "ats_lift": ats_lift_metrics(range_days),
+        "next_actions": next_actions(range_days),
     }
 
 

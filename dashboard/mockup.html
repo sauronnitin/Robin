@@ -32,6 +32,7 @@ tailwind.config = {
 <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,500;0,8..60,600;1,8..60,300&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="kg.css">
 <link rel="stylesheet" href="apply.css">
+<link rel="stylesheet" href="metrics.css">
 <style>
 :root {
   --st-canvas:  #ffffff;
@@ -2632,6 +2633,10 @@ html.dark .jh-asst-send { background: var(--st-peach); color: var(--st-sienna); 
         <svg class="w-4 h-4 opacity-70" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M2 8h12M2 12h8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
         Browse
       </button>
+      <button data-s="sources" class="nav-item flex items-center gap-2.5 w-full px-3 py-2 rounded-lg text-[13px] font-medium text-slate-400 hover:bg-slate-800 hover:text-slate-200">
+        <svg class="w-4 h-4 opacity-70" viewBox="0 0 16 16" fill="none"><path d="M2 3.5h12M2 8h12M2 12.5h8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="12.5" cy="12.5" r="1.5" fill="currentColor"/></svg>
+        Sources
+      </button>
       <button data-s="apply" class="nav-item flex items-center gap-2.5 w-full px-3 py-2 rounded-lg text-[13px] font-medium text-slate-400 hover:bg-slate-800 hover:text-slate-200">
         <svg class="w-4 h-4 opacity-70" viewBox="0 0 16 16" fill="none"><rect x="2" y="3" width="3.4" height="10" rx="1" stroke="currentColor" stroke-width="1.4"/><rect x="6.3" y="3" width="3.4" height="7" rx="1" stroke="currentColor" stroke-width="1.4"/><rect x="10.6" y="3" width="3.4" height="4.5" rx="1" stroke="currentColor" stroke-width="1.4"/></svg>
         Apply
@@ -2969,6 +2974,20 @@ html.dark .jh-asst-send { background: var(--st-peach); color: var(--st-sienna); 
       </div>
       <div class="flex-1 overflow-y-auto overflow-x-hidden p-5 space-y-5" id="metricsRoot">
         <div class="jh-metrics-loading text-[13px] text-slate-500">Loading metrics…</div>
+      </div>
+    </div>
+
+    <div class="screen hidden flex-1 flex flex-col overflow-hidden" id="s-sources">
+      <div class="h-11 flex-shrink-0 border-b border-slate-800 flex items-center px-5 gap-2 bg-slate-900/70">
+        <span class="st-kicker">Sources</span>
+        <div class="flex-1"></div>
+        <button type="button" class="st-btn-ghost text-[12px]" onclick="if(window.__jhMetrics)window.__jhMetrics.load()">Refresh health</button>
+      </div>
+      <div class="flex-1 overflow-y-auto overflow-x-hidden p-5">
+        <p class="text-[13px] text-slate-500 mb-4 max-w-3xl">Full source health, yield, and dedupe detail live here. The Dashboard keeps only a one-line coverage summary.</p>
+        <div id="sourcesHealthRoot" class="jh-sources-panel">
+          <div class="text-[13px] text-slate-500">Open Dashboard once to load source health, or click Refresh.</div>
+        </div>
       </div>
     </div>
 
@@ -4810,6 +4829,15 @@ function renderJobSkeletons(n=8){
   root.innerHTML = cards + `<span class="sr-only">Loading jobs...</span>`;
 }
 
+function jobReachMarker(j){
+  const band = j.location_band || '';
+  const icons = { home: '⌂', remote: '⌂', unknown: '?', elsewhere: '✈' };
+  if(!band && !(j.loc || j.location)) return '';
+  const icon = icons[band] || ((String(j.loc||j.location||'').toLowerCase().includes('remote')) ? '⌂' : '✈');
+  const label = j.location_label || band || (j.loc || j.location || 'Location');
+  return `<span class="jh-job-reach" title="${esc(label)}"><span aria-hidden="true">${icon}</span><span class="sr-only">${esc(label)}</span></span>`;
+}
+
 function renderJobs(){
   const root = document.getElementById('jList');
   if(!root) return;
@@ -4841,7 +4869,7 @@ function renderJobs(){
           <div class="jh-job-company">${esc(j.company)}</div>
           <div class="jh-job-title">${esc(j.title)}</div>
         </div>
-        <div class="jh-job-meta">${esc(j.loc)} · ${esc(j.time)}</div>
+        <div class="jh-job-meta">${esc(j.loc)} · ${esc(j.time)}${jobReachMarker(j)}</div>
         <div class="flex gap-1.5 flex-wrap">${chips}</div>
       </div>
       ${j.isNew?`<span class="jh-job-new">New</span>`:''}
@@ -5106,7 +5134,7 @@ syncFilterChips();
 
 // Nav
 let canvasLoaded=false;
-const SCREEN_IDS = ['browse','apply','dashboard','profile','linkedin','knowledge','canvas','settings'];
+const SCREEN_IDS = ['browse','apply','dashboard','sources','profile','linkedin','knowledge','canvas','settings'];
 const SCREEN_STORAGE_KEY = 'jh-active-screen';
 let currentScreen = 'browse';
 
@@ -5165,6 +5193,9 @@ function nav(s, opts){
     loadSettings();
   }
   if(screenId==='dashboard' && window.__jhMetrics){
+    window.__jhMetrics.load();
+  }
+  if(screenId==='sources' && window.__jhMetrics){
     window.__jhMetrics.load();
   }
   if(screenId==='apply' && window.__jhApply){

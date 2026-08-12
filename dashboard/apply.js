@@ -227,7 +227,7 @@
   // Where the job is, against where the candidate is. Home country is the
   // default and the priority; another country usually means sponsorship, which
   // is a different decision from whether the job is any good.
-  var LOCATION_ICONS = { home: '★', remote: '⌂', unknown: '?', elsewhere: '✈' };
+  var LOCATION_ICONS = { home: '⌂', remote: '⌂', unknown: '?', elsewhere: '✈' };
 
   function locationHtml(app) {
     var band = app.location_band;
