@@ -1,0 +1,419 @@
+/* Pipeline board styles — Steep tokens only, light + dark via html.dark.
+ * Status hues arrive per-element as --pipe-color (set from SPEC.md §5 in
+ * pipeline.js); nothing here invents a color of its own.
+ */
+
+.jh-pipe-wrap {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.jh-pipe-main {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  padding: 20px;
+}
+
+/* Wide boards scroll inside their own container — never the page body. */
+.jh-pipe-cols {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding-bottom: 10px;
+  align-items: flex-start;
+}
+
+.jh-pipe-col {
+  flex: 1 1 0;
+  min-width: 232px;
+  background: var(--st-card, var(--st-mist));
+  border: 1px solid var(--st-border);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  max-height: 100%;
+}
+
+.jh-pipe-col-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--st-border);
+  font-family: var(--st-sans);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--st-ink);
+}
+
+.jh-pipe-col-icon {
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 5px;
+  background: var(--pipe-color);
+  color: #fff;
+  font-size: 11px;
+  line-height: 1;
+}
+
+.jh-pipe-col-label { flex: 1; }
+
+.jh-pipe-col-count {
+  font-variant-numeric: tabular-nums;
+  font-size: 11.5px;
+  color: var(--st-slate);
+  background: var(--st-fog);
+  border: 1px solid var(--st-border);
+  border-radius: 999px;
+  padding: 1px 8px;
+}
+
+.jh-pipe-col-body {
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+}
+
+/* ── Cards ───────────────────────────────────────────────────────────── */
+
+.jh-pipe-card {
+  border: 1px solid var(--st-border);
+  border-left: 3px solid var(--pipe-color);
+  border-radius: 9px;
+  background: var(--st-canvas);
+  padding: 10px 11px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.jh-pipe-card:hover,
+.jh-pipe-card:focus-visible {
+  border-color: var(--pipe-color);
+  transform: translateY(-1px);
+  outline: none;
+}
+
+.jh-pipe-card-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.jh-pipe-company {
+  font-family: var(--st-serif);
+  font-size: 14px;
+  color: var(--st-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.jh-pipe-score {
+  font-family: var(--st-sans);
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+  color: var(--st-sienna);
+  background: var(--st-peach);
+  border-radius: 6px;
+  padding: 1px 6px;
+  flex-shrink: 0;
+}
+
+.jh-pipe-title {
+  font-family: var(--st-sans);
+  font-size: 12.5px;
+  color: var(--st-slate);
+  margin-top: 2px;
+  line-height: 1.35;
+}
+
+.jh-pipe-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.jh-pipe-when {
+  font-size: 11px;
+  color: var(--st-ash);
+}
+
+/* Icon + text, always — color never carries the meaning alone.
+ * The label itself stays ink: SPEC.md §5.1 flags the lighter ramp steps as
+ * below 3:1 on the light surface, which is fine for a border or an icon but
+ * not for text you have to read.
+ */
+.jh-pipe-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--st-sans);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--st-ink);
+  border: 1px solid var(--pipe-color);
+  border-radius: 999px;
+  padding: 1px 7px;
+  white-space: nowrap;
+}
+
+.jh-pipe-pill > [aria-hidden] { color: var(--pipe-color); }
+
+.jh-pipe-empty {
+  font-family: var(--st-sans);
+  font-size: 12px;
+  color: var(--st-ash);
+  padding: 10px 2px;
+}
+
+/* ── Collapsed groups ────────────────────────────────────────────────── */
+
+.jh-pipe-group {
+  border: 1px solid var(--st-border);
+  border-radius: 12px;
+  background: var(--st-card, var(--st-mist));
+  margin-bottom: 14px;
+}
+
+.jh-pipe-group-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  cursor: pointer;
+  font-family: var(--st-sans);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--st-ink);
+  list-style: none;
+}
+
+.jh-pipe-group-head::-webkit-details-marker { display: none; }
+.jh-pipe-group-head::before { content: '▸'; color: var(--st-ash); font-size: 10px; }
+.jh-pipe-group[open] .jh-pipe-group-head::before { content: '▾'; }
+.jh-pipe-group-head .jh-pipe-col-count { margin-left: auto; }
+
+.jh-pipe-group-body {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(232px, 1fr));
+  gap: 8px;
+  padding: 0 12px 12px;
+}
+
+/* ── Pending confirmations ───────────────────────────────────────────── */
+
+.jh-pipe-pending-wrap {
+  border: 1px solid var(--st-border);
+  border-radius: 12px;
+  background: var(--st-card, var(--st-mist));
+  padding: 14px;
+  margin-bottom: 14px;
+}
+
+.jh-pipe-pending-title {
+  font-family: var(--st-serif);
+  font-size: 15px;
+  color: var(--st-ink);
+}
+
+.jh-pipe-pending-note {
+  font-family: var(--st-sans);
+  font-size: 12px;
+  color: var(--st-slate);
+  margin: 2px 0 10px;
+}
+
+.jh-pipe-pending {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 0;
+  border-top: 1px solid var(--st-border);
+}
+
+.jh-pipe-pending-copy { flex: 1; min-width: 0; }
+
+.jh-pipe-pending-subject {
+  font-family: var(--st-sans);
+  font-size: 13px;
+  color: var(--st-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.jh-pipe-pending-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  font-family: var(--st-sans);
+  font-size: 11.5px;
+  color: var(--st-slate);
+  margin-top: 3px;
+}
+
+.jh-pipe-pending-actions { display: flex; gap: 6px; flex-shrink: 0; }
+
+/* ── Controls ────────────────────────────────────────────────────────── */
+
+.jh-pipe-btn {
+  font-family: var(--st-sans);
+  font-size: 12px;
+  color: var(--st-ink);
+  background: var(--st-canvas);
+  border: 1px solid var(--st-border);
+  border-radius: 8px;
+  padding: 5px 10px;
+  cursor: pointer;
+}
+
+.jh-pipe-btn:hover { border-color: var(--st-slate); }
+.jh-pipe-btn[disabled] { opacity: 0.55; cursor: progress; }
+
+.jh-pipe-btn.is-primary {
+  background: var(--st-sienna);
+  border-color: var(--st-sienna);
+  color: var(--st-canvas);
+}
+
+html.dark .jh-pipe-btn.is-primary { color: var(--st-page); }
+
+.jh-pipe-select {
+  width: 100%;
+  font-family: var(--st-sans);
+  font-size: 12.5px;
+  color: var(--st-ink);
+  background: var(--st-canvas);
+  border: 1px solid var(--st-border);
+  border-radius: 8px;
+  padding: 6px 8px;
+  margin-bottom: 14px;
+}
+
+/* ── Detail panel ────────────────────────────────────────────────────── */
+
+.jh-pipe-detail {
+  width: 340px;
+  flex-shrink: 0;
+  border-left: 1px solid var(--st-border);
+  background: var(--st-card, var(--st-mist));
+  padding: 16px;
+  overflow-y: auto;
+}
+
+.jh-pipe-detail.hidden { display: none; }
+
+.jh-pipe-detail-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.jh-pipe-detail-company {
+  font-family: var(--st-serif);
+  font-size: 17px;
+  color: var(--st-ink);
+}
+
+.jh-pipe-detail-title {
+  font-family: var(--st-sans);
+  font-size: 12.5px;
+  color: var(--st-slate);
+}
+
+.jh-pipe-detail-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 0;
+}
+
+.jh-pipe-detail-links {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 14px;
+}
+
+.jh-pipe-detail-links a {
+  font-family: var(--st-sans);
+  font-size: 12.5px;
+  color: var(--st-sienna);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.jh-pipe-detail-label {
+  display: block;
+  font-family: var(--st-sans);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--st-ash);
+  margin: 0 0 6px;
+}
+
+.jh-pipe-events {
+  list-style: none;
+  margin: 0 0 16px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.jh-pipe-events li {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-family: var(--st-sans);
+  font-size: 11.5px;
+  color: var(--st-slate);
+}
+
+.jh-pipe-ev-when { color: var(--st-ash); min-width: 62px; }
+.jh-pipe-ev-src { color: var(--st-ash); }
+.jh-pipe-ev-detail { width: 100%; color: var(--st-slate); }
+
+/* ── Empty state ─────────────────────────────────────────────────────── */
+
+.jh-pipe-blank {
+  border: 1px dashed var(--st-border);
+  border-radius: 12px;
+  padding: 40px 24px;
+  text-align: center;
+}
+
+.jh-pipe-blank-title {
+  font-family: var(--st-serif);
+  font-size: 17px;
+  color: var(--st-ink);
+}
+
+.jh-pipe-blank-copy {
+  font-family: var(--st-sans);
+  font-size: 13px;
+  color: var(--st-slate);
+  max-width: 420px;
+  margin: 6px auto 0;
+  line-height: 1.5;
+}
+
+@media (max-width: 900px) {
+  .jh-pipe-detail { width: 280px; }
+  .jh-pipe-col { min-width: 200px; }
+}
