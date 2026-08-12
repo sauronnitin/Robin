@@ -1,9 +1,18 @@
-"""Published job-search benchmarks. Every number here ships with its source
-string, which the UI displays beside the metric."""
+"""Job-search benchmarks.
+
+PUBLISHED holds figures printed by a cited source. Nothing else belongs here.
+Derived or estimated values go in DERIVED and must be labelled "estimated" in
+the UI -- never presented with a PUBLISHED source string. Prior draft shipped
+tech:55 and design:48 as if published; neither figure is printed anywhere --
+they were extrapolated from the "191 applicants per hire in tech vs 95
+general" ratio. Removed. Every profession falls through to the one figure
+that is actually sourced until a real per-profession number exists.
+"""
 
 from __future__ import annotations
 
-APPLICATIONS_PER_INTERVIEW = {"general": 42, "tech": 55, "design": 48}
+APPLICATIONS_PER_INTERVIEW = {"general": 42}  # published; no per-profession source exists
+DERIVED: dict[str, int] = {}  # populate only with an explicit "estimated" label
 INTERVIEW_RATE = 0.03
 INTERVIEW_TO_HIRE = 0.27
 APPLICANTS_PER_HIRE = {"general": 95, "tech": 191, "healthcare": 47}

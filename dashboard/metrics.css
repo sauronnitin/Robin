@@ -8,10 +8,8 @@
 .jh-bento {
   display: grid;
   width: 100%;
-  max-width: 1200px;
-  margin: 0 auto;
   gap: 6px;
-  grid-template-columns: repeat(4, minmax(0, 1fr)) 240px;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) 260px;
   grid-template-areas:
     "pace pace pace rail"
     "silence silence ats rail"
@@ -66,24 +64,32 @@
 /* ── Size variants ──────────────────────────────────────────── */
 
 .jh-bento-hero {
-  min-height: 168px;
+  min-height: 152px;
 }
 
 .jh-bento-large {
-  min-height: 132px;
+  min-height: 116px;
 }
 
 .jh-bento-medium {
-  min-height: 112px;
+  min-height: 100px;
 }
 
 .jh-bento-small {
-  min-height: 96px;
+  min-height: 84px;
 }
 
 .jh-bento-tall {
   min-height: 100%;
 }
+
+/* Locked/sparse tiles carry one line of muted copy -- a wider column from the
+   full-width grid makes the old min-heights read as empty space rather than
+   a compact metric. Trim them further and drop the loose internal gap. */
+.jh-bento-locked.jh-bento-small { min-height: 68px; }
+.jh-bento-locked.jh-bento-medium { min-height: 80px; }
+.jh-bento-locked.jh-bento-large { min-height: 92px; }
+.jh-bento-locked { gap: 4px; padding: 16px 18px; }
 
 @media (max-width: 900px) {
   .jh-bento-hero,
@@ -479,20 +485,14 @@ html.dark .jh-bento-silence-track {
 /* ── Coverage one-liner ───────────────────────────────────────── */
 
 .jh-bento-sources-line {
-  max-width: 1200px;
-  margin: 10px auto 0;
-  padding: 10px 14px;
-  border-radius: 12px;
   font-family: var(--st-sans);
-  font-size: 12px;
+  font-size: 12.5px;
   font-weight: 500;
-  line-height: 1.4;
+  line-height: 1.35;
   color: #898781;
-  background: var(--st-fog);
-  border: 1px solid var(--st-border);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  margin-top: 6px;
+  white-space: normal;
+  overflow-wrap: break-word;
 }
 
 html.dark .jh-bento-sources-line {

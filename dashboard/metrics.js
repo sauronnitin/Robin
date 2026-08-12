@@ -198,7 +198,10 @@
   function tileRail(actions) {
     const rows = (actions || []).map((a) => `
       <div class="jh-bento-rail-row">
-        <div><strong>${esc(fmtInt(a.count))}</strong> ${esc(a.why)}</div>
+        <div class="jh-bento-rail-row-count">${esc(fmtInt(a.count))}</div>
+        <div class="jh-bento-rail-row-copy">
+          <div class="jh-bento-rail-row-why">${esc(a.why)}</div>
+        </div>
         <button type="button" class="jh-bento-rail-btn" data-endpoint="${esc(a.action_endpoint)}" data-key="${esc(a.key)}">${esc(a.action_label)}</button>
       </div>`).join("");
     return `<aside class="jh-bento-card jh-bento-tall jh-bento-rail jh-bento-area-rail">
@@ -569,4 +572,21 @@
   }
 
   window.__jhMetrics = { load, setRange: (r) => { currentRange = r; load(); } };
+
+  // This file loads after the inline boot script has already restored the
+  // last screen from localStorage, so nav()'s "screenId==='dashboard'" hook
+  // fired before window.__jhMetrics existed and had nothing to call. Pick up
+  // that case here: if we loaded straight into Dashboard or Sources, fetch now.
+  function initIfVisible() {
+    const dash = document.getElementById("s-dashboard");
+    const sources = document.getElementById("s-sources");
+    const visible = (el) => el && !el.classList.contains("hidden");
+    if (visible(dash) || visible(sources)) load();
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initIfVisible);
+  } else {
+    initIfVisible();
+  }
 })();
