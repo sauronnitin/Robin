@@ -23,6 +23,7 @@ from jobhunter_ai.job_sources.base import NormalizedJob
 
 # Task keys this module reacts to. Anything else is ignored.
 HANDLED_TASKS: tuple[str, ...] = (
+    "scrape_and_filter_job_listings",
     "score_and_prioritise_jobs",
     "tailor_resume_per_job",
     "compile_and_upload_resume_pdfs",
@@ -70,6 +71,7 @@ _KEY_ALIASES: dict[str, str] = {
     "location": "location",
     "description": "description",
     "job_description": "description",
+    "job_description_text": "description",
     "work_mode": "work_mode",
     "tailored": "tailored",
     "tailoring_note": "note",
@@ -218,9 +220,9 @@ def _identity(record: dict[str, Any]) -> NormalizedJob | None:
         url=url,
         location=str(record.get("location") or "").strip(),
         work_mode=str(record.get("work_mode") or "").strip(),
-        # Carried only when a job is queued from Browse, where the full posting
-        # is already on screen. Without it the Tailor task has no JD to weave
-        # keywords from and can only pass the base resume through.
+        # Carried from Browse-queued jobs and from Scout-discovered listings.
+        # Score/Tailor output omits it (Rule 1); upsert_job's COALESCE keeps
+        # the earlier text. Without it the Tailor ATS guardrail has no JD.
         description=str(record.get("description") or "").strip(),
     )
 
@@ -342,6 +344,13 @@ def sync_task_output(
         if job is None:
             continue
         job_id = pipeline_store.upsert_job(job, conn=conn)
+        if task_key == "scrape_and_filter_job_listings":
+            # Scout has not scored or qualified anything yet. Persist the
+            # listing (including description) so later Score/Tailor syncs
+            # land on a row that already has posting text. Score creates
+            # the application row the same way it does today.
+            continue
+
         fields: dict[str, Any] = {}
         status: str | None = None
 

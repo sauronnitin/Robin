@@ -305,9 +305,8 @@ def _merge_jobs(
 def _posting_for(job: dict[str, Any]) -> str:
     """The stored job description for a batch entry, if we have one.
 
-    Only jobs queued from Browse carry their posting text - the Score task's
-    output does not include it. So ATS targeting applies to the user's own
-    picks, and everything else tailors the way it did before.
+    Browse-queued jobs and Scout-discovered jobs both persist posting text
+    onto the job row. Score output does not include it (Rule 1).
     """
     url = _job_url(job)
     company = str(job.get("company") or "").strip()
@@ -786,6 +785,10 @@ def _persist_pipeline_state(task_key: str | None, raw_output: str) -> None:
             print(
                 f"[pipeline] {task_key}: persisted {summary['applications']} "
                 f"application(s) {summary.get('statuses') or ''}"
+            )
+        elif task_key == "scrape_and_filter_job_listings" and summary.get("records"):
+            print(
+                f"[pipeline] {task_key}: persisted {summary['records']} job(s)"
             )
     except Exception as exc:  # noqa: BLE001 - persistence is never fatal
         print(f"[pipeline] skipped persisting {task_key}: {exc!r}")
