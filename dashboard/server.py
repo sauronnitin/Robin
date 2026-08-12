@@ -87,6 +87,7 @@ Then open:
 
 from __future__ import annotations
 
+import html
 import json
 import os
 import re
@@ -787,6 +788,56 @@ class DashboardHandler(SimpleHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def _notice_page(self, title: str, message: str, action_url: str = "",
+                     action_label: str = "", status: int = 200) -> None:
+        """A readable page for endpoints a human opens in a tab.
+
+        /api/gmail/connect is opened as a browser tab, not fetched - dumping an
+        API error object there leaves the user reading raw JSON.
+        """
+        action = ""
+        if action_url:
+            action = (
+                f'<a class="cta" href="{html.escape(action_url)}" target="_blank" '
+                f'rel="noopener">{html.escape(action_label or "Open")}</a>'
+            )
+        body = f"""<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{html.escape(title)}</title>
+<style>
+  :root {{ color-scheme: light dark; }}
+  body {{ margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center;
+         background:#fafafb; color:#17191c;
+         font-family:"DM Sans",ui-sans-serif,system-ui,sans-serif; padding:24px; }}
+  .card {{ max-width:520px; background:#fff; border:1px solid rgba(4,23,43,.08);
+          border-radius:14px; padding:28px 30px; }}
+  h1 {{ font-family:"Source Serif 4",Georgia,serif; font-size:21px; margin:0 0 10px; font-weight:600; }}
+  p {{ font-size:14px; line-height:1.55; color:#5b5f68; margin:0 0 18px; }}
+  .row {{ display:flex; gap:10px; flex-wrap:wrap; }}
+  a {{ display:inline-block; font-size:13px; text-decoration:none; padding:8px 14px;
+      border-radius:9px; border:1px solid rgba(4,23,43,.12); color:#17191c; }}
+  a.cta {{ background:#5d2a1a; border-color:#5d2a1a; color:#fff; }}
+  @media (prefers-color-scheme: dark) {{
+    body {{ background:#171411; color:#f0e8df; }}
+    .card {{ background:#211d1a; border-color:rgba(240,232,223,.09); }}
+    p {{ color:#9b9189; }}
+    a {{ color:#f0e8df; border-color:rgba(240,232,223,.14); }}
+    a.cta {{ background:#e8c49a; border-color:#e8c49a; color:#171411; }}
+  }}
+</style></head>
+<body><div class="card">
+  <h1>{html.escape(title)}</h1>
+  <p>{html.escape(message)}</p>
+  <div class="row">{action}<a href="/">Back to JobHunter</a></div>
+</div></body></html>"""
+        raw = body.encode("utf-8")
+        self.send_response(status)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header("Content-Length", str(len(raw)))
+        self.end_headers()
+        self.wfile.write(raw)
+
     def _read_body(self) -> dict:
         length = int(self.headers.get("Content-Length") or 0)
         if length <= 0:
@@ -1104,13 +1155,36 @@ class DashboardHandler(SimpleHTTPRequestHandler):
             return self._json(gmail_verify.gmail_status())
         if path.startswith("/api/gmail/connect"):
             try:
+                # Signing in again cannot fix a disabled API - the token is
+                # already good. Say so instead of walking the user through
+                # consent a second time for nothing.
+                current = gmail_verify.gmail_status()
+                if current.get("needs_api_enable"):
+                    return self._notice_page(
+                        "One switch left in Google Cloud",
+                        current.get("hint")
+                        or "The Gmail API is not enabled for this Google Cloud project.",
+                        action_url=current.get("action_url", ""),
+                        action_label="Enable the Gmail API",
+                    )
+
                 status = gmail_verify.start_gmail_oauth_flow()
                 if status.get("connected"):
                     return self._redirect("/?gmail=connected")
-                return self._json({"ok": False, **status}, status=500)
+                return self._notice_page(
+                    "Gmail is not connected yet",
+                    status.get("hint") or status.get("error") or "The sign-in did not complete.",
+                    action_url=status.get("action_url", ""),
+                    action_label="Fix this in Google Cloud" if status.get("action_url") else "",
+                    status=200,
+                )
             except Exception as exc:
                 print(f"[dashboard] gmail/connect error: {exc!r}")
-                return self._json({"ok": False, "error": str(exc)}, status=500)
+                return self._notice_page(
+                    "Gmail sign-in failed",
+                    str(exc),
+                    status=200,
+                )
         if path.startswith("/api/profiles"):
             try:
                 return self._json({"ok": True, "presets": jobcrew_profile.list_presets()})
