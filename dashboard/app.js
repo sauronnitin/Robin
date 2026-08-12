@@ -818,6 +818,54 @@
     else if (efficiencyOn) loadEfficiencyHistory();
   }
 
+  function _fmtTok(n) {
+    const v = Number(n) || 0;
+    if (v >= 1000) return `${Math.round(v / 1000)}k`;
+    return String(v);
+  }
+
+  async function loadEfficiencyHistory() {
+    if (!efficiencyList) return;
+    efficiencyList.innerHTML = `<div class="efficiency-empty">Loading run history…</div>`;
+    try {
+      const res = await fetch("/api/history?limit=40");
+      const data = await res.json();
+      const runs = Array.isArray(data.runs) ? data.runs : [];
+      if (!runs.length) {
+        efficiencyList.innerHTML = `<div class="efficiency-empty" id="efficiencyEmpty">No completed runs yet.</div>`;
+        return;
+      }
+      efficiencyList.innerHTML = runs.map((run) => {
+        const agents = run.tokens_by_agent || {};
+        const top = Object.entries(agents)
+          .sort((a, b) => (b[1] || 0) - (a[1] || 0))
+          .slice(0, 4)
+          .map(([id, tok]) => `<li><span>${escapeHtml(String(id).split("/").pop())}</span><span>${_fmtTok(tok)}</span></li>`)
+          .join("");
+        const cost = run.estimated_cost_usd != null
+          ? `$${(Number(run.estimated_cost_usd) || 0).toFixed(3)}`
+          : "—";
+        const dur = run.duration_s != null ? `${Math.round(Number(run.duration_s))}s` : "—";
+        const dry = run.dry_run ? `<span class="efficiency-tag">DRY RUN</span>` : "";
+        return `<article class="efficiency-card">
+          <div class="efficiency-card-head">
+            <strong>${escapeHtml(String(run.run_id || "").slice(0, 12))}</strong>
+            ${dry}
+            <span class="efficiency-meta">${escapeHtml(String(run.status || ""))} · ${dur}</span>
+          </div>
+          <div class="efficiency-card-stats">
+            <span>${_fmtTok(run.total_tokens)} tokens</span>
+            <span>${cost}</span>
+            <span>${Number(run.total_retries) || 0} retries</span>
+          </div>
+          ${top ? `<ul class="efficiency-agents">${top}</ul>` : ""}
+        </article>`;
+      }).join("");
+    } catch (err) {
+      efficiencyList.innerHTML = `<div class="efficiency-empty">Could not load run history.</div>`;
+    }
+  }
+
   function setWorkspaceView(view) {
     workspaceView = view;
     if (!stageEl) return;

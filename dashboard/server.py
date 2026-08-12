@@ -37,6 +37,7 @@ Serves dashboard/ static files and run-control APIs:
   GET  /api/linkedin/review
   GET  /api/preview/estimate
   GET  /api/autofix
+  GET  /api/metrics?range=7d|30d|90d|all
   GET  /api/settings
   GET  /api/profile/resume-preview
   GET  /api/profile/resume-preview.pdf
@@ -137,6 +138,7 @@ from jobhunter_ai import kg_store  # noqa: E402
 from jobhunter_ai import model_catalog  # noqa: E402
 from jobhunter_ai import linkedin_review  # noqa: E402
 from jobhunter_ai import location_fit  # noqa: E402
+from jobhunter_ai import metrics as metrics_mod  # noqa: E402
 from jobhunter_ai import outcomes  # noqa: E402
 from jobhunter_ai import pipeline_store  # noqa: E402
 from jobhunter_ai import pipeline_sync  # noqa: E402
@@ -1078,6 +1080,16 @@ class DashboardHandler(SimpleHTTPRequestHandler):
         if path.startswith("/api/history"):
             limit = int(params.get("limit") or 50)
             return self._json(read_run_history(limit))
+        if path == "/api/metrics":
+            try:
+                range_days = metrics_mod.parse_range_param(params.get("range") or "30d")
+            except ValueError as exc:
+                return self._json({"ok": False, "error": str(exc)}, status=400)
+            try:
+                return self._json(metrics_mod.all_metrics(range_days))
+            except Exception as exc:
+                print(f"[dashboard] metrics error: {exc!r}")
+                return self._json({"ok": False, "error": str(exc)}, status=500)
         if path.startswith("/api/run/status"):
             return self._json(run_status())
         if path.startswith("/api/schedule"):

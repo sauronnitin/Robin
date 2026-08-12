@@ -4227,3 +4227,40 @@ html:not(.dark) .kg-graph-wrap { background: #f0f0f2; }
   text-underline-offset: 2px;
   cursor: pointer;
 }
+
+/* Efficiency tab (canvas Activity rail) */
+.efficiency-view { display: flex; flex-direction: column; gap: 10px; padding: 10px 12px 16px; min-height: 0; flex: 1; overflow: auto; }
+.efficiency-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; }
+.efficiency-title { font-size: 13px; font-weight: 600; color: var(--text); }
+.efficiency-sub { font-size: 11px; color: var(--dim); flex: 1; }
+.efficiency-list { display: flex; flex-direction: column; gap: 8px; }
+.efficiency-empty { font-size: 12px; color: var(--dim); padding: 16px 4px; }
+.efficiency-card {
+  border: 1px solid var(--hair);
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: var(--s2);
+}
+.efficiency-card-head {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+  font-size: 12px; color: var(--text); margin-bottom: 6px;
+}
+.efficiency-meta { color: var(--dim); font-size: 11px; }
+.efficiency-tag {
+  font-size: 10px; font-weight: 600; letter-spacing: 0.04em;
+  color: var(--warning, #fab219); border: 1px solid currentColor;
+  border-radius: 999px; padding: 1px 6px;
+}
+.efficiency-card-stats {
+  display: flex; flex-wrap: wrap; gap: 10px;
+  font-size: 11.5px; color: var(--dim); margin-bottom: 6px;
+}
+.efficiency-agents {
+  list-style: none; margin: 0; padding: 0;
+  display: flex; flex-direction: column; gap: 3px;
+}
+.efficiency-agents li {
+  display: flex; justify-content: space-between; gap: 8px;
+  font-size: 11px; color: var(--text);
+}
+.efficiency-agents li span:last-child { color: var(--dim); font-variant-numeric: tabular-nums; }

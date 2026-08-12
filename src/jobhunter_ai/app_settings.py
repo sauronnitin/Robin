@@ -56,8 +56,11 @@ SETTINGS_JSON_KEYS: frozenset[str] = frozenset(
         "notes",
         "preferred_theme",
         "apply_excludes_linkedin",
+        "manual_minutes_per_application",
     }
 )
+
+DEFAULT_MANUAL_MINUTES_PER_APPLICATION = 35
 
 
 def _reload_env() -> None:
@@ -80,17 +83,33 @@ def _bool_dry_run() -> bool:
     return _env_get("DRY_RUN").lower() in ("", "1", "true", "yes", "on")
 
 
+def _default_user_settings() -> dict[str, Any]:
+    return {
+        "apply_excludes_linkedin": True,
+        "manual_minutes_per_application": DEFAULT_MANUAL_MINUTES_PER_APPLICATION,
+    }
+
+
 def load_user_settings() -> dict[str, Any]:
+    defaults = _default_user_settings()
     if not _SETTINGS_PATH.is_file():
-        return {"apply_excludes_linkedin": True}
+        return dict(defaults)
     try:
         data = json.loads(_SETTINGS_PATH.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
-        return {"apply_excludes_linkedin": True}
+        return dict(defaults)
     if not isinstance(data, dict):
-        return {"apply_excludes_linkedin": True}
+        return dict(defaults)
     out = {k: v for k, v in data.items() if k in SETTINGS_JSON_KEYS}
     out.setdefault("apply_excludes_linkedin", True)
+    raw_minutes = out.get("manual_minutes_per_application")
+    try:
+        minutes = int(raw_minutes) if raw_minutes is not None else DEFAULT_MANUAL_MINUTES_PER_APPLICATION
+    except (TypeError, ValueError):
+        minutes = DEFAULT_MANUAL_MINUTES_PER_APPLICATION
+    out["manual_minutes_per_application"] = (
+        minutes if minutes > 0 else DEFAULT_MANUAL_MINUTES_PER_APPLICATION
+    )
     return out
 
 
@@ -98,6 +117,15 @@ def save_user_settings(patch: dict[str, Any]) -> dict[str, Any]:
     current = load_user_settings()
     for key, val in patch.items():
         if key not in SETTINGS_JSON_KEYS:
+            continue
+        if key == "manual_minutes_per_application":
+            try:
+                minutes = int(val)
+            except (TypeError, ValueError):
+                minutes = DEFAULT_MANUAL_MINUTES_PER_APPLICATION
+            current[key] = (
+                minutes if minutes > 0 else DEFAULT_MANUAL_MINUTES_PER_APPLICATION
+            )
             continue
         current[key] = val
     _USER_DIR.mkdir(parents=True, exist_ok=True)

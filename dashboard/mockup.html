@@ -1071,6 +1071,148 @@ nav {
 .st-note.is-cta { color: var(--st-sienna); font-weight: 500; }
 .st-note.is-done { color: var(--st-ash); }
 
+/* ── Dashboard metrics (SPEC.md §5) ── */
+.jh-metrics-range {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+}
+.jh-metrics-range-btn {
+  font-family: var(--st-sans);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--st-ash);
+  background: transparent;
+  border: 1px solid var(--st-border);
+  border-radius: 8px;
+  padding: 4px 10px;
+  cursor: pointer;
+}
+.jh-metrics-range-btn.is-active {
+  color: var(--st-ink);
+  border-color: #2a78d6;
+  background: rgba(42, 120, 214, 0.08);
+}
+html.dark .jh-metrics-range-btn.is-active {
+  border-color: #3987e5;
+  background: rgba(57, 135, 229, 0.15);
+}
+.jh-metrics-hero {
+  display: grid;
+  grid-template-columns: minmax(180px, 1.2fr) repeat(4, minmax(110px, 1fr));
+  gap: 12px;
+}
+@media (max-width: 1100px) {
+  .jh-metrics-hero { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+.jh-metrics-card {
+  background: rgba(255,255,255,0.78);
+  border-radius: 20px;
+  padding: 16px 18px;
+  box-shadow: 0 0 0 1px rgba(4,23,43,0.04), 0 8px 24px rgba(0,0,0,0.05);
+}
+html.dark .jh-metrics-card {
+  background: rgba(33,29,26,0.85);
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.06);
+}
+.jh-metrics-hero-value {
+  font-family: var(--st-serif, Georgia, serif);
+  font-size: 48px;
+  line-height: 1.05;
+  color: var(--st-ink);
+  letter-spacing: -0.02em;
+}
+.jh-metrics-stat-value {
+  font-family: var(--st-serif, Georgia, serif);
+  font-size: 28px;
+  line-height: 1.1;
+  color: var(--st-ink);
+}
+.jh-metrics-label {
+  font-size: 12px;
+  color: #898781;
+  margin-top: 4px;
+}
+.jh-metrics-hint {
+  font-size: 11.5px;
+  color: #898781;
+  margin-top: 6px;
+}
+.jh-metrics-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 6px;
+  min-height: 96px;
+  color: #898781;
+  font-size: 13px;
+}
+.jh-metrics-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+@media (max-width: 900px) {
+  .jh-metrics-grid-2 { grid-template-columns: 1fr; }
+}
+.jh-metrics-chart-scroll {
+  overflow-x: auto;
+  overflow-y: hidden;
+  width: 100%;
+}
+.jh-metrics-chart-scroll svg { display: block; }
+.jh-metrics-tooltip {
+  position: fixed;
+  z-index: 80;
+  pointer-events: none;
+  background: #211d1a;
+  color: #fafafb;
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  max-width: 240px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+}
+html:not(.dark) .jh-metrics-tooltip {
+  background: #211d1a;
+  color: #fafafb;
+}
+.jh-metrics-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+.jh-metrics-table th,
+.jh-metrics-table td {
+  text-align: left;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--st-border);
+  color: var(--st-ink);
+  vertical-align: middle;
+}
+.jh-metrics-table th { color: #898781; font-weight: 500; }
+.jh-metrics-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 500;
+}
+.jh-metrics-badge .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.jh-metrics-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.jh-metrics-title {
+  font-family: var(--st-serif, Georgia, serif);
+  font-size: 18px;
+  color: var(--st-ink);
+  margin-bottom: 10px;
+}
+
 /* ── Recent Applications panel ── */
 .st-panel {
   background: rgba(255,255,255,0.78);
@@ -2817,69 +2959,16 @@ html.dark .jh-asst-send { background: var(--st-peach); color: var(--st-sienna); 
       <div class="st-ink-bar">DRY_RUN: applications not submitted</div>
       <div class="h-11 flex-shrink-0 border-b border-slate-800 flex items-center px-5 gap-2 bg-slate-900/70">
         <span class="st-kicker">Dashboard</span>
+        <div class="flex-1"></div>
+        <div class="jh-metrics-range" id="metricsRange" role="group" aria-label="Date range">
+          <button type="button" class="jh-metrics-range-btn is-active" data-range="7d">7d</button>
+          <button type="button" class="jh-metrics-range-btn" data-range="30d">30d</button>
+          <button type="button" class="jh-metrics-range-btn" data-range="90d">90d</button>
+          <button type="button" class="jh-metrics-range-btn" data-range="all">All</button>
+        </div>
       </div>
-      <div class="flex-1 overflow-y-auto p-5 space-y-5">
-
-        <!-- Agent Pipeline (Kanban) - TOP -->
-        <div class="st-wash">
-          <h1 class="st-h1 mb-2">Agent Pipeline</h1>
-          <div class="text-[12px] text-slate-500 mb-6">Non-LinkedIn jobs queued for AI tailoring and apply. LinkedIn stays in LinkedIn Lab.</div>
-          <div id="kanban" class="flex gap-3 overflow-x-auto pb-3">
-            <!-- filled by renderKanban() -->
-          </div>
-        </div>
-
-        <!-- History + Recent Applications — shared tabbed card BOTTOM -->
-        <div class="st-panel">
-          <!-- Tab bar -->
-          <div class="st-tab-bar">
-            <button onclick="switchDashTab('recent')" id="dtab-recent" class="st-tab is-active">Recent Applications</button>
-            <button onclick="switchDashTab('history')" id="dtab-history" class="st-tab">History</button>
-          </div>
-
-          <!-- Recent pane -->
-          <div id="dpane-recent">
-            <div class="flex items-center gap-1.5 px-4 py-3 border-b border-slate-800 flex-wrap">
-              <button class="st-rchip is-active" onclick="filterDashApps('all')">All (0)</button>
-              <button class="st-rchip" onclick="filterDashApps('noresponse')">
-                <span class="st-rchip-dot"></span>No Response (0)
-              </button>
-              <button class="st-rchip" onclick="filterDashApps('rejected')">
-                <span class="st-rchip-dot"></span>Rejected (0)
-              </button>
-              <button class="st-rchip" onclick="filterDashApps('interview')">
-                <span class="st-rchip-dot"></span>Interview (0)
-              </button>
-              <button class="st-rchip st-rchip-approved" onclick="filterDashApps('approved')">
-                <span class="st-rchip-dot"></span>Approved (0)
-              </button>
-            </div>
-            <div class="h-32 flex flex-col items-center justify-center gap-1.5">
-              <span class="text-xl opacity-30">📭</span>
-              <div class="text-[12px] text-slate-500 text-center max-w-xs">No applications yet. Queue jobs from Browse to get started.</div>
-            </div>
-          </div>
-
-          <!-- History pane -->
-          <div id="dpane-history" class="hidden">
-            <div class="flex items-center justify-between px-5 py-3 border-b border-slate-800">
-              <div class="text-[11.5px] text-slate-500">Daily · last 7 days · 0 applications</div>
-              <div class="flex gap-1">
-                <button class="px-2.5 py-1 rounded-md border border-indigo-500/40 bg-indigo-950/40 text-indigo-400 text-[11px] font-medium">1W</button>
-                <button class="px-2.5 py-1 rounded-md border border-slate-800 text-slate-500 text-[11px] hover:border-slate-700 hover:text-slate-400">1M</button>
-                <button class="px-2.5 py-1 rounded-md border border-slate-800 text-slate-500 text-[11px] hover:border-slate-700 hover:text-slate-400">3M</button>
-                <button class="px-2.5 py-1 rounded-md border border-slate-800 text-slate-500 text-[11px] hover:border-slate-700 hover:text-slate-400">6M</button>
-                <button class="px-2.5 py-1 rounded-md border border-slate-800 text-slate-500 text-[11px] hover:border-slate-700 hover:text-slate-400">All</button>
-              </div>
-            </div>
-            <div class="h-32 flex flex-col items-center justify-center gap-1.5">
-              <span class="text-2xl opacity-30">📊</span>
-              <div class="text-[13px] font-medium text-slate-400">No applications in this period</div>
-              <div class="text-[12px] text-slate-600 text-center max-w-xs">Once the agent starts applying, your history will appear here.</div>
-            </div>
-          </div>
-        </div>
-
+      <div class="flex-1 overflow-y-auto overflow-x-hidden p-5 space-y-5" id="metricsRoot">
+        <div class="jh-metrics-loading text-[13px] text-slate-500">Loading metrics…</div>
       </div>
     </div>
 
@@ -3543,6 +3632,16 @@ html.dark .jh-asst-send { background: var(--st-peach); color: var(--st-sienna); 
             <div class="st-field-wrap"><label class="st-field-label" for="setApplicantCountry">Country</label>
               <input id="setApplicantCountry" type="text" class="st-field" placeholder="United States">
             </div>
+          </div>
+        </div>
+
+        <div class="st-mist-card space-y-3">
+          <div class="text-[13.5px] font-semibold text-slate-100">Metrics</div>
+          <p class="text-[12px] text-slate-500 leading-relaxed">Calibration for the Dashboard time-saved estimate. Labeled as an estimate, never as measured time.</p>
+          <div class="st-field-wrap max-w-xs">
+            <label class="st-field-label" for="setManualMinutes">Manual minutes per application</label>
+            <input id="setManualMinutes" type="number" min="1" max="480" step="1" class="st-field" value="35">
+            <p class="text-[11.5px] text-slate-500 mt-1.5 leading-relaxed">Used to estimate time saved. Your own honest average for finding, tailoring, and submitting one application by hand.</p>
           </div>
         </div>
 
@@ -5065,6 +5164,9 @@ function nav(s, opts){
   if(screenId==='settings'){
     loadSettings();
   }
+  if(screenId==='dashboard' && window.__jhMetrics){
+    window.__jhMetrics.load();
+  }
   if(screenId==='apply' && window.__jhApply){
     window.__jhApply.load();
   }
@@ -6419,6 +6521,13 @@ function applySettingsPayload(data){
   const country = document.getElementById('setApplicantCountry');
   if(country) country.value = env.APPLICANT_COUNTRY || '';
 
+  const prefs = data.prefs || {};
+  const minutes = document.getElementById('setManualMinutes');
+  if(minutes){
+    const m = prefs.manual_minutes_per_application;
+    minutes.value = (m != null && m !== '') ? String(m) : '35';
+  }
+
   const oauth = document.getElementById('setOauthStatus');
   if(oauth){
     const g = data.google_oauth || {};
@@ -6505,11 +6614,17 @@ async function saveSettings(){
   if(gem) env.GEMINI_API_KEY = gem;
   if(groq) env.GROQ_API_KEY = groq;
   if(serp) env.SERPAPI_API_KEY = serp;
+  const minutesEl = document.getElementById('setManualMinutes');
+  const prefs = {
+    manual_minutes_per_application: minutesEl
+      ? Math.max(1, parseInt(minutesEl.value, 10) || 35)
+      : 35,
+  };
   try{
     const res = await fetch(`${API}/api/settings`, {
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ env }),
+      body: JSON.stringify({ env, prefs }),
     });
     const data = await res.json().catch(()=>({}));
     if(!res.ok || data.ok === false){
@@ -6701,6 +6816,7 @@ function switchDashTab(t){
   ['recent','history'].forEach(x=>{
     const btn=document.getElementById('dtab-'+x);
     const pane=document.getElementById('dpane-'+x);
+    if(!btn || !pane) return;
     if(x===t){
       btn.classList.add('is-active');
       pane.classList.remove('hidden');
@@ -6963,6 +7079,7 @@ function toggleSteepTheme(){
   window.THREE = THREE;
 </script>
 <script src="apply.js"></script>
+<script src="metrics.js"></script>
 <script src="knowledge-graph.js"></script>
 <script src="mockup-chat.js"></script>
 </body>
