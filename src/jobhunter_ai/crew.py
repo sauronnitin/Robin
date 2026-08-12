@@ -886,6 +886,12 @@ def _dashboard_step_callback(step_output) -> None:
     )
 
 
+# Sentinel distinct from any real LLM return value (including None/"") so
+# _try_fallback can report "no fallback was available or it also failed"
+# without that ever being confused with a real (possibly empty) response.
+_NO_FALLBACK = object()
+
+
 class GroqLLM(LLM):
     """crewai marks every message with a cache_breakpoint flag for
     prompt-caching-capable providers, then only strips it for Anthropic
@@ -923,6 +929,14 @@ class GroqLLM(LLM):
             raise RuntimeError("Run aborted while paused") from None
 
     def call(self, *args, **kwargs):
+        # Not a real completion kwarg - popped before any super().call() so it
+        # never reaches litellm. Caps a fallback chain at exactly one hop:
+        # _groq_70b and _gemini_flash are each other's fallback_llm, so
+        # without this a call that fails on BOTH would ping-pong between them
+        # until the stack or the API quota gives out. See _try_fallback on
+        # GeminiLLM for the matching half of this guard.
+        kwargs = dict(kwargs)
+        _fallback_depth = kwargs.pop("_fallback_depth", 0)
         max_attempts = 6
         for attempt in range(1, max_attempts + 1):
             self._gate_pause()
@@ -994,7 +1008,7 @@ class GroqLLM(LLM):
                     continue
                 if attempt == max_attempts or payload_too_large:
                     fallback = getattr(self, "fallback_llm", None)
-                    if fallback is not None:
+                    if fallback is not None and _fallback_depth < 1:
                         print(
                             f"[GroqLLM] TPM exhausted after {max_attempts} attempts, "
                             f"falling back to {fallback.model}..."
@@ -1022,6 +1036,7 @@ class GroqLLM(LLM):
                             fb_kwargs = dict(kwargs)
                             if fb_kwargs.get("tools") is not None:
                                 fb_kwargs["tools"] = copy.deepcopy(fb_kwargs["tools"])
+                            fb_kwargs["_fallback_depth"] = _fallback_depth + 1
                             return fallback.call(*args, **fb_kwargs)
                         except Exception as fb_exc:
                             print(f"[GroqLLM] Fallback also failed: {fb_exc!r}")
@@ -1121,7 +1136,45 @@ class GeminiLLM(LLM):
         if decision == "abort":
             raise RuntimeError("Run aborted while paused") from None
 
+    def _try_fallback(self, reason: str, depth: int, *args, **kwargs):
+        """Promote to fallback_llm on an exhausted Gemini failure.
+
+        Gemini has no further fallback of its own -- unlike GroqLLM, whose
+        TPM-exhaustion path already promotes to Gemini, a Gemini-side failure
+        here used to always pause the whole run for a human, even for a
+        transient 503 or an empty-choices response. Mirrors GroqLLM.call's
+        fallback block exactly, including the one-hop depth cap: _groq_70b
+        and _gemini_flash are each other's fallback_llm, so without the cap a
+        call that fails on both would ping-pong between them indefinitely.
+        Returns _NO_FALLBACK if there is no fallback_llm configured, depth is
+        already at the cap, or the fallback call itself also failed (in which
+        case the caller should fall through to its normal pause-for-user path
+        using the ORIGINAL Gemini error, not this one).
+        """
+        fallback = getattr(self, "fallback_llm", None)
+        if fallback is None or depth >= 1:
+            return _NO_FALLBACK
+        print(f"[GeminiLLM] {reason}, falling back to {fallback.model}...")
+        events_bus.emit(
+            "llm",
+            status="retrying",
+            detail={"label": "LLM call (promoted to fallback)", "model": fallback.model},
+        )
+        try:
+            fb_kwargs = dict(kwargs)
+            if fb_kwargs.get("tools") is not None:
+                fb_kwargs["tools"] = copy.deepcopy(fb_kwargs["tools"])
+            fb_kwargs["_fallback_depth"] = depth + 1
+            return fallback.call(*args, **fb_kwargs)
+        except Exception as fb_exc:
+            print(f"[GeminiLLM] Fallback also failed: {fb_exc!r}")
+            return _NO_FALLBACK
+
     def call(self, *args, **kwargs):
+        # See GroqLLM.call's matching comment - popped before any
+        # super().call() so it never reaches litellm.
+        kwargs = dict(kwargs)
+        _fallback_depth = kwargs.pop("_fallback_depth", 0)
         max_attempts = 4
         for attempt in range(1, max_attempts + 1):
             self._gate_pause()
@@ -1176,6 +1229,9 @@ class GeminiLLM(LLM):
                         f"Gemini rate/quota limit after {attempt} attempt(s): "
                         f"{str(exc)[:300]}"
                     )
+                    fb_result = self._try_fallback("rate/quota limit", _fallback_depth, *args, **kwargs)
+                    if fb_result is not _NO_FALLBACK:
+                        return fb_result
                     print(f"[GeminiLLM] {msg} Pausing for user confirmation.")
                     events_bus.emit(
                         "error",
@@ -1217,6 +1273,9 @@ class GeminiLLM(LLM):
                     detail={"error": msg, "raw": str(exc)[:400]},
                 )
                 if attempt == max_attempts:
+                    fb_result = self._try_fallback("empty choices", _fallback_depth, *args, **kwargs)
+                    if fb_result is not _NO_FALLBACK:
+                        return fb_result
                     self._pause_for_user(
                         error=msg,
                         suggestion=(
@@ -1265,6 +1324,10 @@ class GeminiLLM(LLM):
                     status="failed",
                     detail={"error": err},
                 )
+                if attempt == max_attempts:
+                    fb_result = self._try_fallback("unhandled error", _fallback_depth, *args, **kwargs)
+                    if fb_result is not _NO_FALLBACK:
+                        return fb_result
                 # Avoid "quota" in suggestion unless the error itself is quota,
                 # so error_bus does not mislabel empty responses as rate limits.
                 suggestion = (
@@ -1340,7 +1403,20 @@ _gemini_flash = GeminiLLM(model=_GEMINI_FLASH, temperature=0.2, is_litellm=True,
 # dashboard/run_plan.json's fallback_llm field is display-only (AutoFix
 # "promote fallback" only ever edited that JSON for the UI, never anything
 # a live agent actually reads) - this .fallback_llm attribute is what
-# GroqLLM.call() actually invokes when Groq's TPM rate limit is exhausted.
+# GroqLLM.call() / GeminiLLM.call() actually invoke when their own retries
+# are exhausted.
+#
+# job_fit_analyst, resume_tailor, cover_letter_writer,
+# content_humanizer_ai_detection_specialist, and
+# latex_resume_compiler_drive_publisher all run on _gemini_flash as PRIMARY,
+# not as a fallback - commit aac5484 moved them there because Groq 70B's
+# 12K TPM ceiling made it unreliable across a multi-job run. That reasoning
+# holds; what didn't was that Gemini itself then had nothing behind it, so a
+# transient Gemini 503 or empty-choices response (both seen live, run
+# b8866b0f71df, 2026-08-12) crashed the whole crew process instead of
+# retrying anywhere. _groq_70b as Gemini's fallback closes that gap
+# symmetrically with the Groq agents below.
+_gemini_flash.fallback_llm = _groq_70b
 _groq_8b.fallback_llm = _gemini_flash
 _groq_70b.fallback_llm = _gemini_flash
 
