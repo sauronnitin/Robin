@@ -136,6 +136,7 @@ from jobhunter_ai.job_sources.registry import REGISTRY as JOB_SOURCE_REGISTRY  #
 from jobhunter_ai import kg_store  # noqa: E402
 from jobhunter_ai import model_catalog  # noqa: E402
 from jobhunter_ai import linkedin_review  # noqa: E402
+from jobhunter_ai import location_fit  # noqa: E402
 from jobhunter_ai import outcomes  # noqa: E402
 from jobhunter_ai import pipeline_store  # noqa: E402
 from jobhunter_ai import pipeline_sync  # noqa: E402
@@ -198,6 +199,29 @@ def _interval_minutes_from_trigger(trigger: dict | None) -> float | None:
         "monthly": 43200.0,
     }
     return presets.get(preset)
+
+
+def _tag_locations(grouped: dict) -> str:
+    """Band every application by location against the candidate's own country.
+
+    Computed on read rather than stored: the home country lives in the profile
+    and can change, and a cached band would quietly go stale behind it.
+    """
+    try:
+        home = location_fit.home_country(jobcrew_profile.load_profile())
+    except Exception as exc:  # noqa: BLE001 - the board must still render
+        print(f"[location] banding skipped: {exc!r}")
+        return ""
+
+    for rows in grouped.values():
+        for row in rows:
+            band = location_fit.classify(
+                row.get("location") or "", home, row.get("work_mode") or ""
+            )
+            row["location_band"] = band
+            row["location_label"] = location_fit.label(band)
+        rows.sort(key=lambda r: location_fit.sort_key(r.get("location_band", "unknown")))
+    return home
 
 
 def _persist_run_plan(plan: dict | None) -> Path | None:
@@ -1111,6 +1135,7 @@ class DashboardHandler(SimpleHTTPRequestHandler):
         if path == "/api/pipeline":
             try:
                 grouped = pipeline_store.list_pipeline()
+                home = _tag_locations(grouped)
                 return self._json(
                     {
                         "ok": True,
@@ -1118,6 +1143,7 @@ class DashboardHandler(SimpleHTTPRequestHandler):
                         "pipeline": grouped,
                         "counts": {k: len(v) for k, v in grouped.items()},
                         "pending": pipeline_store.pending_confirmations(),
+                        "home_country": home,
                     }
                 )
             except Exception as exc:

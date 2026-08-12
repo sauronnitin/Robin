@@ -67,7 +67,7 @@
 
   var state = {
     pipeline: {}, counts: {}, pending: [],
-    selected: null, loading: false, sample: false
+    selected: null, loading: false, sample: false, home: ''
   };
 
   // ── Sample walkthrough ───────────────────────────────────────────────────
@@ -224,6 +224,23 @@
       + '</div>';
   }
 
+  // Where the job is, against where the candidate is. Home country is the
+  // default and the priority; another country usually means sponsorship, which
+  // is a different decision from whether the job is any good.
+  var LOCATION_ICONS = { home: '★', remote: '⌂', unknown: '?', elsewhere: '✈' };
+
+  function locationHtml(app) {
+    var band = app.location_band;
+    if (!band) return '';
+    var where = app.location || app.location_label || '';
+    return '<div class="jh-apply-loc is-' + esc(band) + '" title="'
+      + esc((app.location_label || band) + (state.home ? ' · you are in ' + state.home : ''))
+      + '">'
+      + '<span class="jh-apply-loc-icon" aria-hidden="true">' + (LOCATION_ICONS[band] || '·') + '</span>'
+      + '<span class="jh-apply-loc-text">' + esc(where || app.location_label || band) + '</span>'
+      + '</div>';
+  }
+
   function cardHtml(app) {
     var m = meta(app.status);
     var score = (app.fit_score === null || app.fit_score === undefined)
@@ -237,6 +254,7 @@
       + score
       + '  </div>'
       + '  <div class="jh-apply-title">' + esc(app.title || '') + '</div>'
+      + locationHtml(app)
       + metricsHtml(app)
       + '  <div class="jh-apply-meta">' + statusPill(app.status)
       + (state.sample ? '<span class="jh-apply-sample-tag">Sample</span>' : '')
@@ -477,6 +495,7 @@
       + '  <button class="jh-apply-btn" id="applyDetailClose" aria-label="Close">✕</button>'
       + '</div>'
       + '<div class="jh-apply-detail-row">' + statusPill(app.status)
+      + locationHtml(app)
       + atsBar(app)
       + (app.dry_run ? '<span class="jh-apply-dry-tag">Dry run — not submitted</span>' : '')
       + (app.fit_score != null ? '<span class="jh-apply-score">' + Math.round(app.fit_score) + '</span>' : '')
@@ -555,6 +574,7 @@
       state.pipeline = data.pipeline || {};
       state.counts = data.counts || {};
       state.pending = data.pending || [];
+      state.home = data.home_country || '';
       render();
       updateBadge();
     } catch (err) {

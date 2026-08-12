@@ -265,6 +265,35 @@
   line-height: 1.35;
 }
 
+/* Where the job is, against where the candidate is. §5.3 good for in-country,
+   muted for everything else — with an icon and the place name, never colour
+   carrying it alone. */
+.jh-apply-loc {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 6px;
+  font-family: var(--st-sans);
+  font-size: 11px;
+  color: var(--st-slate);
+  min-width: 0;
+}
+
+.jh-apply-loc-icon { flex-shrink: 0; font-size: 10px; }
+
+.jh-apply-loc-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.jh-apply-loc.is-home .jh-apply-loc-icon { color: #0ca30c; }
+.jh-apply-loc.is-home .jh-apply-loc-text { color: var(--st-ink); }
+.jh-apply-loc.is-remote .jh-apply-loc-icon { color: #2a78d6; }
+.jh-apply-loc.is-elsewhere { opacity: 0.75; }
+.jh-apply-loc.is-elsewhere .jh-apply-loc-icon { color: #ec835a; }
+.jh-apply-loc.is-unknown { opacity: 0.7; }
+
 /* Every metric the pipeline holds for this job, in one row. */
 .jh-apply-metrics {
   display: grid;

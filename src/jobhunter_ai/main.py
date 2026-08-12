@@ -26,14 +26,18 @@ def run():
 
     # The search describes the candidate, not a list in a config file. These
     # come from the roles on their own resume (see role_profile).
+    from jobhunter_ai import location_fit
     from jobhunter_ai import profile as jobcrew_profile
     from jobhunter_ai import role_profile
 
-    role = role_profile.ensure(jobcrew_profile.load_profile())
+    user_profile = jobcrew_profile.load_profile()
+    role = role_profile.ensure(user_profile)
+    home = location_fit.home_country(user_profile)
     titles = jobcrew_profile.search_titles()
     print(
         f"[jobhunter] searching as {role.get('primary_title') or 'unknown role'}"
-        f" ({role.get('seniority')}): {', '.join(titles) or 'no titles derived'}"
+        f" ({role.get('seniority')}) based in {home}:"
+        f" {', '.join(titles) or 'no titles derived'}"
     )
 
     inputs = {
@@ -43,6 +47,7 @@ def run():
         "search_titles": ", ".join(f'"{t}"' for t in titles),
         "primary_role": role.get("primary_title") or "",
         "seniority": role.get("seniority") or "senior",
+        "home_country": home,
     }
     try:
         graph_crew = crew_from_env_or_default()

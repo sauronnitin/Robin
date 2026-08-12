@@ -703,12 +703,46 @@ def _drop_off_role(jobs: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return kept
 
 
+def _prioritise_home_country(jobs: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Order the batch home country first, then open remote, then the rest.
+
+    Universal rule, not a US one: the country comes from the candidate's own
+    profile, so a user in India gets India-first on the same code path. Fit
+    still ranks within a band - this decides which band gets the batch slot,
+    not which job is better.
+    """
+    try:
+        from jobhunter_ai import location_fit
+        from jobhunter_ai import profile as jobcrew_profile
+
+        home = location_fit.home_country(jobcrew_profile.load_profile())
+    except Exception as exc:  # noqa: BLE001 - ordering must not break a run
+        print(f"[location] priority skipped: {exc!r}")
+        return jobs
+
+    def key(job: dict[str, Any]) -> tuple[int, float]:
+        band = location_fit.classify(
+            str(job.get("location") or ""), home, str(job.get("work_mode") or "")
+        )
+        job["location_band"] = band
+        return (location_fit.sort_key(band), -_job_score(job))
+
+    ordered = sorted(jobs, key=key)
+    if ordered:
+        head = ordered[0]
+        print(
+            f"[location] home={home}; batch leader {head.get('company', '?')} "
+            f"({head.get('location_band')})"
+        )
+    return ordered
+
+
 def _select_tailor_batch(
     scored_text: str,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], str]:
     """Merge newly scored jobs with the durable queue; take top N for this run."""
     scored = _drop_off_role(_parse_scored_jobs(scored_text))
-    pooled = _merge_jobs(_load_job_queue(), scored)
+    pooled = _prioritise_home_country(_merge_jobs(_load_job_queue(), scored))
     batch = pooled[:_TAILOR_BATCH_SIZE]
     remaining = pooled[_TAILOR_BATCH_SIZE:]
     # No queue file to rewrite: this run's scores are persisted by the task
