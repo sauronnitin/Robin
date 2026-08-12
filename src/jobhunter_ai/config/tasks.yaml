@@ -192,14 +192,22 @@ tailor_resume_per_job:
   - score_and_prioritise_jobs
 write_cover_letters:
   description: |-
-    For each job in the results, FIRST determine whether a cover letter is required.
+    For each job in the results, use the cover_letter_gate field already injected
+    into Tailor's output. Do NOT try to re-read a job description: this task's
+    context never includes one.
 
     COVER LETTER GATE (important):
-    - Only write a cover letter if the job description EXPLICITLY requires or requests one - e.g. phrases like "cover letter required", "please include a cover letter", "submit a cover letter", "tell us why you want to work here", or a clear application prompt asking for a written note.
-    - If the listing does NOT clearly ask for a cover letter, SKIP it: set cover_letter_required = false, cover_letter_text = "", cover_letter_doc_link = "N/A - not required", and do NOT create a Google Doc for it.
-    - Listings rarely state this explicitly. When in doubt and there is no clear request, treat it as NOT required and skip.
+    - cover_letter_gate is one of: required, not_required, unknown.
+    - required: the posting explicitly asked for a cover letter. Write one.
+      cover_letter_gate_signal (when present) is the matched phrase in context.
+    - not_required: the posting was checked and no explicit ask was found. SKIP:
+      set cover_letter_required = false, cover_letter_text = "",
+      cover_letter_doc_link = "N/A - not required", and do NOT create a Google Doc.
+    - unknown: posting text was unavailable, so the gate could not be checked.
+      This is a real, distinct state, not a guess. Keep the conservative default
+      and SKIP (same fields as not_required). Do not invent a requirement.
 
-    When a cover letter IS required, write a tailored, human-sounding cover letter.
+    When cover_letter_gate is required, write a tailored, human-sounding cover letter.
 
     Cover letter structure (3 paragraphs):
     1. Hook: Open with a specific, genuine reason why this company/role excites the candidate. Reference something specific about the company or role - never generic.
@@ -222,7 +230,7 @@ write_cover_letters:
   expected_output: 'A list of jobs, each paired with: Company Name, Job Title, Job
     URL, cover_letter_required (true/false), the cover letter text (empty when not
     required), and a Google Doc link (or ''N/A - not required''). Cover letters and
-    Docs are produced ONLY for jobs whose listing explicitly requires one.'
+    Docs are produced ONLY when cover_letter_gate is required.'
   agent: cover_letter_writer
   context:
   - tailor_resume_per_job

@@ -359,6 +359,32 @@ def _ats_target_line(job: dict[str, Any]) -> str:
     )
 
 
+# Phrases from write_cover_letters' COVER LETTER GATE in tasks.yaml. That
+# task's context is Tailor output, which never carries description (D-3).
+_COVER_LETTER_ASK_RE = re.compile(
+    r"cover letter (?:is )?required"
+    r"|please include a cover letter"
+    r"|submit a cover letter"
+    r"|tell us why you want to work here"
+    r"|asking for a written note",
+    re.I,
+)
+
+
+def _cover_letter_required(description: str) -> tuple[bool, str]:
+    """Whether a posting explicitly asks for a cover letter, and the
+    matched phrase in context -- deterministic, mirrors
+    write_cover_letters' own gate criteria in tasks.yaml. Exists because
+    that task's context never carries description at all (D-3): an LLM
+    asked to judge this without ever seeing the posting can only guess."""
+    text = description or ""
+    match = _COVER_LETTER_ASK_RE.search(text)
+    if not match:
+        return False, ""
+    start, end = max(0, match.start() - 40), min(len(text), match.end() + 40)
+    return True, text[start:end].strip()
+
+
 def _format_job_block(job: dict[str, Any], index: int) -> str:
     ats_line = _ats_target_line(job)
     suffix = f"\n{ats_line}" if ats_line else ""
@@ -516,6 +542,17 @@ def _tailor_ats_guardrail(task_output) -> tuple[bool, Any]:
                 "job_title": job.get("Job Title") or job.get("job_title") or "",
             }
             posting = _posting_for(entry)
+            required, signal = (
+                _cover_letter_required(posting) if posting else (False, "")
+            )
+            job["cover_letter_gate"] = (
+                "required"
+                if required
+                else ("unknown" if not posting else "not_required")
+            )
+            if signal:
+                job["cover_letter_gate_signal"] = signal
+
             latex = job.get("resume_latex")
             if not posting or not isinstance(latex, str) or len(latex) < 400:
                 continue
@@ -553,7 +590,7 @@ def _tailor_ats_guardrail(task_output) -> tuple[bool, Any]:
                 "Experience bullet. Do not invent employment, tools, or metrics. "
                 "Re-output the full JSON array.\n" + "\n".join(shortfalls)
             )
-        return True, raw
+        return True, json.dumps(jobs, ensure_ascii=False)
     except (json.JSONDecodeError, TypeError) as exc:
         print(f"[ats] guardrail skipped (passing tailor output through): {exc}")
         return True, raw
