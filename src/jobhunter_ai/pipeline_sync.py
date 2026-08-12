@@ -173,6 +173,42 @@ def classify_submission(status_text: str) -> str:
     return "failed"
 
 
+def queue_job(record: dict[str, Any], *, conn=None) -> dict[str, Any]:
+    """Queue one job the user deliberately picked in Browse.
+
+    This is the only way a job enters the pipeline by hand. It lands at
+    `discovered` - the crew decides nothing here, the user did.
+    """
+    canonical = _coerce_record(record or {})
+    job = _identity(canonical)
+    if job is None:
+        raise ValueError("a job needs a URL, or both a company and a title")
+
+    job_id = pipeline_store.upsert_job(job, conn=conn)
+    fields: dict[str, Any] = {}
+    score = _as_float(canonical.get("fit_score"))
+    if score is not None:
+        fields["fit_score"] = score
+
+    application_id = pipeline_store.record_application(
+        job_id,
+        None,
+        source="user",
+        detail="queued from Browse",
+        conn=conn,
+        **fields,
+    )
+    item = pipeline_store.get_application(application_id, conn=conn)
+    return {
+        "ok": True,
+        "application_id": application_id,
+        "job_id": job_id,
+        "status": (item or {}).get("status", "discovered"),
+        "company": job.company,
+        "title": job.title,
+    }
+
+
 def sync_task_output(
     task_key: str,
     text: str,

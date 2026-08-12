@@ -17,6 +17,7 @@ Serves dashboard/ static files and run-control APIs:
   POST /api/job-sources/scan
   GET  /api/pipeline
   GET  /api/pipeline/detail?id=N
+  POST /api/pipeline/queue
   POST /api/pipeline/status
   GET  /api/outcomes/scan?days=N
   POST /api/outcomes/confirm
@@ -136,6 +137,7 @@ from jobhunter_ai import model_catalog  # noqa: E402
 from jobhunter_ai import linkedin_review  # noqa: E402
 from jobhunter_ai import outcomes  # noqa: E402
 from jobhunter_ai import pipeline_store  # noqa: E402
+from jobhunter_ai import pipeline_sync  # noqa: E402
 from jobhunter_ai import profile as jobcrew_profile  # noqa: E402
 from jobhunter_ai import resume_parse  # noqa: E402
 
@@ -1371,6 +1373,16 @@ class DashboardHandler(SimpleHTTPRequestHandler):
                 return self._json({"ok": True, **catalog, "scan": report})
             except Exception as exc:
                 print(f"[dashboard] job-sources scan failed: {exc!r}")
+                return self._json({"ok": False, "error": str(exc)}, status=500)
+        if path == "/api/pipeline/queue":
+            try:
+                if not isinstance(body, dict):
+                    return self._json({"ok": False, "error": "JSON object required"}, status=400)
+                return self._json(pipeline_sync.queue_job(body))
+            except ValueError as exc:
+                return self._json({"ok": False, "error": str(exc)}, status=400)
+            except Exception as exc:
+                print(f"[dashboard] pipeline/queue failed: {exc!r}")
                 return self._json({"ok": False, "error": str(exc)}, status=500)
         if path == "/api/pipeline/status":
             try:

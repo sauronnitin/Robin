@@ -6,6 +6,9 @@ gcp-service-account.json
 google-oauth-client.json
 google-oauth-token.json
 google-oauth-token.json.bak
+gmail_token.json
+token.json
+credentials.json
 Google Auth/
 
 # Browser / sessions
