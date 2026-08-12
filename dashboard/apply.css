@@ -234,6 +234,45 @@
   line-height: 1.35;
 }
 
+/* ATS match. §5.3 good / warning — always with the number beside it. */
+.jh-apply-ats {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 7px;
+  font-family: var(--st-sans);
+  font-size: 10.5px;
+  color: var(--st-slate);
+}
+
+.jh-apply-ats-label {
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--st-ash);
+}
+
+.jh-apply-ats-from { color: var(--st-ash); }
+.jh-apply-ats-value { font-variant-numeric: tabular-nums; color: var(--st-ink); font-weight: 600; }
+
+.jh-apply-ats-track {
+  flex: 1;
+  height: 3px;
+  min-width: 32px;
+  border-radius: 999px;
+  background: var(--st-border);
+  overflow: hidden;
+}
+
+.jh-apply-ats-track > span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--st-ash);
+}
+
+.jh-apply-ats.is-good .jh-apply-ats-track > span { background: #0ca30c; }
+.jh-apply-ats.is-low .jh-apply-ats-track > span { background: #fab219; }
+
 .jh-apply-meta {
   display: flex;
   align-items: center;

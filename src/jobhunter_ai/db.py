@@ -196,6 +196,14 @@ CREATE TABLE outreach (
     """
 ALTER TABLE application ADD COLUMN dry_run INTEGER NOT NULL DEFAULT 0;
 """,
+    # Keyword match of the resume against this posting, before and after
+    # tailoring. Separate from fit_score, which judges whether the job is worth
+    # applying to at all - these two move independently and answer different
+    # questions.
+    """
+ALTER TABLE application ADD COLUMN ats_before REAL;
+ALTER TABLE application ADD COLUMN ats_after REAL;
+""",
 ]
 
 

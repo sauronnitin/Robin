@@ -171,10 +171,39 @@
       + '<span aria-hidden="true">' + m.icon + '</span>' + esc(m.label) + '</span>';
   }
 
+  // Keyword match of the resume against this posting - a different question
+  // from fit, so it gets its own row rather than sitting next to the fit score
+  // where the two would read as one number.
+  var ATS_FLOOR = 65;
+
+  function atsBar(app) {
+    var before = app.ats_before;
+    var after = app.ats_after;
+    if (before === null || before === undefined) {
+      if (after === null || after === undefined) return '';
+    }
+    var current = (after === null || after === undefined) ? before : after;
+    var tone = current >= ATS_FLOOR ? 'is-good' : 'is-low';
+    var arrow = (after !== null && after !== undefined && before !== null && before !== undefined)
+      ? '<span class="jh-apply-ats-from">' + Math.round(before) + ' →</span> '
+      : '';
+    var label = (after !== null && after !== undefined) ? 'after tailoring' : 'base resume';
+    return ''
+      + '<div class="jh-apply-ats ' + tone + '" title="Keyword match against this posting ('
+      + esc(label) + ')">'
+      + '  <span class="jh-apply-ats-label">ATS</span>'
+      + arrow
+      + '  <span class="jh-apply-ats-value">' + Math.round(current) + '</span>'
+      + '  <span class="jh-apply-ats-track"><span style="width:'
+      + Math.max(2, Math.min(100, current)) + '%"></span></span>'
+      + '</div>';
+  }
+
   function cardHtml(app) {
     var m = meta(app.status);
     var score = (app.fit_score === null || app.fit_score === undefined)
-      ? '' : '<span class="jh-apply-score">' + Math.round(app.fit_score) + '</span>';
+      ? '' : '<span class="jh-apply-score" title="Fit: is this job worth applying to">'
+             + Math.round(app.fit_score) + '</span>';
     var when = app.applied_at || app.updated_at;
     return ''
       + '<article class="jh-apply-card" data-app="' + app.id + '" style="--apply-color:' + m.color + '" tabindex="0">'
@@ -183,6 +212,7 @@
       + score
       + '  </div>'
       + '  <div class="jh-apply-title">' + esc(app.title || '') + '</div>'
+      + atsBar(app)
       + '  <div class="jh-apply-meta">' + statusPill(app.status)
       + (state.sample ? '<span class="jh-apply-sample-tag">Sample</span>' : '')
       // A rehearsal must never read as a sent application.

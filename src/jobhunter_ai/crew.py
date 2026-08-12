@@ -17,6 +17,7 @@ from crewai.project import CrewBase, agent, crew, task
 from crewai.llms.cache import CACHE_BREAKPOINT_KEY
 from jobhunter_ai.tools.scrape_website_truncated import TruncatedScrapeWebsiteTool
 from jobhunter_ai.tools.job_apis import JobApisTool
+from jobhunter_ai import ats_score
 from jobhunter_ai import events_bus
 from jobhunter_ai import latex_sanitize
 from jobhunter_ai import pipeline_store
@@ -75,6 +76,12 @@ def _usage_delta(before: dict[str, int], after: dict[str, int]) -> dict[str, int
 # tokens so Groq succeeds directly. Overflow jobs stay at `scored` in the
 # application table and get picked up on the next run.
 _TAILOR_BATCH_SIZE = 1
+
+# Below this a job is not worth a tailoring cycle or an application slot. Raised
+# from 25: at 25 the queue filled with roles the candidate was a weak match for,
+# and every one of them still cost a full tailor + compile + apply pass.
+_MIN_QUALIFYING_SCORE = 45.0
+_BASE_RESUME_PATH = Path(__file__).resolve().parents[2] / "resume" / "base_resume.tex"
 _PROJECT_ROOT = Path(__file__).resolve().parents[2]
 _FIELD_RE = re.compile(
     r"^\*{0,2}(?P<key>Job Title|Title|Company(?: Name)?|Location|Work Mode|"
@@ -172,7 +179,7 @@ def _parse_scored_jobs(text: str) -> list[dict[str, Any]]:
                             score = float(score_raw)
                         except (TypeError, ValueError):
                             score = 0.0
-                        if score < 25:
+                        if score < _MIN_QUALIFYING_SCORE:
                             continue
                         normalized.append(
                             {
@@ -235,7 +242,7 @@ def _parse_scored_jobs(text: str) -> list[dict[str, Any]]:
         if not url or not score_m:
             continue
         score = float(score_m.group(1))
-        if score < 25:
+        if score < _MIN_QUALIFYING_SCORE:
             continue
         jobs.append(
             {
@@ -274,12 +281,72 @@ def _merge_jobs(
     return sorted(by_url.values(), key=_job_score, reverse=True)
 
 
+def _posting_for(job: dict[str, Any]) -> str:
+    """The stored job description for a batch entry, if we have one.
+
+    Only jobs queued from Browse carry their posting text - the Score task's
+    output does not include it. So ATS targeting applies to the user's own
+    picks, and everything else tailors the way it did before.
+    """
+    url = _job_url(job)
+    company = str(job.get("company") or "").strip()
+    title = str(job.get("job_title") or "").strip()
+    if not url and not (company and title):
+        return ""
+    try:
+        conn = pipeline_store.connect()
+    except Exception:  # noqa: BLE001
+        return ""
+    try:
+        row = None
+        if url:
+            row = conn.execute(
+                "SELECT description FROM job WHERE url = ?", (url,)
+            ).fetchone()
+        if row is None and company and title:
+            row = conn.execute(
+                "SELECT description FROM job WHERE company = ? AND title = ?",
+                (company, title),
+            ).fetchone()
+        return (row["description"] or "") if row else ""
+    except Exception:  # noqa: BLE001 - never fail a run over a lookup
+        return ""
+    finally:
+        conn.close()
+
+
+def _ats_target_line(job: dict[str, Any]) -> str:
+    """A compact instruction telling Tailor exactly which keywords are missing.
+
+    A short ranked list, never the posting itself (Rule 1): the agent needs the
+    gap, not another copy of the JD it is already being shown.
+    """
+    posting = _posting_for(job)
+    if not posting:
+        return ""
+    try:
+        base_latex = _BASE_RESUME_PATH.read_text(encoding="utf-8")
+    except OSError:
+        return ""
+    result = ats_score.score_latex(posting, base_latex)
+    if not result.detail.get("terms"):
+        return ""
+    missing = result.gap_summary(14)
+    return (
+        f"**ATS TARGET**: base resume matches this posting at {result.score:.0f}/100. "
+        f"Minimum acceptable after tailoring: {ats_score.MINIMUM_SCORE:.0f}. Aim higher. "
+        f"Missing keywords, highest value first: {missing or '(none - keep the match)'}"
+    )
+
+
 def _format_job_block(job: dict[str, Any], index: int) -> str:
+    ats_line = _ats_target_line(job)
+    suffix = f"\n{ats_line}" if ats_line else ""
     raw = (job.get("raw_block") or "").strip()
     if raw and ("**Fit Score**" in raw or "Fit Score" in raw):
         # Prefer original Score wording when present (drop leading "N." if any).
         body = re.sub(r"^\d+\.\s*", "", raw).strip()
-        return f"{index}. {body}"
+        return f"{index}. {body}{suffix}"
     return (
         f"{index}. **Job Title**: {job.get('job_title', '')}\n"
         f"**Company**: {job.get('company', '')}\n"
@@ -290,6 +357,7 @@ def _format_job_block(job: dict[str, Any], index: int) -> str:
         f"**injection_flagged**: {job.get('injection_flagged', 'no')}\n"
         f"**injection_note**: {job.get('injection_note', 'none')}\n"
         f"**Rationale**: {job.get('rationale', '')}"
+        f"{suffix}"
     )
 
 
@@ -396,6 +464,106 @@ def _score_batch_guardrail(task_output) -> tuple[bool, Any]:
         # Never block the pipeline on queue I/O; fall through with original output.
         print(f"[job_queue] guardrail error (passing score output through): {exc}")
         return True, raw
+
+
+def _tailor_ats_guardrail(task_output) -> tuple[bool, Any]:
+    """After Tailor: re-score each resume and send it back if it fell short.
+
+    The agent cannot mark its own homework - asked to rate its own output it
+    rates generously - so the check is the deterministic scorer, and failing it
+    returns concrete missing keywords rather than "try harder".
+
+    Only jobs whose posting text we hold can be checked. Everything else passes
+    through: refusing work we cannot measure would block the run for no reason.
+    """
+    raw = getattr(task_output, "raw", None) or str(task_output)
+    try:
+        start, end = raw.find("["), raw.rfind("]")
+        if start == -1 or end <= start:
+            return True, raw
+        jobs = json.loads(raw[start : end + 1])
+        if not isinstance(jobs, list) or not jobs:
+            return True, raw
+
+        shortfalls: list[str] = []
+        scored: list[str] = []
+        for job in jobs:
+            if not isinstance(job, dict):
+                continue
+            entry = {
+                "job_url": job.get("Job URL") or job.get("job_url") or "",
+                "company": job.get("Company Name") or job.get("company") or "",
+                "job_title": job.get("Job Title") or job.get("job_title") or "",
+            }
+            posting = _posting_for(entry)
+            latex = job.get("resume_latex")
+            if not posting or not isinstance(latex, str) or len(latex) < 400:
+                continue
+
+            result = ats_score.score_latex(posting, latex)
+            if not result.detail.get("terms"):
+                continue
+            label = f"{entry['company']} - {entry['job_title']}"
+            scored.append(f"{label}: {result.score:.0f}")
+            _record_ats_after(entry, result.score)
+
+            if result.score < ats_score.MINIMUM_SCORE:
+                shortfalls.append(
+                    f"- {label}: scored {result.score:.0f}/100, needs "
+                    f"{ats_score.MINIMUM_SCORE:.0f}+. Still missing: "
+                    f"{result.gap_summary(12)}"
+                )
+
+        if scored:
+            print(f"[ats] tailored match scores -> {', '.join(scored)}")
+            events_bus.emit(
+                "step",
+                agent_id="resume_tailor",
+                task_key="tailor_resume_per_job",
+                status="done",
+                detail={"label": "ats_scores", "scores": scored},
+            )
+
+        if shortfalls:
+            print(f"[ats] {len(shortfalls)} resume(s) below the floor; asking for another pass")
+            return False, (
+                "The tailored resumes below are still under the ATS minimum. Add the "
+                "listed keywords ONLY where the candidate genuinely has that "
+                "experience - Skills section first, then Summary, then a relevant "
+                "Experience bullet. Do not invent employment, tools, or metrics. "
+                "Re-output the full JSON array.\n" + "\n".join(shortfalls)
+            )
+        return True, raw
+    except (json.JSONDecodeError, TypeError) as exc:
+        print(f"[ats] guardrail skipped (passing tailor output through): {exc}")
+        return True, raw
+
+
+def _record_ats_after(entry: dict[str, Any], score: float) -> None:
+    """Store the post-tailoring match score against the application."""
+    try:
+        conn = pipeline_store.connect()
+    except Exception:  # noqa: BLE001
+        return
+    try:
+        url = _job_url(entry)
+        row = None
+        if url:
+            row = conn.execute(
+                "SELECT a.id FROM application a JOIN job j ON j.id = a.job_id"
+                " WHERE j.url = ?",
+                (url,),
+            ).fetchone()
+        if row is None:
+            return
+        with conn:
+            conn.execute(
+                "UPDATE application SET ats_after = ? WHERE id = ?", (score, row["id"])
+            )
+    except Exception as exc:  # noqa: BLE001 - bookkeeping never fails a run
+        print(f"[ats] could not store score: {exc!r}")
+    finally:
+        conn.close()
 
 
 _LATEX_OUTPUT_KEYS = ("humanized_latex", "resume_latex")
@@ -1360,7 +1528,14 @@ class JobhunterAiCrew:
 
     @task
     def tailor_resume_per_job(self) -> Task:
-        return Task(config=self.tasks_config["tailor_resume_per_job"])
+        return Task(
+            config=self.tasks_config["tailor_resume_per_job"],
+            # Re-score the output and hand back the remaining gaps. One retry:
+            # a second pass fixes an under-keyworded resume, a third mostly
+            # burns tokens arguing with a posting we genuinely do not match.
+            guardrail=_tailor_ats_guardrail,
+            guardrail_max_retries=1,
+        )
 
     @task
     def write_cover_letters(self) -> Task:

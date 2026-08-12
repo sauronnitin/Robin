@@ -14,8 +14,10 @@ from __future__ import annotations
 
 import json
 import re
+from pathlib import Path
 from typing import Any
 
+from jobhunter_ai import ats_score
 from jobhunter_ai import pipeline_store
 from jobhunter_ai.job_sources.base import NormalizedJob
 
@@ -237,6 +239,22 @@ def classify_submission(status_text: str) -> str:
     return "failed"
 
 
+_BASE_RESUME_PATH = Path(__file__).resolve().parents[2] / "resume" / "base_resume.tex"
+
+
+def base_resume_ats(posting: str) -> float | None:
+    """The base resume's keyword match against a posting, or None if unknown."""
+    if not (posting or "").strip():
+        return None
+    try:
+        latex = _BASE_RESUME_PATH.read_text(encoding="utf-8")
+    except OSError as exc:  # noqa: BLE001 - scoring is a nicety, not a gate
+        print(f"[ats] base resume unreadable ({exc}); skipping baseline score")
+        return None
+    result = ats_score.score_latex(posting, latex)
+    return result.score if result.detail.get("terms") else None
+
+
 def queue_job(record: dict[str, Any], *, conn=None) -> dict[str, Any]:
     """Queue one job the user deliberately picked in Browse.
 
@@ -253,6 +271,13 @@ def queue_job(record: dict[str, Any], *, conn=None) -> dict[str, Any]:
     score = _as_float(canonical.get("fit_score"))
     if score is not None:
         fields["fit_score"] = score
+
+    # Score the base resume against this posting now, while the description is
+    # in hand. It tells the user where they stand before a single token is
+    # spent, and gives tailoring a baseline to beat.
+    baseline = base_resume_ats(job.description)
+    if baseline is not None:
+        fields["ats_before"] = baseline
 
     application_id = pipeline_store.record_application(
         job_id,
