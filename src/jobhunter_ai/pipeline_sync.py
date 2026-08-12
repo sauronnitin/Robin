@@ -20,6 +20,7 @@ from typing import Any
 from jobhunter_ai import ats_score
 from jobhunter_ai import pipeline_store
 from jobhunter_ai.job_sources.base import NormalizedJob
+from jobhunter_ai.job_sources.normalize import normalize_work_mode
 
 # Task keys this module reacts to. Anything else is ignored.
 HANDLED_TASKS: tuple[str, ...] = (
@@ -219,7 +220,12 @@ def _identity(record: dict[str, Any]) -> NormalizedJob | None:
         company=company,
         url=url,
         location=str(record.get("location") or "").strip(),
-        work_mode=str(record.get("work_mode") or "").strip(),
+        # Same combined-signal call the adapters already use. LLM agents
+        # sometimes paste employment type ("Full-Time") into Work Mode;
+        # normalize_work_mode drops that instead of storing it verbatim.
+        work_mode=normalize_work_mode(
+            f"{record.get('work_mode') or ''} {record.get('location') or ''}"
+        ),
         # Carried from Browse-queued jobs and from Scout-discovered listings.
         # Score/Tailor output omits it (Rule 1); upsert_job's COALESCE keeps
         # the earlier text. Without it the Tailor ATS guardrail has no JD.
