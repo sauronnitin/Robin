@@ -5,9 +5,13 @@ scrape_and_filter_job_listings:
 
     STRATEGY A -- Multi-source API tool (PRIMARY, use first):
     Call the job_apis_multi_source tool with confirm: true.
-    This single call queries RemoteOK, Remotive, Jobicy, Freehire, Rise, and SerpAPI Google Jobs
-    (if SERPAPI_API_KEY is set) and returns a compact JSON list of pre-filtered design roles.
+    This single call uses the same job feed as Browse: the company ATS watchlist
+    (Greenhouse, Lever, Ashby, Workable) plus open APIs (RemoteOK, Remotive, Jobicy,
+    Freehire, Rise, SerpAPI Google Jobs if SERPAPI_API_KEY is set, and the rest of
+    the enabled source list). queries and sources are optional; if omitted, the tool
+    uses the candidate's resume-derived search terms and the enabled sources.
     Parse the returned JSON and add all listings to your collection.
+    Each listing includes a role_band field (core / adjacent). Pass it through unchanged.
 
     STRATEGY B -- Direct URL fetches (FALLBACK, only if Strategy A returns fewer than 8 listings):
     Fetch these URLs with read_website_content, in order, skipping any that fail or return a block page:
@@ -73,7 +77,7 @@ score_and_prioritise_jobs:
     Score each job 0-100 using these weights. Do NOT average vibes - work through the five components and add them up. They total exactly 100.
 
     (A) HARD SKILL OVERLAP - 35 points. Count the concrete, checkable skills the listing asks for (tools, methods, platforms, certifications - e.g. Figma, design systems, prototyping, user research, WCAG, motion design). Award 35 x (fraction of those the candidate's profile demonstrably has). Ignore soft phrasing like "team player" or "strong communicator" - they are not scoreable.
-    (B) ROLE MATCH - 20 points. 20 for a direct Product/UX/Product Design title; 14 for closely adjacent (Experience, Interaction, Design Systems, Digital Product); 8 for design-adjacent but different craft (Brand, Graphic, Visual); 0 for non-design.
+    (B) ROLE MATCH - 20 points. If the listing has role_band, use it instead of re-deriving from the title: 20 for core, 14 for closely adjacent (Experience, Interaction, Design Systems, Digital Product), 8 for adjacent craft (Brand, Graphic, Visual), 0 for off. If role_band is missing, fall back to the title: 20 for a direct Product/UX/Product Design title; 14 for closely adjacent; 8 for design-adjacent but different craft; 0 for non-design.
     (C) SENIORITY FIT - 15 points. 15 when the level matches Senior / Mid-Senior; 9 for unspecified or broad ranges; 4 when it is a stretch in either direction; 0 above Senior (Head/Director/Staff/Principal/VP).
     (D) DOMAIN - 15 points. 15 when the industry or product type overlaps the candidate's background (physical + digital product ecosystems, AI tooling, SaaS platforms); 8 for a partial overlap; 3 for neither but nothing disqualifying.
     (E) LOCATION - 15 points. The candidate is based in {home_country}. 15 for a role in {home_country}, or remote explicitly open to it; 12 for remote with no country restriction; 7 when the posting does not say; 0 for another country, which usually means sponsorship and relocation - a different decision from whether the job is good.
@@ -88,7 +92,8 @@ score_and_prioritise_jobs:
 
     FILTERING - KEEP IT LOOSE AND INCLUSIVE:
     - PASS any listing that is plausibly a Product Design / UX / Product Designer-adjacent role at or below Senior level. When in doubt, PASS it.
-    - Only EXCLUDE a listing if it clearly fails one of these hard rules: (a) it is not a design role at all (e.g., pure engineering, sales, marketing, recruiting, finance), OR (b) its seniority is clearly above Senior (Head / Director / Staff / Principal / VP / org-level Lead), OR (c) it is an exact duplicate of another listing in this same batch.
+    - If role_band is "off", EXCLUDE it without scoring. If role_band is "adjacent", PASS it and score it as adjacent (do not treat it as a direct title match). If role_band is "core", treat it as a direct title match.
+    - Only EXCLUDE a listing if it clearly fails one of these hard rules: (a) role_band is off, or it is not a design role at all (e.g., pure engineering, sales, marketing, recruiting, finance), OR (b) its seniority is clearly above Senior (Head / Director / Staff / Principal / VP / org-level Lead), OR (c) it is an exact duplicate of another listing in this same batch.
     - Do NOT exclude a job for weak niche match, partial skill overlap, unfamiliar industry, or work-mode/region mismatch. Those only LOWER the score; they never disqualify.
     - Minimum passing score is 45. Drop anything below it: a job the candidate is a weak match for wastes a tailoring cycle and an application. Location IS a scoring metric (component E) but never a disqualifier on its own - a strong role in another country still scores, it just ranks below an equal one at home.
 

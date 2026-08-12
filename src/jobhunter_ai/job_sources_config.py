@@ -45,6 +45,7 @@ SOURCE_CATALOG: list[dict[str, str]] = [
     {"id": "github", "label": "GitHub Jobs", "group": "community"},
     {"id": "hn", "label": "Hacker News", "group": "community"},
     {"id": "reddit", "label": "Reddit", "group": "community"},
+    {"id": "serpapi", "label": "Google Jobs", "group": "community"},
 ]
 
 DEFAULT_ENABLED = [
@@ -58,8 +59,11 @@ DEFAULT_ENABLED = [
     "himalayas",
     "workingnomads",
     "themuse",
+    "freehire",
+    "rise",
     "github",
     "hn",
+    "serpapi",
 ]
 
 DEFAULT_WATCHLIST = [

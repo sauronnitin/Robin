@@ -20,14 +20,8 @@ from collections import deque
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 
-from jobhunter_ai.job_sources import fetch_all
+from jobhunter_ai.job_feed import fetch_job_feed, item_to_normalized
 from jobhunter_ai.job_sources.base import NormalizedJob
-from jobhunter_ai.job_sources_config import (
-    DEFAULT_ENABLED,
-    free_queries,
-    load_job_sources,
-    watchlist_slugs,
-)
 
 _SCAN_LOCK = threading.Lock()
 _SCAN_LOG: deque[dict[str, Any]] = deque(maxlen=240)
@@ -309,19 +303,6 @@ _UA = {
     "Accept": "application/json",
 }
 
-_DESIGN_RE = re.compile(
-    r"\b(product\s+design(er)?|ux\s+design(er)?|ui\s+design(er)?|interaction\s+design(er)?|"
-    r"design\s+system|experience\s+design(er)?|visual\s+design(er)?|digital\s+design(er)?|"
-    r"industrial\s+design(er)?|service\s+design(er)?|graphic\s+design(er)?|"
-    r"motion\s+design(er)?|brand\s+design(er)?|product\s+manager|pm\b|figma|prototyp)\b",
-    re.I,
-)
-_HARD_EXCLUDE_RE = re.compile(
-    r"\b(head\s+of|director|vice\s+president|\bvp\b|chief|principal|staff\s+designer)\b",
-    re.I,
-)
-
-
 def _get_json(url: str, timeout: float = 5.0, headers: dict[str, str] | None = None) -> Any:
     source = _infer_source(url)
     t0 = time.time()
@@ -500,14 +481,6 @@ def _match_query(job: dict[str, Any], q: str) -> bool:
         for k in ("title", "company", "location", "ats_source", "tags")
     ).lower()
     return all(tok in blob for tok in q.lower().split())
-
-
-def _keep_title(title: str, desc: str = "", *, prefer_design: bool = True) -> bool:
-    if _HARD_EXCLUDE_RE.search(title or ""):
-        return False
-    if not prefer_design:
-        return True
-    return bool(_DESIGN_RE.search(title or "") or _DESIGN_RE.search((desc or "")[:500]))
 
 
 def _card(
@@ -899,6 +872,13 @@ def fetch_jobs(
         end_scan_log()
 
 
+def _feed_item_to_card(item: dict[str, Any]) -> dict[str, Any]:
+    card = _normalized_to_card(item_to_normalized(item))
+    if item.get("role_band"):
+        card["role_band"] = item["role_band"]
+    return card
+
+
 def _build_jobs_response(
     *,
     q: str = "",
@@ -906,35 +886,15 @@ def _build_jobs_response(
     remote: str = "",
     limit: int = 20,
 ) -> dict[str, Any]:
-    cfg = load_job_sources()
-    wanted = {s.strip().lower() for s in (sources or []) if s.strip()}
-    if not wanted:
-        wanted = {s.lower() for s in (cfg.get("enabled_sources") or DEFAULT_ENABLED)}
+    user_q = (q or "").strip()
+    feed = fetch_job_feed(
+        query=user_q or None,
+        sources=sources,
+        remote=remote,
+        limit=limit,
+    )
 
-    slugs = watchlist_slugs(cfg)
-    queries = free_queries(cfg)
-
-    source_pairs: list[tuple[str, str]] = []
-    for provider in _ATS_PROVIDERS:
-        if provider not in wanted:
-            continue
-        for slug in slugs.get(provider) or []:
-            s = str(slug).strip()
-            if s:
-                source_pairs.append((provider, s))
-
-    for provider in _SOURCE_META:
-        if provider in _ATS_PROVIDERS:
-            continue
-        if provider in wanted:
-            source_pairs.append((provider, ""))
-
-    query_candidates = list(queries.get("github") or []) + list(queries.get("hn") or [])
-    fetch_query = (query_candidates[0] if query_candidates else "") or "product designer"
-
-    jobs_norm, stats = fetch_all(source_pairs, query=fetch_query, max_workers=8)
-
-    for st in stats:
+    for st in feed.get("stats") or []:
         provider = str(st.get("provider") or "api")
         slug = str(st.get("slug") or "")
         status_raw = str(st.get("status") or "")
@@ -955,109 +915,18 @@ def _build_jobs_response(
             error=str(err) if err else None,
         )
 
-    cards = [_normalized_to_card(j) for j in jobs_norm]
-
-    per_source_cap = max(8, min(20, int(limit or 20)))
-    by_source: dict[str, list[dict[str, Any]]] = {}
-    for card in cards:
-        src = str(card.get("ats_source") or "other")
-        by_source.setdefault(src, []).append(card)
-
-    jobs: list[dict[str, Any]] = []
-    used_sources: list[str] = []
-
-    def _extend(source_id: str, batch: list[dict[str, Any]]) -> None:
-        if not batch:
-            return
-        designish = [j for j in batch if _DESIGN_RE.search(j.get("title") or "")]
-        rest = [j for j in batch if j not in designish]
-        ordered = designish + rest
-        used_sources.append(source_id)
-        jobs.extend(ordered[:per_source_cap])
-
-    source_order = list(_SOURCE_META.keys())
-    for source_id in source_order:
-        if source_id in by_source:
-            _extend(source_id, by_source[source_id])
-    for source_id, batch in by_source.items():
-        if source_id not in used_sources:
-            _extend(source_id, batch)
-
-    if q:
-        jobs = [j for j in jobs if _match_query(j, q)]
-    else:
-        designish = [j for j in jobs if _DESIGN_RE.search(j.get("title") or "")]
-        others = [j for j in jobs if j not in designish]
-        by_src: dict[str, list[dict[str, Any]]] = {}
-        for j in designish + others:
-            by_src.setdefault(str(j.get("ats_source") or "other"), []).append(j)
-        interleaved: list[dict[str, Any]] = []
-        while any(by_src.values()):
-            for src in list(by_src.keys()):
-                bucket = by_src.get(src) or []
-                if not bucket:
-                    by_src.pop(src, None)
-                    continue
-                interleaved.append(bucket.pop(0))
-        jobs = interleaved
-
-    if remote in ("1", "true", "yes"):
-        jobs = [j for j in jobs if j.get("remote")]
-
-    seen: set[str] = set()
-    unique: list[dict[str, Any]] = []
-    for j in jobs:
-        key = (
-            f"{(j.get('company') or '').lower()}|"
-            f"{(j.get('title') or '').lower()}|"
-            f"{(j.get('ats_source') or '')}"
-        )
-        url = (j.get("job_url") or "").lower()
-        dedupe = url or key
-        if dedupe in seen:
-            continue
-        seen.add(dedupe)
-        unique.append(j)
-
-    limit_n = max(1, min(int(limit or 20), 120))
-    clipped = unique[:limit_n]
-    _hydrate_job_descriptions(clipped)
-    role = _tag_role_bands(clipped)
-    # `jobs` is the candidate's own role; adjacent crafts get their own list so
-    # Browse can show them apart rather than mixed in. Off-role never ships.
-    core = [j for j in clipped if j.get("role_band") == "core"]
-    adjacent = [j for j in clipped if j.get("role_band") == "adjacent"]
+    core = [_feed_item_to_card(j) for j in (feed.get("jobs") or [])]
+    adjacent = [_feed_item_to_card(j) for j in (feed.get("adjacent") or [])]
+    if user_q:
+        core = [j for j in core if _match_query(j, user_q)]
+        adjacent = [j for j in adjacent if _match_query(j, user_q)]
+    _hydrate_job_descriptions(core + adjacent)
     return {
         "jobs": core,
         "adjacent": adjacent,
-        "dropped": len(clipped) - len(core) - len(adjacent),
-        "role": role,
+        "dropped": int(feed.get("dropped") or 0),
+        "role": feed.get("role") or {},
         "total": len(core),
-        "sources_used": used_sources,
-        "watchlist": slugs,
+        "sources_used": list(feed.get("sources_used") or []),
+        "watchlist": feed.get("watchlist") or {},
     }
-
-
-def _tag_role_bands(jobs: list[dict[str, Any]]) -> dict[str, Any]:
-    """Mark every listing core / adjacent / off against the candidate's role.
-
-    Boards return whatever their search matched, which is how a software
-    developer role reached a product designer. Banding here means Browse can
-    show the same job in the right place and the crew can ignore the rest.
-    """
-    try:
-        from jobhunter_ai import role_profile
-
-        role = role_profile.load()
-        if not role.get("core_titles"):
-            for job in jobs:
-                job["role_band"] = "core"  # no role derived yet: assume nothing
-            return role
-        for job in jobs:
-            job["role_band"] = role_profile.classify_title(job.get("title") or "", role)
-        return role
-    except Exception as exc:  # noqa: BLE001 - Browse must not break over this
-        print(f"[role] banding skipped: {exc!r}")
-        for job in jobs:
-            job["role_band"] = "core"
-        return {}

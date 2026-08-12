@@ -1,8 +1,8 @@
 """Multi-source Job APIs tool for the Global Scout agent.
 
-Fetches via the unified ``job_sources`` registry (one adapter per provider).
-Returns a compact, LLM-safe JSON string — full descriptions never enter the
-agent context (SPEC Rule 1: truncate_for_llm).
+Fetches via the shared ``fetch_job_feed`` pipeline (same providers, query,
+and classifiers as Browse). Returns a compact, LLM-safe JSON string: full
+descriptions never enter the agent context (SPEC Rule 1: truncate_for_llm).
 """
 
 from __future__ import annotations
@@ -18,7 +18,7 @@ from crewai.tools import BaseTool
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field
 
-from jobhunter_ai.job_sources import fetch_all
+from jobhunter_ai.job_feed import fetch_job_feed
 from jobhunter_ai.truncate import truncate_for_llm
 
 load_dotenv(Path(__file__).resolve().parents[3] / ".env", override=False)
@@ -27,44 +27,6 @@ _MAX_TOTAL = 20
 _MAX_DESC = 180
 _USER_AGENT = "JobHunterAI/1.0 (+https://github.com/jobcrew)"
 _TIMEOUT = 12
-
-_DESIGN_RE = re.compile(
-    r"\b(product\s+design(er)?|ux\s+design(er)?|ui\s+design(er)?|interaction\s+design(er)?|"
-    r"design\s+system|experience\s+design(er)?|visual\s+design(er)?|digital\s+design(er)?|"
-    r"industrial\s+design(er)?|service\s+design(er)?|creative\s+design(er)?|"
-    r"graphic\s+design(er)?|motion\s+design(er)?|brand\s+design(er)?|"
-    r"hci|human.computer\s+interaction|figma|prototyp)\b",
-    re.I,
-)
-
-_HARD_EXCLUDE_RE = re.compile(
-    r"\b(head\s+of|director|vice\s+president|\bvp\b|chief|principal|staff\s+designer)\b",
-    re.I,
-)
-
-_NONDESIGN_HARD_RE = re.compile(
-    r"\b(software\s+engineer|backend|frontend|full.?stack|data\s+scientist|"
-    r"data\s+engineer|devops|sre|machine\s+learning|ml\s+engineer|"
-    r"rails|django|java\s+developer|python\s+developer|patient\s+care|"
-    r"marketing|sales|recruiter|finance|accounting|legal|nurse|physician)\b",
-    re.I,
-)
-
-# Scout open/community providers (no ATS watchlist — Browse owns that).
-_SCOUT_PROVIDERS = [
-    "remoteok",
-    "remotive",
-    "jobicy",
-    "freehire",
-    "rise",
-    "arbeitnow",
-    "himalayas",
-    "workingnomads",
-    "themuse",
-    "github",
-    "hn",
-    "serpapi",
-]
 
 
 def _clean_html(text: str) -> str:
@@ -76,26 +38,10 @@ def _trim_desc(text: str) -> str:
     return _clean_html(text)[:_MAX_DESC]
 
 
-def _is_design_role(title: str, desc: str = "", trust_source_category: bool = False) -> bool:
-    """Return True if this appears to be a design-adjacent role.
-
-    When trust_source_category=True (e.g. already fetched from a design-tagged
-    endpoint), we only reject clear non-design roles rather than requiring a
-    positive design keyword match.
-    """
-    if trust_source_category:
-        return not bool(_NONDESIGN_HARD_RE.search(title))
-    return bool(_DESIGN_RE.search(title) or _DESIGN_RE.search(desc[:400]))
-
-
-def _is_hard_excluded(title: str) -> bool:
-    return bool(_HARD_EXCLUDE_RE.search(title))
-
-
 def _fetch_json(url: str) -> Any:
     """HTTP seam retained so Phase 0 characterization tests can patch it.
 
-    Production Scout fetching goes through ``job_sources.fetch_all``; this
+    Production Scout fetching goes through ``job_feed.fetch_job_feed``; this
     helper is not on the hot path unless tests replace it with a Mock.
     """
     req = urllib.request.Request(
@@ -111,7 +57,7 @@ class JobApisToolInput(BaseModel):
     # strict:true on every tool call and forces every declared field into
     # "required" regardless of pydantic defaults, so a genuinely empty
     # schema ({"properties": {}, "required": []}) is unavoidable with zero
-    # fields — and Groq's strict-mode API rejects that shape server-side
+    # fields, and Groq's strict-mode API rejects that shape server-side
     # ("'required' present but 'properties' is missing"). One boolean the
     # model always sets true is far more reliable for a small/fast model to
     # supply correctly than the previous two-empty-array requirement was.
@@ -122,22 +68,21 @@ class JobApisToolInput(BaseModel):
 
 
 class JobApisTool(BaseTool):
-    """Fetch product-design job listings from multiple free REST APIs.
+    """Fetch product-design job listings from the shared job feed.
 
-    Sources: RemoteOK, Remotive, Jobicy, Freehire, Rise, Arbeitnow, Himalayas,
-    Working Nomads, The Muse, GitHub hiring issues, Hacker News, SerpAPI Google Jobs.
-    Returns a compact JSON list of up to 20 listings (title, company, location,
-    url, description). Any source that fails or returns no matches is silently
-    skipped. SerpAPI is only called when SERPAPI_API_KEY is set in the environment.
+    Same providers and query as Browse: company ATS watchlist (Greenhouse,
+    Lever, Ashby, Workable) plus open APIs. Returns a compact JSON list of
+    up to 20 listings. queries/sources from the LLM are optional refinements
+    on the resume-derived default, not a requirement.
     """
 
     name: str = "job_apis_multi_source"
     description: str = (
-        "Fetch product-design job listings from multiple free public REST APIs "
-        "(RemoteOK, Remotive, Jobicy, Freehire, Rise, Arbeitnow, Himalayas, "
-        "Working Nomads, The Muse, GitHub, Hacker News, SerpAPI). "
+        "Fetch product-design job listings from the shared job feed "
+        "(company ATS watchlist plus RemoteOK, Remotive, Jobicy, Freehire, Rise, "
+        "Arbeitnow, Himalayas, Working Nomads, The Muse, GitHub, Hacker News, SerpAPI). "
         "Returns a compact JSON list of up to 20 listings. "
-        "Takes one argument: confirm=true."
+        "Takes one argument: confirm=true. queries and sources are optional."
     )
     args_schema: Type[BaseModel] = JobApisToolInput
 
@@ -155,42 +100,31 @@ class JobApisTool(BaseTool):
                 max_chars=3200,
             )
 
-        queries = queries or []
-        allowed = {s.strip().lower() for s in (sources or []) if str(s).strip()}
-        providers = [p for p in _SCOUT_PROVIDERS if not allowed or p in allowed]
-        query = " ".join(queries[:2]).strip() or "product designer"
-        pairs = [(p, "") for p in providers]
-        jobs, _stats = fetch_all(pairs, query=query, max_workers=8)
-
-        trust_cats = {"remotive", "jobicy", "workingnomads", "themuse"}
+        query_parts = [str(q).strip() for q in (queries or []) if str(q).strip()]
+        query = " ".join(query_parts[:2]) or None
+        allowed = [str(s).strip().lower() for s in (sources or []) if str(s).strip()]
+        feed = fetch_job_feed(
+            query=query,
+            sources=allowed or None,
+            limit=_MAX_TOTAL,
+        )
+        combined = list(feed.get("jobs") or []) + list(feed.get("adjacent") or [])
         out: list[dict] = []
-        seen: set[str] = set()
-        for job in jobs:
-            title = job.title or ""
-            if _is_hard_excluded(title):
-                continue
-            trust = job.provider in trust_cats
-            if not _is_design_role(title, job.description or "", trust_source_category=trust):
-                continue
-            url = (job.url or "").strip()
-            if url and url in seen:
-                continue
-            if url:
-                seen.add(url)
+        for job in combined[:_MAX_TOTAL]:
             out.append(
                 {
-                    "title": title.strip(),
-                    "company": (job.company or "").strip(),
-                    "location": (job.location or "").strip(),
-                    "url": url,
-                    "description": _trim_desc(job.description or ""),
+                    "title": (job.get("title") or "").strip(),
+                    "company": (job.get("company") or "").strip(),
+                    "location": (job.get("location") or "").strip(),
+                    "url": (job.get("url") or "").strip(),
+                    "description": _trim_desc(job.get("description") or ""),
+                    "role_band": job.get("role_band") or "core",
+                    "source": job.get("provider") or job.get("ats_source") or "",
                 }
             )
-            if len(out) >= _MAX_TOTAL:
-                break
 
-        payload = json.dumps(out[:_MAX_TOTAL], ensure_ascii=True)
+        payload = json.dumps(out, ensure_ascii=True)
         return truncate_for_llm(
-            f"Job listings from multi-source API ({len(out[:_MAX_TOTAL])} found):\n{payload}",
+            f"Job listings from multi-source API ({len(out)} found):\n{payload}",
             max_chars=3200,
         )
