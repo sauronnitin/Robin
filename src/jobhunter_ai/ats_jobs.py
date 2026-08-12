@@ -1022,9 +1022,42 @@ def _build_jobs_response(
     limit_n = max(1, min(int(limit or 20), 120))
     clipped = unique[:limit_n]
     _hydrate_job_descriptions(clipped)
+    role = _tag_role_bands(clipped)
+    # `jobs` is the candidate's own role; adjacent crafts get their own list so
+    # Browse can show them apart rather than mixed in. Off-role never ships.
+    core = [j for j in clipped if j.get("role_band") == "core"]
+    adjacent = [j for j in clipped if j.get("role_band") == "adjacent"]
     return {
-        "jobs": clipped,
-        "total": len(clipped),
+        "jobs": core,
+        "adjacent": adjacent,
+        "dropped": len(clipped) - len(core) - len(adjacent),
+        "role": role,
+        "total": len(core),
         "sources_used": used_sources,
         "watchlist": slugs,
     }
+
+
+def _tag_role_bands(jobs: list[dict[str, Any]]) -> dict[str, Any]:
+    """Mark every listing core / adjacent / off against the candidate's role.
+
+    Boards return whatever their search matched, which is how a software
+    developer role reached a product designer. Banding here means Browse can
+    show the same job in the right place and the crew can ignore the rest.
+    """
+    try:
+        from jobhunter_ai import role_profile
+
+        role = role_profile.load()
+        if not role.get("core_titles"):
+            for job in jobs:
+                job["role_band"] = "core"  # no role derived yet: assume nothing
+            return role
+        for job in jobs:
+            job["role_band"] = role_profile.classify_title(job.get("title") or "", role)
+        return role
+    except Exception as exc:  # noqa: BLE001 - Browse must not break over this
+        print(f"[role] banding skipped: {exc!r}")
+        for job in jobs:
+            job["role_band"] = "core"
+        return {}

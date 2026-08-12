@@ -108,10 +108,22 @@ def swarm_modules(profile: dict[str, Any] | None = None) -> list[str]:
 
 
 def search_titles(profile: dict[str, Any] | None = None) -> list[str]:
+    """Titles to search job boards for.
+
+    An explicit `search.titles` list is the user's override and wins. Otherwise
+    the titles come from the role derived from their own resume - the search
+    should describe the candidate, not a list someone typed into a config.
+    """
     profile = profile or load_profile()
     search = profile.get("search") or {}
-    titles = search.get("titles") or []
-    return [str(t) for t in titles if t]
+    titles = [str(t) for t in (search.get("titles") or []) if t]
+    if titles:
+        return titles
+
+    from jobhunter_ai import role_profile
+
+    role = role_profile.ensure(profile)
+    return role_profile.search_terms(role)
 
 
 def scout_urls(profile: dict[str, Any] | None = None) -> list[str]:
