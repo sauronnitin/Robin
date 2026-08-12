@@ -146,6 +146,18 @@ def _job_score(job: dict[str, Any]) -> float:
         return -1.0
 
 
+def _is_core_title(title: str) -> bool:
+    """Whether a title is the candidate's own role under any of its names.
+
+    A direct match never gets dropped for a low score: the model's number is a
+    judgement, but the title is a fact.
+    """
+    try:
+        return role_profile.classify_title(title, role_profile.load()) == "core"
+    except Exception:  # noqa: BLE001 - a scoring gate must not break a run
+        return False
+
+
 def _parse_scored_jobs(text: str) -> list[dict[str, Any]]:
     """Extract scored job dicts from freeform Score-task markdown/JSON."""
     if not text or not text.strip():
@@ -180,7 +192,13 @@ def _parse_scored_jobs(text: str) -> list[dict[str, Any]]:
                             score = float(score_raw)
                         except (TypeError, ValueError):
                             score = 0.0
-                        if score < _MIN_QUALIFYING_SCORE:
+                        title_for_gate = str(
+                            item.get("job_title")
+                            or item.get("Job Title")
+                            or item.get("title")
+                            or ""
+                        )
+                        if score < _MIN_QUALIFYING_SCORE and not _is_core_title(title_for_gate):
                             continue
                         normalized.append(
                             {
@@ -243,7 +261,9 @@ def _parse_scored_jobs(text: str) -> list[dict[str, Any]]:
         if not url or not score_m:
             continue
         score = float(score_m.group(1))
-        if score < _MIN_QUALIFYING_SCORE:
+        if score < _MIN_QUALIFYING_SCORE and not _is_core_title(
+            fields.get("job_title") or fields.get("title") or ""
+        ):
             continue
         jobs.append(
             {
@@ -632,8 +652,16 @@ def _offload_latex_guardrail(task_output) -> tuple[bool, Any]:
         return True, raw
 
 
+# A core title match has already proved the two components the rubric scores
+# hardest: it IS the candidate's role (25) at a level they can take (20). So a
+# direct match cannot honestly score below that sum, whatever the model said,
+# and it never gets dropped for a low score. This exists because two plain
+# "Product Designer" postings were skipped on scores of 35 and 40.
+_CORE_SCORE_FLOOR = 45.0
+
+
 def _drop_off_role(jobs: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Remove listings that are not the candidate's profession or level.
+    """Keep the candidate's own role, drop the rest.
 
     The prompt already says so, but a prompt is a request. This is the check:
     an agent that returns a Product Manager posting for a product designer gets
@@ -648,13 +676,20 @@ def _drop_off_role(jobs: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
     kept: list[dict[str, Any]] = []
     dropped: list[str] = []
+    lifted: list[str] = []
     for job in jobs:
         title = str(job.get("job_title") or "")
         # Adjacent roles are the user's call from Browse, never the crew's.
         if role_profile.classify_title(title, role) == "core":
+            if _job_score(job) < _CORE_SCORE_FLOOR:
+                lifted.append(f"{title} ({_job_score(job):.0f} -> {_CORE_SCORE_FLOOR:.0f})")
+                job["fit_score"] = _CORE_SCORE_FLOOR
             kept.append(job)
         else:
             dropped.append(title)
+
+    if lifted:
+        print(f"[role] direct title match, floored to qualifying: {'; '.join(lifted[:5])}")
 
     if dropped:
         print(f"[role] dropped {len(dropped)} off-role listing(s): {'; '.join(dropped[:5])}")

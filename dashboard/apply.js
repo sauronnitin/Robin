@@ -199,6 +199,31 @@
       + '</div>';
   }
 
+  // Every number the pipeline knows about this job, on the card. A dash is an
+  // honest "not measured yet" - better than an absent row that reads as zero.
+  function metricsHtml(app) {
+    function cell(label, value, title) {
+      var text = (value === null || value === undefined || value === '')
+        ? '<span class="jh-apply-metric-none">—</span>'
+        : esc(String(value));
+      return '<div class="jh-apply-metric" title="' + esc(title) + '">'
+        + '<span class="jh-apply-metric-label">' + esc(label) + '</span>'
+        + '<span class="jh-apply-metric-value">' + text + '</span></div>';
+    }
+    var lift = (app.ats_before != null && app.ats_after != null)
+      ? (app.ats_after - app.ats_before >= 0 ? '+' : '') + Math.round(app.ats_after - app.ats_before)
+      : null;
+    return '<div class="jh-apply-metrics">'
+      + cell('Fit', app.fit_score == null ? null : Math.round(app.fit_score),
+             'Is this job worth applying to (0-100)')
+      + cell('ATS', app.ats_before == null ? null : Math.round(app.ats_before),
+             'Keyword match of the base resume against this posting')
+      + cell('Tailored', app.ats_after == null ? null : Math.round(app.ats_after),
+             'Keyword match after tailoring')
+      + cell('Lift', lift, 'How much tailoring moved the ATS match')
+      + '</div>';
+  }
+
   function cardHtml(app) {
     var m = meta(app.status);
     var score = (app.fit_score === null || app.fit_score === undefined)
@@ -212,7 +237,7 @@
       + score
       + '  </div>'
       + '  <div class="jh-apply-title">' + esc(app.title || '') + '</div>'
-      + atsBar(app)
+      + metricsHtml(app)
       + '  <div class="jh-apply-meta">' + statusPill(app.status)
       + (state.sample ? '<span class="jh-apply-sample-tag">Sample</span>' : '')
       // A rehearsal must never read as a sent application.
@@ -222,19 +247,42 @@
       + '</article>';
   }
 
+  // Which columns the user collapsed. Kept across reloads: a board you have to
+  // re-tidy every visit is not tidy.
+  var COLLAPSE_KEY = 'jh-apply-collapsed';
+
+  function collapsedColumns() {
+    try {
+      return JSON.parse(localStorage.getItem(COLLAPSE_KEY) || '[]') || [];
+    } catch (err) { return []; }
+  }
+
+  function toggleColumn(key) {
+    var collapsed = collapsedColumns();
+    var next = collapsed.indexOf(key) === -1
+      ? collapsed.concat([key])
+      : collapsed.filter(function (k) { return k !== key; });
+    try { localStorage.setItem(COLLAPSE_KEY, JSON.stringify(next)); } catch (err) {}
+    render();
+  }
+
   function columnHtml(col) {
     var items = columnItems(col);
+    var isCollapsed = collapsedColumns().indexOf(col.key) !== -1;
     return ''
-      + '<section class="jh-apply-col" data-col="' + col.key + '">'
-      + '  <header class="jh-apply-col-head" style="--apply-color:' + col.color + '">'
+      + '<section class="jh-apply-col' + (isCollapsed ? ' is-collapsed' : '') + '" data-col="' + col.key + '">'
+      + '  <button class="jh-apply-col-head" type="button" data-toggle-col="' + col.key + '"'
+      + '    style="--apply-color:' + col.color + '" aria-expanded="' + (!isCollapsed) + '">'
       + '    <span class="jh-apply-col-icon" aria-hidden="true">' + col.icon + '</span>'
       + '    <span class="jh-apply-col-label">' + esc(col.label) + '</span>'
       + '    <span class="jh-apply-col-count">' + items.length + '</span>'
-      + '  </header>'
-      + '  <div class="jh-apply-col-body">'
-      + (items.length ? items.map(cardHtml).join('')
-          : '<div class="jh-apply-empty">Nothing here yet</div>')
-      + '  </div>'
+      + '    <span class="jh-apply-col-caret" aria-hidden="true">' + (isCollapsed ? '▸' : '▾') + '</span>'
+      + '  </button>'
+      + (isCollapsed ? '' : ''
+          + '  <div class="jh-apply-col-body">'
+          + (items.length ? items.map(cardHtml).join('')
+              : '<div class="jh-apply-empty">Nothing here yet</div>')
+          + '  </div>')
       + '</section>';
   }
 
@@ -344,6 +392,7 @@
       + '  <button class="jh-apply-btn" id="applyDetailClose" aria-label="Close">✕</button>'
       + '</div>'
       + '<div class="jh-apply-detail-row">' + statusPill(app.status)
+      + atsBar(app)
       + (app.dry_run ? '<span class="jh-apply-dry-tag">Dry run — not submitted</span>' : '')
       + (app.fit_score != null ? '<span class="jh-apply-score">' + Math.round(app.fit_score) + '</span>' : '')
       + '</div>'
@@ -547,6 +596,9 @@
 
     var refresh = event.target.closest('#applyRefreshBtn');
     if (refresh) { load(); return; }
+
+    var colToggle = event.target.closest('[data-toggle-col]');
+    if (colToggle) { toggleColumn(colToggle.getAttribute('data-toggle-col')); return; }
 
     if (event.target.closest('#applySampleStart')) { applySample(); return; }
     if (event.target.closest('#applySampleExit')) { load(); return; }

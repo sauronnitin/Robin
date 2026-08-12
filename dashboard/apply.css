@@ -3,6 +3,8 @@
  * pipeline.js); nothing here invents a color of its own.
  */
 
+/* The page itself never scrolls. Everything is bounded to the viewport and the
+   scrolling happens inside the region that owns the content. */
 .jh-apply-wrap {
   display: flex;
   flex: 1;
@@ -13,8 +15,21 @@
 .jh-apply-main {
   flex: 1;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  padding: 20px 20px 0;
+}
+
+/* Header block (title, flow strip, banner) stays put; the board scrolls. */
+.jh-apply-main > :not(#applyBoard) { flex: 0 0 auto; }
+
+#applyBoard {
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
-  padding: 20px;
+  padding-bottom: 20px;
 }
 
 /* Wide boards scroll inside their own container — never the page body. */
@@ -23,7 +38,8 @@
   gap: 12px;
   overflow-x: auto;
   padding-bottom: 10px;
-  align-items: flex-start;
+  align-items: stretch;
+  min-height: 0;
 }
 
 .jh-apply-col {
@@ -34,20 +50,35 @@
   border-radius: 12px;
   display: flex;
   flex-direction: column;
-  max-height: 100%;
+  min-height: 0;
+}
+
+/* A collapsed column keeps its header visible and gives its width back. */
+.jh-apply-col.is-collapsed {
+  flex: 0 0 auto;
+  min-width: 0;
 }
 
 .jh-apply-col-head {
   display: flex;
   align-items: center;
   gap: 8px;
+  width: 100%;
   padding: 10px 12px;
+  border: none;
   border-bottom: 1px solid var(--st-border);
+  background: none;
   font-family: var(--st-sans);
   font-size: 12.5px;
   font-weight: 600;
   color: var(--st-ink);
+  cursor: pointer;
+  text-align: left;
 }
+
+.jh-apply-col.is-collapsed .jh-apply-col-head { border-bottom: none; }
+.jh-apply-col-head:hover { background: var(--st-fog); }
+.jh-apply-col-caret { color: var(--st-ash); font-size: 10px; }
 
 .jh-apply-col-icon {
   width: 18px;
@@ -233,6 +264,41 @@
   margin-top: 2px;
   line-height: 1.35;
 }
+
+/* Every metric the pipeline holds for this job, in one row. */
+.jh-apply-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 4px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--st-border);
+}
+
+.jh-apply-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.jh-apply-metric-label {
+  font-family: var(--st-sans);
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--st-ash);
+}
+
+.jh-apply-metric-value {
+  font-family: var(--st-sans);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  color: var(--st-ink);
+}
+
+.jh-apply-metric-none { color: var(--st-ash); }
 
 /* ATS match. §5.3 good / warning — always with the number beside it. */
 .jh-apply-ats {
