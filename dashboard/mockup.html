@@ -4849,7 +4849,10 @@ async function qJob(){
         title: j.title,
         url: j.job_url || j.url || '',
         location: j.location || '',
-        work_mode: j.workplace || j.work_mode || ''
+        work_mode: j.workplace || j.work_mode || '',
+        // The posting itself, so the crew can score and tailor against it
+        // instead of guessing from a title.
+        description: j.description || j.desc || ''
       })
     });
     const data = await res.json().catch(()=>({}));

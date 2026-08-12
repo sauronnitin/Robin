@@ -209,7 +209,8 @@ def record_application(
                 )
 
         if status is not None:
-            set_status(application_id, status, source, detail, conn=conn)
+            # Automated writers only ever move a job forward (see advance_status).
+            advance_status(application_id, status, source, detail, conn=conn)
         return application_id
     finally:
         if own:
@@ -277,6 +278,66 @@ _APP_SELECT = """
 """
 
 
+# The linear path a job walks. Terminal outcomes sit outside it: they can be
+# reached from anywhere, but nothing automated reopens them.
+_PROGRESSION: tuple[str, ...] = (
+    "discovered",
+    "scored",
+    "tailored",
+    "applied",
+    "replied",
+    "interview",
+    "offer",
+)
+_TERMINALS: frozenset[str] = frozenset({"rejected", "skipped", "failed"})
+
+
+def advance_status(
+    application_id: int,
+    status: str,
+    source: str,
+    detail: str = "",
+    *,
+    conn=None,
+) -> bool:
+    """set_status, but never backwards. Returns whether anything changed.
+
+    Automated writers - a re-run, an import, a replayed task output - must not
+    drag a job back down the funnel. The event log is append-only and Phase 3
+    counts transitions, so a `tailored -> scored` event would count that job
+    through the same stage twice. A person moving a card by hand still uses
+    set_status: correcting a wrong status is exactly what that is for.
+    """
+    status = validate_status(status)
+
+    own = conn is None
+    conn = conn or connect()
+    try:
+        row = conn.execute(
+            "SELECT status FROM application WHERE id = ?", (application_id,)
+        ).fetchone()
+        if row is None:
+            raise ValueError(f"no application with id {application_id}")
+        current = row["status"]
+        if current == status:
+            return False
+
+        # Nothing automated reopens a closed application.
+        if current in _TERMINALS:
+            return False
+        if status not in _TERMINALS:
+            here = _PROGRESSION.index(current) if current in _PROGRESSION else -1
+            there = _PROGRESSION.index(status) if status in _PROGRESSION else -1
+            if there <= here:
+                return False
+
+        set_status(application_id, status, source, detail, conn=conn)
+        return True
+    finally:
+        if own:
+            conn.close()
+
+
 def get_application(application_id: int, *, conn=None) -> dict[str, Any] | None:
     """One application with its job fields, event history, and inbound messages."""
     own = conn is None
@@ -334,6 +395,46 @@ def list_pipeline(*, conn=None) -> dict[str, list[dict[str, Any]]]:
             item = dict(row)
             grouped.setdefault(item["status"], []).append(item)
         return grouped
+    finally:
+        if own:
+            conn.close()
+
+
+# Work still owed: queued by the user but not yet scored, or scored but not yet
+# tailored. This table is the run's work list - the JSON queue file it replaced
+# could drift from it, and did.
+_WORK_STATUSES = ("discovered", "scored")
+
+
+def list_work_queue(limit: int | None = None, *, conn=None) -> list[dict[str, Any]]:
+    """Jobs waiting for the crew, the user's own picks first.
+
+    A deliberate pick outranks a higher-scoring job the crew found on its own -
+    that is the whole point of queueing something by hand.
+    """
+    own = conn is None
+    conn = conn or connect()
+    try:
+        rows = conn.execute(
+            f"""
+            SELECT a.id, a.job_id, a.status, a.fit_score, a.created_at,
+                   j.title, j.company, j.location, j.work_mode, j.url, j.description
+            FROM application a JOIN job j ON j.id = a.job_id
+            WHERE a.status IN ({','.join('?' * len(_WORK_STATUSES))})
+            ORDER BY
+                EXISTS(
+                    SELECT 1 FROM application_event e
+                    WHERE e.application_id = a.id
+                      AND e.from_status IS NULL
+                      AND e.source = 'user'
+                ) DESC,
+                COALESCE(a.fit_score, -1) DESC,
+                a.created_at ASC
+            """,
+            _WORK_STATUSES,
+        )
+        items = [dict(row) for row in rows]
+        return items[:limit] if limit else items
     finally:
         if own:
             conn.close()

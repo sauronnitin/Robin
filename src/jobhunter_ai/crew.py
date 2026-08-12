@@ -19,6 +19,7 @@ from jobhunter_ai.tools.scrape_website_truncated import TruncatedScrapeWebsiteTo
 from jobhunter_ai.tools.job_apis import JobApisTool
 from jobhunter_ai import events_bus
 from jobhunter_ai import latex_sanitize
+from jobhunter_ai import pipeline_store
 from jobhunter_ai import pipeline_sync
 from jobhunter_ai.screening import screen_listings
 
@@ -71,11 +72,10 @@ def _usage_delta(before: dict[str, int], after: dict[str, int]) -> dict[str, int
 # (prompt+completion), over Groq 70b's 12K TPM ceiling, causing an
 # immediate permanent 429 every attempt (not a transient rate limit) and
 # forcing a slow Gemini fallback. batch=1 keeps each call under ~10K
-# tokens so Groq succeeds directly. Overflow jobs persist in job_queue.json
-# and get picked up on the next run.
+# tokens so Groq succeeds directly. Overflow jobs stay at `scored` in the
+# application table and get picked up on the next run.
 _TAILOR_BATCH_SIZE = 1
 _PROJECT_ROOT = Path(__file__).resolve().parents[2]
-_JOB_QUEUE_PATH = _PROJECT_ROOT / "logs" / "job_queue.json"
 _FIELD_RE = re.compile(
     r"^\*{0,2}(?P<key>Job Title|Title|Company(?: Name)?|Location|Work Mode|"
     r"Job URL|URL|Fit Score|Score|injection_flagged|injection_note|Rationale)"
@@ -90,26 +90,41 @@ def _queue_now() -> str:
 
 
 def _load_job_queue() -> list[dict[str, Any]]:
-    if not _JOB_QUEUE_PATH.exists():
-        return []
+    """Work carried over from earlier runs, read from the application table.
+
+    This used to be `logs/job_queue.json`. Two queues for one concept drifted -
+    the file kept jobs the board had already moved on from - so the table is now
+    the only one. Nothing removes a job from here: its status advances past
+    `scored` when the run tailors it, which takes it out of the query.
+    """
     try:
-        data = json.loads(_JOB_QUEUE_PATH.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
+        rows = pipeline_store.list_work_queue()
+    except Exception as exc:  # noqa: BLE001 - a run must not die on queue I/O
+        print(f"[queue] could not read the queue ({exc!r}); continuing with new jobs only")
         return []
-    jobs = data.get("jobs") if isinstance(data, dict) else data
-    return [j for j in jobs if isinstance(j, dict)] if isinstance(jobs, list) else []
 
-
-def _save_job_queue(jobs: list[dict[str, Any]]) -> None:
-    _JOB_QUEUE_PATH.parent.mkdir(parents=True, exist_ok=True)
-    payload = {
-        "updated_at": _queue_now(),
-        "count": len(jobs),
-        "jobs": jobs,
-    }
-    tmp = _JOB_QUEUE_PATH.with_suffix(".json.tmp")
-    tmp.write_text(json.dumps(payload, indent=2), encoding="utf-8")
-    tmp.replace(_JOB_QUEUE_PATH)
+    jobs: list[dict[str, Any]] = []
+    for row in rows:
+        if row["status"] != "scored":
+            # `discovered` jobs have no score yet; they enter through the Scout
+            # guardrail and get scored this run rather than jumping to Tailor.
+            continue
+        jobs.append(
+            {
+                "job_title": row.get("title") or "",
+                "company": row.get("company") or "",
+                "location": row.get("location") or "",
+                "work_mode": row.get("work_mode") or "",
+                "job_url": row.get("url") or "",
+                "fit_score": float(row.get("fit_score") or 0),
+                "injection_flagged": "no",
+                "injection_note": "none",
+                "rationale": "",
+                "raw_block": "",
+                "queued_at": row.get("created_at") or _queue_now(),
+            }
+        )
+    return jobs
 
 
 def _job_url(job: dict[str, Any]) -> str:
@@ -293,7 +308,7 @@ def _format_batch_for_tailor(
             lines.append(_format_job_block(job, i))
             lines.append("")
     lines.append(
-        f"QUEUE NOTE: {len(queued)} job(s) saved to logs/job_queue.json for the next run "
+        f"QUEUE NOTE: {len(queued)} job(s) stay in the Apply queue for the next run "
         "(not tailored this run)."
     )
     if queued:
@@ -304,6 +319,62 @@ def _format_batch_for_tailor(
                 f"(Fit {job.get('fit_score', '?')}) {job.get('job_url', '')}"
             )
     return "\n".join(lines).strip() + "\n"
+
+
+# A queued job carries its description from Browse. Cap what rides along:
+# Rule 1 - a blob an agent only forwards must not travel by value.
+_QUEUED_JD_LIMIT = 1200
+
+
+def _queued_jobs_guardrail(task_output) -> tuple[bool, Any]:
+    """After Scout: append the jobs the user queued by hand.
+
+    The crew used to start from a fresh fetch and never look at the queue, so a
+    deliberate pick in Browse reached the board and stopped there. Appending
+    here rather than later means a queued job goes through injection screening
+    and scoring like any other listing - it is untrusted text from a job board
+    either way, and the Tailor task needs a Fit Score to decide anything.
+    """
+    raw = getattr(task_output, "raw", None) or str(task_output)
+    try:
+        queued = pipeline_store.list_work_queue()
+        fresh = [row for row in queued if row["status"] == "discovered"]
+        if not fresh:
+            return True, raw
+
+        lines = [
+            "",
+            "",
+            "USER-QUEUED JOBS (chosen by the candidate in Browse - screen and "
+            "score these exactly like the listings above):",
+            "",
+        ]
+        for index, row in enumerate(fresh, start=1):
+            description = (row.get("description") or "").strip()
+            if len(description) > _QUEUED_JD_LIMIT:
+                description = description[:_QUEUED_JD_LIMIT].rstrip() + " …[truncated]"
+            lines.append(
+                f"{index}. **Job Title**: {row.get('title', '')}\n"
+                f"**Company**: {row.get('company', '')}\n"
+                f"**Location**: {row.get('location', '')}\n"
+                f"**Work Mode**: {row.get('work_mode', '')}\n"
+                f"**Job URL**: {row.get('url', '')}\n"
+                f"**Job Description**: {description or '(not captured - open the URL if needed)'}"
+            )
+            lines.append("")
+
+        print(f"[queue] added {len(fresh)} user-queued job(s) to this run")
+        events_bus.emit(
+            "step",
+            agent_id="global_product_design_job_scout",
+            task_key="scrape_and_filter_job_listings",
+            status="done",
+            detail={"label": "user_queued_jobs", "count": len(fresh)},
+        )
+        return True, raw + "\n".join(lines)
+    except Exception as exc:  # noqa: BLE001 - never fail a run over the queue
+        print(f"[queue] skipped injecting queued jobs: {exc!r}")
+        return True, raw
 
 
 def _score_batch_guardrail(task_output) -> tuple[bool, Any]:
@@ -400,11 +471,13 @@ def _select_tailor_batch(
     pooled = _merge_jobs(_load_job_queue(), scored)
     batch = pooled[:_TAILOR_BATCH_SIZE]
     remaining = pooled[_TAILOR_BATCH_SIZE:]
-    _save_job_queue(remaining)
+    # No queue file to rewrite: this run's scores are persisted by the task
+    # callback, and anything left at `scored` is still in the queue by
+    # definition. One source of truth, nothing to keep in sync.
     formatted = _format_batch_for_tailor(batch, remaining)
     print(
         f"[job_queue] scored={len(scored)} pool={len(pooled)} "
-        f"batch={len(batch)} queued={len(remaining)} path={_JOB_QUEUE_PATH}"
+        f"batch={len(batch)} queued={len(remaining)} (source: application table)"
     )
     events_bus.emit(
         "step",
@@ -416,7 +489,7 @@ def _select_tailor_batch(
             "scored": len(scored),
             "batch": len(batch),
             "queued": len(remaining),
-            "queue_path": str(_JOB_QUEUE_PATH),
+            "queue_source": "application table",
         },
     )
     return batch, remaining, formatted
@@ -1265,7 +1338,12 @@ class JobhunterAiCrew:
 
     @task
     def scrape_and_filter_job_listings(self) -> Task:
-        return Task(config=self.tasks_config["scrape_and_filter_job_listings"])
+        return Task(
+            config=self.tasks_config["scrape_and_filter_job_listings"],
+            # Fold in what the user queued by hand before anything is screened.
+            guardrail=_queued_jobs_guardrail,
+            guardrail_max_retries=0,
+        )
 
     @task
     def screen_listings_for_prompt_injection(self) -> Task:

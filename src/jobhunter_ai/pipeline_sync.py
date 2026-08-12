@@ -66,6 +66,8 @@ _KEY_ALIASES: dict[str, str] = {
     "fit_score": "fit_score",
     "score": "fit_score",
     "location": "location",
+    "description": "description",
+    "job_description": "description",
     "work_mode": "work_mode",
     "tailored": "tailored",
     "tailoring_note": "note",
@@ -214,6 +216,10 @@ def _identity(record: dict[str, Any]) -> NormalizedJob | None:
         url=url,
         location=str(record.get("location") or "").strip(),
         work_mode=str(record.get("work_mode") or "").strip(),
+        # Carried only when a job is queued from Browse, where the full posting
+        # is already on screen. Without it the Tailor task has no JD to weave
+        # keywords from and can only pass the base resume through.
+        description=str(record.get("description") or "").strip(),
     )
 
 

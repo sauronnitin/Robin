@@ -108,3 +108,69 @@ def import_run_history(jsonl_path: str | Path = DEFAULT_JSONL) -> int:
     finally:
         conn.close()
     return imported
+
+
+DEFAULT_JOB_QUEUE = Path("logs/job_queue.json")
+
+
+def import_job_queue(queue_path: str | Path = DEFAULT_JOB_QUEUE) -> int:
+    """Move the legacy `logs/job_queue.json` pool into the application table.
+
+    The file was the crew's cross-run queue before the pipeline tables existed.
+    Keeping both meant two answers to "what is queued", so the file is retired -
+    but the jobs in it are real scored work and must not be thrown away.
+
+    Idempotent: jobs land through `upsert_job`, so re-importing matches the same
+    fingerprints instead of duplicating.
+    """
+    from jobhunter_ai import pipeline_store
+    from jobhunter_ai.job_sources.base import NormalizedJob
+
+    path = Path(queue_path)
+    if not path.is_file():
+        print(f"[db_import] no legacy job queue at {path}")
+        return 0
+
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        print(f"[db_import] could not read {path}: {exc}")
+        return 0
+
+    jobs = data.get("jobs") if isinstance(data, dict) else data
+    if not isinstance(jobs, list):
+        return 0
+
+    imported = 0
+    for entry in jobs:
+        if not isinstance(entry, dict):
+            continue
+        title = str(entry.get("job_title") or "").strip()
+        company = str(entry.get("company") or "").strip()
+        url = str(entry.get("job_url") or "").strip()
+        if not url and not (title and company):
+            continue
+        try:
+            score = float(entry.get("fit_score") or 0)
+        except (TypeError, ValueError):
+            score = 0.0
+
+        job_id = pipeline_store.upsert_job(
+            NormalizedJob(
+                title=title,
+                company=company,
+                url=url,
+                location=str(entry.get("location") or "").strip(),
+                work_mode=str(entry.get("work_mode") or "").strip(),
+            )
+        )
+        pipeline_store.record_application(
+            job_id,
+            None,
+            status="scored",
+            source="crew",
+            detail="imported from logs/job_queue.json",
+            fit_score=score or None,
+        )
+        imported += 1
+    return imported
