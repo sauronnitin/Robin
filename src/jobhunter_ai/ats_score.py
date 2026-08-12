@@ -211,7 +211,12 @@ def extract_terms(posting: str, vocabulary: set[str] | None = None) -> list[Term
             if part in terms and not terms[part].required:
                 terms.pop(part, None)
 
-    return sorted(terms.values(), key=lambda t: t.weight, reverse=True)
+    # Sort by weight, then alphabetically. The tie-break is not cosmetic: terms
+    # are collected through a set, whose iteration order is hash-randomised per
+    # process, so weight alone left equal-weight terms in a different order on
+    # every run - and the tailor was handed a different missing-keyword list
+    # each time for identical input.
+    return sorted(terms.values(), key=lambda t: (-t.weight, t.text))
 
 
 _HEADING_LINE_RE = re.compile(r"^[A-Za-z][A-Za-z &/'-]{2,38}$")
