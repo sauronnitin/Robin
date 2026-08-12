@@ -45,6 +45,7 @@ _APPLICATION_FIELDS: frozenset[str] = frozenset(
         "cover_doc_url",
         "applied_at",
         "notes",
+        "dry_run",
     }
 )
 
@@ -270,7 +271,7 @@ def set_status(
 _APP_SELECT = """
     a.id, a.job_id, a.run_id, a.status, a.fit_score, a.tailored, a.cover_letter,
     a.resume_pdf_url, a.cover_doc_url, a.applied_at, a.created_at, a.updated_at,
-    a.notes,
+    a.notes, a.dry_run,
     j.title, j.company, j.location, j.work_mode, j.url, j.posted_at
     FROM application a JOIN job j ON j.id = a.job_id
 """

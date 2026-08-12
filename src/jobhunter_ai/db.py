@@ -190,6 +190,12 @@ CREATE TABLE outreach (
   updated_at   TEXT NOT NULL
 );
 """,
+    # A DRY_RUN rehearsal reports "Applied" without submitting anything. Without
+    # this flag those rows are indistinguishable from real applications and the
+    # outcome funnel counts submissions that never happened.
+    """
+ALTER TABLE application ADD COLUMN dry_run INTEGER NOT NULL DEFAULT 0;
+""",
 ]
 
 

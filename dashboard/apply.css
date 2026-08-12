@@ -152,6 +152,21 @@
   color: var(--st-slate);
 }
 
+/* §5.3 warning - a rehearsal is not a sent application. */
+.jh-apply-dry-tag {
+  flex-shrink: 0;
+  font-family: var(--st-sans);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--st-ink);
+  border: 1px solid #fab219;
+  border-radius: 5px;
+  padding: 1px 6px;
+  white-space: nowrap;
+}
+
 .jh-apply-sample-tag {
   flex-shrink: 0;
   font-family: var(--st-sans);

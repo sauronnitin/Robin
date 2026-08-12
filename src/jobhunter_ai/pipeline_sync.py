@@ -27,8 +27,30 @@ HANDLED_TASKS: tuple[str, ...] = (
     "submit_job_applications",
 )
 
-_FIELD_RE = re.compile(r"^\s*[-*]?\s*(?P<key>[A-Za-z][A-Za-z /_]{2,40}?)\s*:\s*(?P<val>.+?)\s*$")
-_BLOCK_SPLIT_RE = re.compile(r"(?im)^\s*(?:job\s*\d+\s*:|#{1,4}\s*job\s*\d+)\s*$")
+# Agents emit labeled fields in whatever markdown they feel like on the day:
+# "- Company Name: X", "*   **Company:** X", "**Fit Score:** 65%". The tasks ask
+# for a fixed shape and mostly comply, but a parser that only accepts one shape
+# silently drops a whole run's worth of applications - which is exactly what
+# happened on the 2026-08-11 live run. Bullets and emphasis are noise here.
+_EMPHASIS = r"(?:\*\*|__|\*|_)"
+_FIELD_RE = re.compile(
+    r"^\s*(?:[-*+•]\s*)*"          # any number of bullet markers
+    rf"{_EMPHASIS}?\s*"                  # optional opening emphasis
+    r"(?P<key>[A-Za-z][A-Za-z /_]{2,40}?)\s*"
+    rf"{_EMPHASIS}?\s*:\s*{_EMPHASIS}?\s*"
+    r"(?P<val>.+?)\s*$"
+)
+
+# A job block starts at "Job 1:", "### Job 1", or a numbered markdown heading
+# such as "**3. Product Designer**". An over-eager split is harmless: a chunk
+# with no identifiable job is dropped.
+_BLOCK_SPLIT_RE = re.compile(
+    r"(?im)^\s*(?:"
+    r"job\s*\d+\s*:"
+    r"|#{1,4}\s*job\s*\d+"
+    r"|(?:\*\*|__)?\d+[.)]\s+[^\n]{0,90}?(?:\*\*|__)?"
+    r")\s*$"
+)
 
 # "Company Name" -> company, "Job URL" -> url, ... one vocabulary for every
 # shape the tasks emit (JSON keys and labeled blocks alike).
@@ -89,10 +111,42 @@ def _parse_json_records(text: str) -> list[dict[str, Any]]:
     return [_coerce_record(item) for item in parsed if isinstance(item, dict)]
 
 
+_HEADING_NOISE_RE = re.compile(r"^[\s*_#]+|[\s*_#]+$")
+_HEADING_INDEX_RE = re.compile(r"^(?:job\s*)?\d+\s*[.):]\s*", re.I)
+
+
+def _heading_title(heading: str) -> str:
+    """The job title out of a heading like `**3. Product Designer**`.
+
+    Markdown numbering carries the title in these outputs, so a parser that
+    only reads field lines loses it - and a job without a title falls back to
+    URL identity, which stops it deduplicating against the same job seen with
+    a title later.
+    """
+    text = _HEADING_NOISE_RE.sub("", heading or "")
+    text = _HEADING_INDEX_RE.sub("", text).strip()
+    return "" if text.lower().startswith("job ") or text.isdigit() else text
+
+
+def _chunks_with_headings(text: str) -> list[tuple[str, str]]:
+    """Split into (heading, body) blocks, keeping each heading with its body."""
+    marks = [(m.start(), m.end(), m.group(0)) for m in _BLOCK_SPLIT_RE.finditer(text)]
+    if not marks:
+        return [("", text)]
+
+    chunks: list[tuple[str, str]] = []
+    if marks[0][0] > 0:
+        chunks.append(("", text[: marks[0][0]]))
+    for index, (_start, end, heading) in enumerate(marks):
+        stop = marks[index + 1][0] if index + 1 < len(marks) else len(text)
+        chunks.append((heading, text[end:stop]))
+    return chunks
+
+
 def _parse_labeled_records(text: str) -> list[dict[str, Any]]:
-    """Parse the `Job N:` labeled-block format the Compile/Apply tasks emit."""
+    """Parse the labeled-block formats the Score/Compile/Apply tasks emit."""
     records: list[dict[str, Any]] = []
-    for chunk in _BLOCK_SPLIT_RE.split(text):
+    for heading, chunk in _chunks_with_headings(text):
         fields: dict[str, Any] = {}
         for line in chunk.splitlines():
             match = _FIELD_RE.match(line)
@@ -101,6 +155,10 @@ def _parse_labeled_records(text: str) -> list[dict[str, Any]]:
             key = _canonical_key(match.group("key"))
             if key and key not in fields:
                 fields[key] = match.group("val").strip().strip("*").strip()
+        if not fields.get("title"):
+            title = _heading_title(heading)
+            if title:
+                fields["title"] = title
         if fields.get("url") or (fields.get("company") and fields.get("title")):
             records.append(fields)
     return records
@@ -209,6 +267,23 @@ def queue_job(record: dict[str, Any], *, conn=None) -> dict[str, Any]:
     }
 
 
+def _is_dry_run(text: str) -> bool:
+    """Whether this submission was a rehearsal rather than a real application.
+
+    The setting is the ground truth; the agent's own "DRY_RUN: would apply to"
+    confirmation line is the backstop for a run started with a different
+    environment than the dashboard is reading.
+    """
+    if "dry_run" in (text or "").lower():
+        return True
+    try:
+        from jobhunter_ai import app_settings
+
+        return bool(app_settings._bool_dry_run())
+    except Exception:  # noqa: BLE001 - never fail a run over a settings read
+        return False
+
+
 def sync_task_output(
     task_key: str,
     text: str,
@@ -220,6 +295,7 @@ def sync_task_output(
     if task_key not in HANDLED_TASKS:
         return {"task": task_key, "handled": False, "records": 0}
 
+    dry_run = _is_dry_run(text) if task_key == "submit_job_applications" else False
     records = parse_records(text or "")
     summary: dict[str, Any] = {
         "task": task_key,
@@ -227,6 +303,7 @@ def sync_task_output(
         "records": len(records),
         "applications": 0,
         "statuses": {},
+        "dry_run": dry_run,
     }
 
     for record in records:
@@ -263,6 +340,9 @@ def sync_task_output(
                 fields["cover_letter"] = 1
             if status == "applied":
                 fields["applied_at"] = pipeline_store.utc_now()
+                # A DRY_RUN rehearsal reports "Applied" for a form it never
+                # submitted. Flag it, or the funnel counts it as a real one.
+                fields["dry_run"] = 1 if dry_run else 0
 
         application_id = pipeline_store.record_application(
             job_id,

@@ -185,6 +185,8 @@
       + '  <div class="jh-apply-title">' + esc(app.title || '') + '</div>'
       + '  <div class="jh-apply-meta">' + statusPill(app.status)
       + (state.sample ? '<span class="jh-apply-sample-tag">Sample</span>' : '')
+      // A rehearsal must never read as a sent application.
+      + (app.dry_run ? '<span class="jh-apply-dry-tag" title="DRY_RUN: nothing was submitted">Dry run</span>' : '')
       + '    <span class="jh-apply-when">' + esc(humanDate(when)) + '</span>'
       + '  </div>'
       + '</article>';
@@ -312,6 +314,7 @@
       + '  <button class="jh-apply-btn" id="applyDetailClose" aria-label="Close">✕</button>'
       + '</div>'
       + '<div class="jh-apply-detail-row">' + statusPill(app.status)
+      + (app.dry_run ? '<span class="jh-apply-dry-tag">Dry run — not submitted</span>' : '')
       + (app.fit_score != null ? '<span class="jh-apply-score">' + Math.round(app.fit_score) + '</span>' : '')
       + '</div>'
       + (links.length ? '<div class="jh-apply-detail-links">' + links.join('') + '</div>' : '')
