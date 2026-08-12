@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import base64
 import os
+import re
 import threading
 import time
 from pathlib import Path
@@ -62,7 +63,45 @@ def gmail_status() -> dict[str, Any]:
         profile = service.users().getProfile(userId="me").execute()
         return {"connected": True, "email": profile.get("emailAddress")}
     except Exception as exc:
-        return {"connected": False, "email": None, "error": str(exc)}
+        return {"connected": False, "email": None, **explain_gmail_error(str(exc))}
+
+
+# Google's 403 for a disabled API is 800 characters of prose wrapped around one
+# console link. Pull the link out and say the one sentence that matters.
+_API_DISABLED_RE = re.compile(
+    r"(https://console\.(?:developers|cloud)\.google\.com/apis/api/gmail\.googleapis\.com[^\s\"']*)"
+)
+
+
+def explain_gmail_error(message: str) -> dict[str, Any]:
+    """Turn a raw Gmail API error into something a person can act on."""
+    result: dict[str, Any] = {"error": message}
+    blob = message or ""
+
+    if "accessNotConfigured" in blob or "has not been used in project" in blob:
+        match = _API_DISABLED_RE.search(blob)
+        result["needs_api_enable"] = True
+        result["hint"] = (
+            "Signed in, but the Gmail API is switched off for this Google Cloud "
+            "project. Enable it, wait a minute, then press Re-check."
+        )
+        if match:
+            result["action_url"] = match.group(1)
+        return result
+
+    if "invalid_grant" in blob or "Token has been expired or revoked" in blob:
+        result["hint"] = "That Google sign-in expired or was revoked. Connect again."
+        return result
+
+    if "insufficient" in blob.lower() or "insufficientPermissions" in blob:
+        result["hint"] = (
+            "The sign-in did not include read access to Gmail. Connect again and "
+            "leave the Gmail permission ticked."
+        )
+        return result
+
+    result["hint"] = "Gmail could not be reached. See the error for details."
+    return result
 
 
 def start_gmail_oauth_flow() -> dict[str, Any]:

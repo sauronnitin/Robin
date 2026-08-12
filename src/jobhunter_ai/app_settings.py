@@ -165,6 +165,12 @@ def get_settings() -> dict[str, Any]:
         "gmail": {
             "connected": bool(gmail.get("connected")),
             "email": gmail.get("email"),
+            # Carry the diagnosis through - the Settings card is where a failed
+            # connection actually gets fixed.
+            "hint": gmail.get("hint"),
+            "action_url": gmail.get("action_url"),
+            "needs_api_enable": gmail.get("needs_api_enable", False),
+            "error": gmail.get("error"),
         },
         "google_oauth": {
             "client_present": _oauth_client_present(),

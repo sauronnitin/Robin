@@ -3401,8 +3401,32 @@ html.dark .jh-asst-send { background: var(--st-peach); color: var(--st-sienna); 
           </div>
           <div class="flex flex-wrap items-center gap-3 pt-1 text-[12px]">
             <span id="setOauthStatus" class="text-slate-400">Google OAuth: …</span>
-            <span id="setGmailStatus" class="text-slate-400">Gmail: …</span>
-            <a href="/api/gmail/connect" class="text-indigo-400 hover:text-indigo-300 font-medium">Connect Gmail</a>
+          </div>
+        </div>
+
+        <!-- Gmail: the only thing that turns replies into pipeline status. -->
+        <div class="st-mist-card space-y-3">
+          <div class="flex items-start justify-between gap-3 flex-wrap">
+            <div class="min-w-0">
+              <div class="text-[13.5px] font-semibold text-slate-100">Gmail replies</div>
+              <p class="text-[12px] text-slate-500 mt-0.5 max-w-xl">
+                Lets Apply read recruiter replies and move a card from Applied to Replied on its own.
+                Interviews, offers, and rejections still wait for you to confirm them.
+              </p>
+            </div>
+            <span id="setGmailStatus" class="jh-gmail-pill is-unknown">Gmail: …</span>
+          </div>
+
+          <ul class="jh-gmail-facts">
+            <li><b>Read-only.</b> The scope is <code>gmail.readonly</code> — this app cannot send, delete, or edit mail.</li>
+            <li><b>Optional.</b> The board works without it; you just move cards by hand.</li>
+            <li><b>Local.</b> The token is written to <code>gmail_token.json</code> in the project folder and is gitignored.</li>
+          </ul>
+
+          <div class="flex flex-wrap items-center gap-2">
+            <button type="button" id="setGmailConnectBtn" onclick="connectGmailFromSettings()" class="jh-apply-btn is-primary">Connect Gmail</button>
+            <button type="button" id="setGmailRecheckBtn" onclick="refreshGmailStatus(true)" class="jh-apply-btn">Re-check</button>
+            <span id="setGmailHint" class="text-[11.5px] text-slate-500"></span>
           </div>
         </div>
 
@@ -6288,11 +6312,7 @@ function applySettingsPayload(data){
     const g = data.google_oauth || {};
     oauth.textContent = `Google OAuth: ${g.client_present ? 'client found' : 'client missing'}${g.token_present ? ' · token cached' : ''}`;
   }
-  const gmail = document.getElementById('setGmailStatus');
-  if(gmail){
-    const gm = data.gmail || {};
-    gmail.textContent = gm.connected ? `Gmail: connected (${gm.email||''})` : 'Gmail: not connected';
-  }
+  paintGmailStatus(data.gmail || {});
 
   const pack = document.getElementById('setProfilePack');
   if(pack){
@@ -6464,6 +6484,83 @@ function showEmailVerifyModal(company, ats){
 function closeEmailModal(){
   document.getElementById('emailVerifyModal').classList.add('hidden');
 }
+function paintGmailStatus(gm){
+  const pill = document.getElementById('setGmailStatus');
+  if(pill){
+    const connected = !!gm.connected;
+    pill.textContent = connected ? `Connected · ${gm.email||''}` : 'Not connected';
+    pill.classList.toggle('is-on', connected);
+    pill.classList.toggle('is-off', !connected);
+    pill.classList.remove('is-unknown');
+  }
+  const btn = document.getElementById('setGmailConnectBtn');
+  if(btn){
+    btn.textContent = gm.connected ? 'Reconnect' : 'Connect Gmail';
+    btn.disabled = false;
+  }
+  const hint = document.getElementById('setGmailHint');
+  if(hint){
+    if(gm.connected){
+      hint.textContent = '';
+    } else if(gm.hint){
+      hint.textContent = gm.hint + ' ';
+      if(gm.action_url){
+        const a = document.createElement('a');
+        a.href = gm.action_url;
+        a.target = '_blank';
+        a.rel = 'noopener';
+        a.className = 'jh-gmail-link';
+        a.textContent = 'Open Google Cloud console';
+        hint.appendChild(a);
+      }
+    } else {
+      hint.textContent = '';
+    }
+  }
+}
+
+async function refreshGmailStatus(announce){
+  try{
+    const res = await fetch(`${API}/api/gmail/status`);
+    const data = await res.json();
+    paintGmailStatus(data);
+    if(announce) showT(data.connected ? `Gmail connected (${data.email||''})` : 'Gmail is not connected yet');
+    return data;
+  }catch(err){
+    if(announce) showT(`Could not read Gmail status: ${err.message}`);
+    return {connected:false};
+  }
+}
+
+// Consent happens in Google's own tab — this only opens it and waits.
+function connectGmailFromSettings(){
+  const btn = document.getElementById('setGmailConnectBtn');
+  const hint = document.getElementById('setGmailHint');
+  btn.disabled = true;
+  btn.textContent = 'Waiting for Google…';
+  if(hint) hint.textContent = 'Pick your Google account and approve read-only access, then come back here.';
+  window.open(`${API}/api/gmail/connect`, '_blank');
+  showT('Google sign-in opened in a new tab');
+
+  let n = 0;
+  const iv = setInterval(async ()=>{
+    n++;
+    const data = await refreshGmailStatus(false);
+    if(data.connected){
+      clearInterval(iv);
+      if(hint) hint.textContent = 'Done — Apply can read replies now.';
+      showT(`Gmail connected (${data.email||''})`);
+      return;
+    }
+    if(n > 90){
+      clearInterval(iv);
+      btn.disabled = false;
+      btn.textContent = 'Connect Gmail';
+      if(hint) hint.textContent = 'Timed out waiting. Press Connect Gmail to try again.';
+    }
+  }, 2000);
+}
+
 function connectGmail(){
   const btn = document.getElementById('evConnectBtn');
   btn.textContent = 'Connecting…';
