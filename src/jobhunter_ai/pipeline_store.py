@@ -11,7 +11,7 @@ from typing import Any
 
 from jobhunter_ai.db import connect, utc_now
 from jobhunter_ai.job_sources.base import NormalizedJob
-from jobhunter_ai.job_sources.normalize import fingerprint
+from jobhunter_ai.job_sources.normalize import canonical_url, fingerprint
 
 # Exact strings from SPEC.md §3.1. A typo'd status silently breaks the funnel,
 # so anything outside this set raises rather than being written.
@@ -71,11 +71,65 @@ def _validate_source(source: str) -> str:
     return value
 
 
+def _find_job_row(conn, job: NormalizedJob, fp: str):
+    """Fingerprint first (cross-board content-key), then same canonical URL.
+
+    fingerprint() switches between company|title and a URL-hash depending on
+    whether the title is present, so Score with an empty/dirty title and
+    Apply with a clean one used to insert two rows for one posting. A URL
+    match reuses the existing row. Different boards of the same role still
+    only collapse via content-key: RemoteOK and Greenhouse URLs differ, so
+    this fallback does not merge them.
+    """
+    row = conn.execute(
+        "SELECT id, fingerprint FROM job WHERE fingerprint = ?", (fp,)
+    ).fetchone()
+    if row is not None:
+        return row
+    url = (job.url or "").strip()
+    if not url:
+        return None
+    row = conn.execute(
+        "SELECT id, fingerprint FROM job WHERE url = ?", (url,)
+    ).fetchone()
+    if row is not None:
+        return row
+    canon = canonical_url(url)
+    if not canon:
+        return None
+    for stored in conn.execute(
+        "SELECT id, fingerprint, url FROM job WHERE url != ''"
+    ):
+        if canonical_url(stored["url"]) == canon:
+            return stored
+    return None
+
+
+def _fingerprint_to_keep(conn, job_id: int, new_fp: str, stored_fp: str) -> str:
+    """Promote URL-hash identity to content-key; never the other way around."""
+    if new_fp == stored_fp:
+        return stored_fp
+    # Score with a missing title must not undo Scout's company|title key, or
+    # the same role on another board would stop collapsing.
+    if new_fp.startswith("u:") and stored_fp.startswith("c:"):
+        return stored_fp
+    taken = conn.execute(
+        "SELECT 1 FROM job WHERE fingerprint = ? AND id != ?",
+        (new_fp, job_id),
+    ).fetchone()
+    if taken is not None:
+        return stored_fp
+    return new_fp
+
+
 def upsert_job(job: NormalizedJob, *, conn=None) -> int:
-    """Insert or update a job by fingerprint. Returns job.id.
+    """Insert or update a job by fingerprint, or by canonical URL. Returns job.id.
 
     `last_seen_at` moves on every call; `first_seen_at` is written once, on
-    insert, and never touched again.
+    insert, and never touched again. Fingerprint is the primary identity
+    (same role on RemoteOK and Greenhouse collapses). If that misses, a
+    matching URL still updates the existing row so a later cleaner title
+    does not fork a second posting.
     """
     own = conn is None
     conn = conn or connect()
@@ -83,9 +137,7 @@ def upsert_job(job: NormalizedJob, *, conn=None) -> int:
         fp = fingerprint(job)
         now = utc_now()
         with conn:
-            row = conn.execute(
-                "SELECT id FROM job WHERE fingerprint = ?", (fp,)
-            ).fetchone()
+            row = _find_job_row(conn, job, fp)
             if row is None:
                 cur = conn.execute(
                     """
@@ -114,11 +166,15 @@ def upsert_job(job: NormalizedJob, *, conn=None) -> int:
                 return int(cur.lastrowid)
 
             job_id = int(row["id"])
+            fp_to_write = _fingerprint_to_keep(
+                conn, job_id, fp, str(row["fingerprint"] or "")
+            )
             # Refresh only what a later sighting can legitimately improve. An
             # empty value from a thinner source must not blank a richer one.
             conn.execute(
                 """
                 UPDATE job SET
+                    fingerprint = ?,
                     last_seen_at = ?,
                     title       = COALESCE(NULLIF(?, ''), title),
                     company     = COALESCE(NULLIF(?, ''), company),
@@ -133,6 +189,7 @@ def upsert_job(job: NormalizedJob, *, conn=None) -> int:
                 WHERE id = ?
                 """,
                 (
+                    fp_to_write,
                     now,
                     job.title or "",
                     job.company or "",

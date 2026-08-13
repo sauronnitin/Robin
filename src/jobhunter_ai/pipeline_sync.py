@@ -120,6 +120,24 @@ def _parse_json_records(text: str) -> list[dict[str, Any]]:
 
 _HEADING_NOISE_RE = re.compile(r"^[\s*_#]+|[\s*_#]+$")
 _HEADING_INDEX_RE = re.compile(r"^(?:job\s*)?\d+\s*[.):]\s*", re.I)
+# Score sometimes pastes the field label into the heading, and on a bad day
+# doubles it: "**Job Title**: **Job Title**: Product Designer".
+_JOB_TITLE_LABEL_RE = re.compile(
+    rf"^(?:{_EMPHASIS})?Job\s*Title(?:{_EMPHASIS})?\s*:\s*",
+    re.I,
+)
+
+
+def _strip_title_labels(title: str) -> str:
+    """Drop a leading 'Job Title:' prefix, including doubled leaks."""
+    text = (title or "").strip()
+    for _ in range(8):
+        stripped = _JOB_TITLE_LABEL_RE.sub("", text, count=1)
+        stripped = _HEADING_NOISE_RE.sub("", stripped).strip()
+        if stripped == text:
+            break
+        text = stripped
+    return text
 
 
 def _heading_title(heading: str) -> str:
@@ -128,11 +146,14 @@ def _heading_title(heading: str) -> str:
     Markdown numbering carries the title in these outputs, so a parser that
     only reads field lines loses it - and a job without a title falls back to
     URL identity, which stops it deduplicating against the same job seen with
-    a title later.
+    a title later. Score also sometimes embeds the field label itself
+    (`**Job Title**: Product Designer`, doubled on a bad day); strip that
+    before treating the rest as the title.
     """
     text = _HEADING_NOISE_RE.sub("", heading or "")
     text = _HEADING_INDEX_RE.sub("", text).strip()
-    return "" if text.lower().startswith("job ") or text.isdigit() else text
+    text = _strip_title_labels(text)
+    return "" if not text or text.isdigit() or text.lower().startswith("job ") else text
 
 
 def _chunks_with_headings(text: str) -> list[tuple[str, str]]:
@@ -209,7 +230,7 @@ def _usable_link(value: Any) -> str:
 
 def _identity(record: dict[str, Any]) -> NormalizedJob | None:
     company = str(record.get("company") or "").strip()
-    title = str(record.get("title") or "").strip()
+    title = _strip_title_labels(str(record.get("title") or "").strip())
     url = _clean_url(record.get("url"))
     if not url and not (company and title):
         return None
