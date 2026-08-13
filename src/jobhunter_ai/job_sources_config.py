@@ -66,6 +66,7 @@ DEFAULT_ENABLED = [
     "serpapi",
 ]
 
+# Example watchlist for the demo Product Designer persona. Replace with your own targets.
 DEFAULT_WATCHLIST = [
     "greenhouse,anthropic",
     "greenhouse,stripe",
