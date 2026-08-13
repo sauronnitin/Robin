@@ -19,6 +19,8 @@ user/*
 !user/README.md
 secrets/*
 !secrets/README.md
+reference/*
+!reference/README.md
 resume/
 
 # Runtime artifacts
