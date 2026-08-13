@@ -79,6 +79,13 @@ Case Study Building*.md
 *Case Study*.md
 *migration plan*.md
 
+# Local case-study launchers (point at docs/case-study-jobhunter/, kept on disk)
+Open-JobHunter-CaseStudy.bat
+Open-Figma-Ajna-Capture.bat
+Rebuild-Figma-Ajna-Slides.bat
+Open-Inject-JobHunter-GUI.bat
+Open-Figma-Ajna-Style.bat
+
 # O*NET bulk download (raw upstream; derived bundle is under dashboard/kg/onet/)
 .onet_raw/
 
