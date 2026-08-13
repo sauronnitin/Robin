@@ -237,9 +237,9 @@ write_cover_letters:
   - tailor_resume_per_job
 humanize_content:
   description: |-
-    For each job, take the cover letter text and the tailored resume sections (Summary + Experience bullets) from the previous tasks and rewrite them to pass AI detection with a score under 10% on GPTZero, Originality.ai, Copyleaks, Turnitin, and ZeroGPT.
+    For each job, take the cover letter text from the previous task and rewrite it to pass AI detection with a score under 10% on GPTZero, Originality.ai, Copyleaks, Turnitin, and ZeroGPT. This task no longer touches the resume — Tailor's resume_latex output already carries the candidate's real, minimally-edited voice and is not rewritten as prose, so carry it forward unchanged.
 
-    Apply ALL of the following humanization rules without exception:
+    Apply ALL of the following humanization rules to the cover letter without exception:
 
     **Sentence structure:** Vary length aggressively. Mix short punchy sentences with longer flowing ones. Break the AI pattern of uniform medium-length sentences.
 
@@ -255,11 +255,9 @@ humanize_content:
 
     **Banned phrases (never use under any circumstances):** "I am excited to", "I am passionate about", "I believe I would be", "leverage", "utilize", "cutting-edge", "dynamic", "I am writing to express", "I would be a great fit", "synergy", "robust", "I am thrilled", "I would be an excellent".
 
-    **Keywords:** All JD-relevant keywords from the tailoring step must survive the humanization — do not remove them, only reframe how they appear in context.
+    **Keywords:** All JD-relevant keywords already in the cover letter must survive the humanization — do not remove them, only reframe how they appear in context.
 
-    **Resume sections:** Humanize the Summary and Experience bullets ONLY. Do NOT change job titles, company names, dates, or the Skills list.
-
-    **Cover letter:** Full rewrite through the humanization lens — all 3 paragraphs.
+    **Full rewrite:** all 3 paragraphs of the cover letter go through the humanization lens.
 
     OUTPUT FORMAT (produce this JSON array FIRST — it is the primary deliverable):
     a JSON array with one object per job, in this exact shape:
@@ -271,15 +269,16 @@ humanize_content:
         "Fit Score": <carried forward from input>,
         "cover_letter_text": "<humanized cover letter text, or empty string if not required>",
         "cover_letter_doc_link": "<carried forward from input, or 'N/A - not required'>",
-        "humanized_latex": "<this job's complete humanized LaTeX resume source, and ONLY this job's — never another job's>"
+        "resume_latex": "<this job's complete LaTeX resume source, copied VERBATIM from tailor_resume_per_job's resume_latex for this job — do not rewrite, paraphrase, or touch it in any way>"
       },
       ...
     ]
 
     Every job from the input must produce exactly one object. Never merge two jobs'
-    LaTeX into one object's humanized_latex field. Do not omit any field. Always emit
-    the real, complete LaTeX in humanized_latex — the pipeline swaps it for a short
-    file reference after you answer, so never emit a reference yourself.
+    LaTeX into one object's resume_latex field. Do not omit any field. Always emit
+    the real, complete LaTeX in resume_latex, copied unchanged from Tailor's output
+    — the pipeline swaps it for a short file reference after you answer, so never
+    emit a reference yourself.
 
     ONLY AFTER producing the full JSON array above: for each job whose
     cover_letter_doc_link is a real Google Doc (not "N/A - not required"), use its
@@ -289,9 +288,10 @@ humanize_content:
     all jobs as your Final Answer.
   expected_output: 'A JSON array, one object per job, each with exactly these keys:
     Company Name, Job Title, Job URL, Fit Score, cover_letter_text, cover_letter_doc_link,
-    humanized_latex (that job''s complete LaTeX source only, never combined with another
-    job''s). No job may be omitted or merged with another. Company Name, Job Title, Job
-    URL, and Fit Score are always carried forward unchanged from the input.'
+    resume_latex (that job''s complete LaTeX source, copied verbatim from
+    tailor_resume_per_job, never rewritten, never combined with another job''s). No
+    job may be omitted or merged with another. Company Name, Job Title, Job URL, and
+    Fit Score are always carried forward unchanged from the input.'
   agent: content_humanizer_ai_detection_specialist
   context:
   - write_cover_letters
@@ -299,13 +299,13 @@ humanize_content:
 compile_and_upload_resume_pdfs:
   description: |-
     The Humanize Content step's output is a JSON array, one object per job, each with
-    Company Name, Job Title, Job URL, Fit Score, and a humanized_latex field holding a
+    Company Name, Job Title, Job URL, Fit Score, and a resume_latex field holding a
     short `FILE:<name>.tex` ref to that job's resume source. Process every object in
-    the array. Never reuse one object's humanized_latex ref for a different job.
+    the array. Never reuse one object's resume_latex ref for a different job.
 
-    For each job object, take its humanized_latex ref and:
+    For each job object, take its resume_latex ref and:
 
-    1. Use the LaTeX compiler tool to compile it into a PDF. Pass the humanized_latex value through as latex_source EXACTLY as given: it is a short ref and the tool loads the source itself. Never expand, retype, or paste LaTeX source into the argument. (The tool sanitizes double-escaped backslashes and may fall back to the active profile resume in user/ or the selected role pack.)
+    1. Use the LaTeX compiler tool to compile it into a PDF. Pass the resume_latex value through as latex_source EXACTLY as given: it is a short ref and the tool loads the source itself. Never expand, retype, or paste LaTeX source into the argument. (The tool sanitizes double-escaped backslashes and may fall back to the active profile resume in user/ or the selected role pack.)
     2. From the compiler output, copy the short pdf_base64 ref exactly (e.g. FILE:last_compile.b64). Do NOT paste giant Base64 blobs into the next tool call.
     3. Use the Google Drive PDF uploader tool with that FILE: ref as pdf_base64 and filename: "[Company Name] - [Job Title] - Resume.pdf"
     4. Capture the returned Google Drive shareable link for each uploaded PDF.

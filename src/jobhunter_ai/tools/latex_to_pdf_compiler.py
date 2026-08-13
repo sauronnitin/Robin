@@ -27,7 +27,7 @@ class LatexToPdfCompilerInput(BaseModel):
         ...,
         description=(
             "Either a short `FILE:<name>.tex` ref (preferred — copy it verbatim from "
-            "the humanized_latex field you were given) or the full LaTeX source string. "
+            "the resume_latex field you were given) or the full LaTeX source string. "
             "Prefer the ref: never retype a whole resume into this argument."
         ),
     )
@@ -39,7 +39,7 @@ class LatexToPdfCompiler(BaseTool):
     name: str = "Latex To Pdf Compiler"
     description: str = (
         "Compiles a resume into a PDF using the YtoTech LaTeX-on-HTTP API. "
-        "Pass latex_source as the short `FILE:<name>.tex` ref from the humanized_latex "
+        "Pass latex_source as the short `FILE:<name>.tex` ref from the resume_latex "
         "field (preferred): the tool loads the source itself, so you never need to "
         "retype the LaTeX. A full LaTeX string is still accepted. "
         "Sanitizes double-escaped backslashes and falls back to the active profile resume "
