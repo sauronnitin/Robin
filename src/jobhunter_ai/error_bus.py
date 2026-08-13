@@ -16,6 +16,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from jobhunter_ai.profile import profile_resume_path
+
 _PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DASHBOARD_DIR = _PROJECT_ROOT / "dashboard"
 ERRORS_DIR = DASHBOARD_DIR / "errors"
@@ -207,10 +209,10 @@ def _live_code_and_hint(error: str, suggestion: str) -> tuple[str, str]:
             "live_config",
             "Set MASTER_SHEET_ID in .env and confirm Google OAuth token is valid.",
         )
-    if "resume" in text and ("base_resume" in text or "not found" in text):
+    if "resume" in text and ("base_resume" in text or "not found" in text or "no resume" in text):
         return (
             "live_config",
-            "Ensure resume/base_resume.tex exists, then Confirm fix & retry.",
+            "Place resume.tex or resume.pdf in user/ (see README), then Confirm fix & retry.",
         )
     if "gemini_api_key" in text or ("gemini" in text and ("api key" in text or "apikey" in text)):
         return (
@@ -280,13 +282,26 @@ def upsert_live_open(
     return report
 
 
+def _resume_hint_path() -> str:
+    try:
+        found = profile_resume_path()
+        if found is not None:
+            try:
+                return found.resolve().relative_to(_PROJECT_ROOT.resolve()).as_posix()
+            except ValueError:
+                return found.as_posix()
+    except Exception:
+        pass
+    return "user/resume.tex"
+
+
 def _hint_files(code: str) -> list[str]:
     if code == "live_rate_limit":
         return ["src/jobhunter_ai/crew.py", "src/jobhunter_ai/config/tasks.yaml"]
     if code == "live_tool_failure":
         return ["src/jobhunter_ai/crew.py", "src/jobhunter_ai/tools/"]
     if code in ("live_config", "live_auth"):
-        return [".env", "google-oauth-client.json", "resume/base_resume.tex"]
+        return [".env", "google-oauth-client.json", _resume_hint_path()]
     if code == "live_aborted":
         return ["dashboard/errors/latest.json"]
     return ["dashboard/events.jsonl", "src/jobhunter_ai/crew.py"]

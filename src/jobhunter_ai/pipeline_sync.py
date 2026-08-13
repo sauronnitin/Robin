@@ -14,11 +14,11 @@ from __future__ import annotations
 
 import json
 import re
-from pathlib import Path
 from typing import Any
 
 from jobhunter_ai import ats_score
 from jobhunter_ai import pipeline_store
+from jobhunter_ai import profile as jobcrew_profile
 from jobhunter_ai.job_sources.base import NormalizedJob
 from jobhunter_ai.job_sources.normalize import normalize_work_mode
 
@@ -247,15 +247,15 @@ def classify_submission(status_text: str) -> str:
     return "failed"
 
 
-_BASE_RESUME_PATH = Path(__file__).resolve().parents[2] / "resume" / "base_resume.tex"
-
-
 def base_resume_ats(posting: str) -> float | None:
     """The base resume's keyword match against a posting, or None if unknown."""
     if not (posting or "").strip():
         return None
+    resume_path = jobcrew_profile.profile_resume_path()
+    if resume_path is None:
+        return None
     try:
-        latex = _BASE_RESUME_PATH.read_text(encoding="utf-8")
+        latex = resume_path.read_text(encoding="utf-8")
     except OSError as exc:  # noqa: BLE001 - scoring is a nicety, not a gate
         print(f"[ats] base resume unreadable ({exc}); skipping baseline score")
         return None

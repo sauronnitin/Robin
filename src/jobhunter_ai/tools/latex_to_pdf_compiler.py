@@ -40,11 +40,12 @@ class LatexToPdfCompiler(BaseTool):
     description: str = (
         "Compiles a resume into a PDF using the YtoTech LaTeX-on-HTTP API. "
         "Pass latex_source as the short `FILE:<name>.tex` ref from the humanized_latex "
-        "field (preferred) — the tool loads the source itself, so you never need to "
+        "field (preferred): the tool loads the source itself, so you never need to "
         "retype the LaTeX. A full LaTeX string is still accepted. "
-        "Sanitizes double-escaped backslashes and falls back to resume/base_resume.tex when "
+        "Sanitizes double-escaped backslashes and falls back to the active profile resume "
+        "(user/resume.tex or the selected role pack) when "
         "the source is not valid LaTeX. On success, writes the PDF Base64 to a cache file and "
-        f"returns the short ref `{LAST_COMPILE_REF}` — pass that exact string as pdf_base64 "
+        f"returns the short ref `{LAST_COMPILE_REF}`: pass that exact string as pdf_base64 "
         "to the Google Drive PDF Upload tool (do NOT paste a giant Base64 blob into chat)."
     )
     args_schema: Type[BaseModel] = LatexToPdfCompilerInput

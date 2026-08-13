@@ -10,6 +10,12 @@ from typing import Any
 _ROOT = Path(__file__).resolve().parents[2]
 _PROFILES = _ROOT / "profiles"
 _USER = _ROOT / "user"
+# Leftover from the CrewAI studio paste-here working file. Gitignored, never
+# created by onboarding, and not mentioned in README. Kept as a last-resort
+# lookup so an existing local copy still works.
+_LEGACY_BASE_RESUME = _ROOT / "resume" / "base_resume.tex"
+_RESUME_FILE_KEYS = ("resume_tex", "resume_pdf", "resume_md")
+_CONVENTIONAL_RESUME_NAMES = ("resume.tex", "resume.pdf", "resume.md")
 
 
 def project_root() -> Path:
@@ -73,20 +79,79 @@ def load_profile(profile_id: str | None = None) -> dict[str, Any]:
     return data
 
 
-def profile_resume_text(profile: dict[str, Any] | None = None) -> str:
-    profile = profile or load_profile()
-    base = Path(str(profile.get("_dir") or _USER))
-    files = profile.get("files") or {}
-    for key in ("resume_tex", "resume_pdf", "resume_md"):
+def _resume_candidates(base: Path, data: dict[str, Any]) -> list[Path]:
+    out: list[Path] = []
+    files = data.get("files") or {}
+    for key in _RESUME_FILE_KEYS:
         name = files.get(key)
-        if not name:
-            continue
-        path = base / str(name)
-        if path.is_file():
+        if name:
+            out.append(base / str(name))
+    for name in _CONVENTIONAL_RESUME_NAMES:
+        out.append(base / name)
+    return out
+
+
+def profile_resume_path(profile: dict[str, Any] | None = None) -> Path | None:
+    """On-disk resume the live crew should read.
+
+    README, profiles/README, and user/README all tell a new user to put
+    ``resume.tex`` or ``resume.pdf`` in ``user/``. The product-designer pack
+    ships ``profiles/product-designer/resume.tex``. Onboarding writes parsed
+    fields to ``user/profile.json`` and a preview blob, never
+    ``resume/base_resume.tex`` (gitignored leftover from the original
+    paste-here working file).
+
+    Order: active profile dir (user/ or profiles/<id>/) via ``files.*`` then
+    conventional names; if the active profile is a user overlay with no
+    resume file, the JOBCREW_PROFILE preset pack; then the legacy path.
+    """
+    profile = profile or load_profile()
+    seen: set[Path] = set()
+
+    def _first_existing(paths: list[Path]) -> Path | None:
+        for path in paths:
             try:
-                return path.read_text(encoding="utf-8", errors="ignore")
+                resolved = path.resolve()
             except OSError:
                 continue
+            if resolved in seen:
+                continue
+            seen.add(resolved)
+            if path.is_file():
+                return path
+        return None
+
+    found = _first_existing(
+        _resume_candidates(Path(str(profile.get("_dir") or _USER)), profile)
+    )
+    if found is not None:
+        return found
+
+    # Existing local working copy from the original paste-here path. Check
+    # this before the example pack so a user overlay without user/resume.tex
+    # does not silently switch to the fictional product-designer resume.
+    if _LEGACY_BASE_RESUME.is_file():
+        return _LEGACY_BASE_RESUME
+
+    if profile.get("_source") == "user":
+        pid = (os.environ.get("JOBCREW_PROFILE") or "product-designer").strip()
+        preset_dir = _PROFILES / pid
+        preset = _read_json(preset_dir / "profile.json") or {}
+        found = _first_existing(_resume_candidates(preset_dir, preset))
+        if found is not None:
+            return found
+
+    return None
+
+
+def profile_resume_text(profile: dict[str, Any] | None = None) -> str:
+    profile = profile or load_profile()
+    path = profile_resume_path(profile)
+    if path is not None:
+        try:
+            return path.read_text(encoding="utf-8", errors="ignore")
+        except OSError:
+            pass
     candidate = profile.get("candidate") or {}
     parts = [
         str(candidate.get("display_name") or ""),

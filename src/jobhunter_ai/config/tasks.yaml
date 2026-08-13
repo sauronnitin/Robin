@@ -304,7 +304,7 @@ compile_and_upload_resume_pdfs:
 
     For each job object, take its humanized_latex ref and:
 
-    1. Use the LaTeX compiler tool to compile it into a PDF. Pass the humanized_latex value through as latex_source EXACTLY as given — it is a short ref and the tool loads the source itself. Never expand, retype, or paste LaTeX source into the argument. (The tool sanitizes double-escaped backslashes and may fall back to base resume/base_resume.tex.)
+    1. Use the LaTeX compiler tool to compile it into a PDF. Pass the humanized_latex value through as latex_source EXACTLY as given: it is a short ref and the tool loads the source itself. Never expand, retype, or paste LaTeX source into the argument. (The tool sanitizes double-escaped backslashes and may fall back to the active profile resume in user/ or the selected role pack.)
     2. From the compiler output, copy the short pdf_base64 ref exactly (e.g. FILE:last_compile.b64). Do NOT paste giant Base64 blobs into the next tool call.
     3. Use the Google Drive PDF uploader tool with that FILE: ref as pdf_base64 and filename: "[Company Name] - [Job Title] - Resume.pdf"
     4. Capture the returned Google Drive shareable link for each uploaded PDF.

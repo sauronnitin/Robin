@@ -1,19 +1,22 @@
 import os
 import sys
-from pathlib import Path
 from dotenv import load_dotenv
 
 load_dotenv()
 
 from jobhunter_ai import events_bus
+from jobhunter_ai import profile as jobcrew_profile
 from jobhunter_ai.crew import JobhunterAiCrew
 from jobhunter_ai.graph_crew import crew_from_env_or_default
 
 
 def run():
-    resume_path = Path("resume/base_resume.tex")
-    if not resume_path.exists():
-        raise FileNotFoundError(f"Missing resume at {resume_path}")
+    resume_path = jobcrew_profile.profile_resume_path()
+    if resume_path is None:
+        raise FileNotFoundError(
+            "No resume found. Place resume.tex or resume.pdf in user/ "
+            "(see README), or use the shipped example via JOBCREW_PROFILE=product-designer."
+        )
     resume_latex = resume_path.read_text(encoding="utf-8")
     sheet_id = os.environ.get("MASTER_SHEET_ID")
     if not sheet_id:
@@ -27,7 +30,6 @@ def run():
     # The search describes the candidate, not a list in a config file. These
     # come from the roles on their own resume (see role_profile).
     from jobhunter_ai import location_fit
-    from jobhunter_ai import profile as jobcrew_profile
     from jobhunter_ai import role_profile
 
     user_profile = jobcrew_profile.load_profile()

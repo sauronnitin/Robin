@@ -5,8 +5,13 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+from jobhunter_ai.profile import profile_resume_path
+
 _FENCE_RE = re.compile(r"^```(?:latex|tex)?\s*\n?(.*?)\n?```\s*$", re.DOTALL | re.IGNORECASE)
 
+# Legacy CWD-relative path from the original paste-here working file.
+# load_base_resume() no longer reads this directly; profile_resume_path()
+# may still return it as a last-resort lookup.
 DEFAULT_BASE_RESUME = Path("resume/base_resume.tex")
 
 # A full resume is ~3.5k tokens. Letting it ride through the LLM as task
@@ -90,7 +95,9 @@ def is_plausible_latex(text: str) -> bool:
 
 
 def load_base_resume(path: Path | None = None) -> str | None:
-    p = path or DEFAULT_BASE_RESUME
+    p = path if path is not None else profile_resume_path()
+    if p is None:
+        return None
     try:
         if p.is_file():
             return p.read_text(encoding="utf-8")

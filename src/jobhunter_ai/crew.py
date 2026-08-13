@@ -22,6 +22,7 @@ from jobhunter_ai import events_bus
 from jobhunter_ai import latex_sanitize
 from jobhunter_ai import pipeline_store
 from jobhunter_ai import pipeline_sync
+from jobhunter_ai import profile as jobcrew_profile
 from jobhunter_ai import role_profile
 from jobhunter_ai.screening import screen_listings
 
@@ -82,7 +83,6 @@ _TAILOR_BATCH_SIZE = 1
 # from 25: at 25 the queue filled with roles the candidate was a weak match for,
 # and every one of them still cost a full tailor + compile + apply pass.
 _MIN_QUALIFYING_SCORE = 45.0
-_BASE_RESUME_PATH = Path(__file__).resolve().parents[2] / "resume" / "base_resume.tex"
 _PROJECT_ROOT = Path(__file__).resolve().parents[2]
 _FIELD_RE = re.compile(
     r"^\*{0,2}(?P<key>Job Title|Title|Company(?: Name)?|Location|Work Mode|"
@@ -345,7 +345,10 @@ def _ats_target_line(job: dict[str, Any]) -> str:
     if not posting:
         return ""
     try:
-        base_latex = _BASE_RESUME_PATH.read_text(encoding="utf-8")
+        resume_path = jobcrew_profile.profile_resume_path()
+        if resume_path is None:
+            return ""
+        base_latex = resume_path.read_text(encoding="utf-8")
     except OSError:
         return ""
     result = ats_score.score_latex(posting, base_latex)
@@ -749,7 +752,6 @@ def _prioritise_home_country(jobs: list[dict[str, Any]]) -> list[dict[str, Any]]
     """
     try:
         from jobhunter_ai import location_fit
-        from jobhunter_ai import profile as jobcrew_profile
 
         home = location_fit.home_country(jobcrew_profile.load_profile())
     except Exception as exc:  # noqa: BLE001 - ordering must not break a run
