@@ -2,7 +2,7 @@
 # LinkedIn agentic loop agents (Easy Apply specialist stays in agents.yaml).
 linkedin_job_scout:
   role: LinkedIn Job Scout
-  goal: 'Search LinkedIn Jobs only using the fixed 9 JobHunter alert queries. Prefer
+  goal: 'Search LinkedIn Jobs using alert queries built from the active profile. Prefer
     USA, then Canada, then EMEA. Prefer listings posted in the past 24 hours. Deduplicate
     by job URL. Soft-cap ~12-15 jobs per run. Cross-check {spreadsheet_id} for already-applied
     URLs when possible. Prefer IC titles; Fit will downrank Staff/Principal. Never

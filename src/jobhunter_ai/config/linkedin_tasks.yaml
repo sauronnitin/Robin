@@ -4,7 +4,7 @@ linkedin_scout_jobs:
   description: |-
     LinkedIn-only scout. Use the LinkedIn Scout tool (Playwright persistent browser-session/).
 
-    Queries: the tool already encodes the 9 fixed JobHunter LinkedIn alert queries.
+    Queries: the tool builds alert queries from the active profile search titles.
     Geo priority: USA first, then Canada, then EMEA. Prefer past 24 hours.
     Soft cap: ~12-15 jobs. Deduplicate by job URL.
 

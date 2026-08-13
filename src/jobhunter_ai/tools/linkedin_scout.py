@@ -19,10 +19,10 @@ from jobhunter_ai.browser_session import (
     wait_for_linkedin_login,
 )
 from jobhunter_ai.linkedin_queries import (
-    LINKEDIN_ALERT_QUERIES,
     LINKEDIN_GEO_PRIORITY,
     LINKEDIN_POSTED_PAST_24H,
     LINKEDIN_SCOUT_SOFT_CAP,
+    linkedin_alert_queries,
 )
 from jobhunter_ai.tools.playwright_apply import _SESSION_DIR
 
@@ -44,7 +44,7 @@ class LinkedInScoutToolInput(BaseModel):
     queries_json: str = Field(
         default="",
         description=(
-            "Optional JSON list of query strings. Omit or pass empty string to use built-in LINKEDIN_ALERT_QUERIES. Do NOT pass DRY_RUN or other unknown fields."
+            "Optional JSON list of query strings. Omit or pass empty string to use profile-derived alert queries. Do NOT pass DRY_RUN or other unknown fields."
         ),
     )
 
@@ -261,21 +261,21 @@ def _parse_cards(page) -> list[dict[str, Any]]:
 
 
 class LinkedInScoutTool(BaseTool):
-    """Search LinkedIn Jobs with the fixed alert query set via Playwright."""
+    """Search LinkedIn Jobs with profile-derived alert queries via Playwright."""
 
     name: str = "LinkedIn Scout"
     description: str = (
-        "Search LinkedIn Jobs using the 9 JobHunter alert queries. Uses the persistent "
-        "browser-session/ context (must already be logged into LinkedIn). Prefers USA, "
-        "then Canada, then EMEA, past 24h filter, dedupes by job URL, soft-caps ~12-15. "
-        "This step only searches — it never applies. Returns compact JSON. "
-        "On login wall returns LOGIN_REQUIRED."
+        "Search LinkedIn Jobs using alert queries built from the active profile's "
+        "search titles. Uses the persistent browser-session/ context (must already "
+        "be logged into LinkedIn). Prefers USA, then Canada, then EMEA, past 24h "
+        "filter, dedupes by job URL, soft-caps ~12-15. This step only searches, it "
+        "never applies. Returns compact JSON. On login wall returns LOGIN_REQUIRED."
     )
     args_schema: Type[BaseModel] = LinkedInScoutToolInput
 
     def _run(self, max_results: int = LINKEDIN_SCOUT_SOFT_CAP, queries_json: str = "") -> str:
         cap = max(1, min(int(max_results or LINKEDIN_SCOUT_SOFT_CAP), 20))
-        queries = list(LINKEDIN_ALERT_QUERIES)
+        queries = linkedin_alert_queries()
         if queries_json and queries_json.strip():
             try:
                 parsed = json.loads(queries_json)
