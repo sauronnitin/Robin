@@ -85,6 +85,22 @@ ROLE_FAMILIES: dict[str, dict[str, Any]] = {
         ],
         "adjacent": ["design technologist", "ux engineer", "devops engineer", "data engineer"],
     },
+    "marketing": {
+        "label": "Marketing Manager",
+        "core": [
+            "marketing manager", "growth marketing manager", "content marketing manager",
+            "product marketing manager", "digital marketing manager", "growth marketer",
+        ],
+        "adjacent": ["brand manager", "lifecycle manager", "demand generation", "content strategist"],
+    },
+    "data_analyst": {
+        "label": "Data Analyst",
+        "core": [
+            "data analyst", "business analyst", "product analyst", "analytics engineer",
+            "senior data analyst",
+        ],
+        "adjacent": ["data scientist", "business intelligence", "insights analyst"],
+    },
 }
 
 # Titles that are never this candidate's profession, whatever their family.

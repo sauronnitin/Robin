@@ -36,6 +36,7 @@ def run():
     role = role_profile.ensure(user_profile)
     home = location_fit.home_country(user_profile)
     titles = jobcrew_profile.search_titles()
+    niche = str((user_profile.get("search") or {}).get("niche") or "").strip()
     print(
         f"[jobhunter] searching as {role.get('primary_title') or 'unknown role'}"
         f" ({role.get('seniority')}) based in {home}:"
@@ -50,6 +51,7 @@ def run():
         "primary_role": role.get("primary_title") or "",
         "seniority": role.get("seniority") or "senior",
         "home_country": home,
+        "niche": niche or str(role.get("primary_title") or "the candidate's field"),
     }
     try:
         graph_crew = crew_from_env_or_default()

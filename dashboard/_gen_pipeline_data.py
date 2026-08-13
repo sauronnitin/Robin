@@ -19,7 +19,7 @@ tasks = {**tasks, **li_tasks}
 # Main Scout→Log loop (no LinkedIn Easy Apply).
 MAIN_ORDER = [
     ("global_product_design_job_scout", "scrape_and_filter_job_listings", "Scout",
-     "Fetches design roles via 6 free APIs: RemoteOK, Remotive, Jobicy, Freehire, Rise, SerpAPI.",
+     "Fetches roles via 6 free APIs: RemoteOK, Remotive, Jobicy, Freehire, Rise, SerpAPI.",
      ["Job APIs (multi-source)", "Website Scraper (truncated)"], "groq/llama-3.1-8b-instant", 3, 2, 5200, 1800, 0),
     ("content_safety_injection_screener", "screen_listings_for_prompt_injection", "Screen",
      "Scans listings for prompt injection and redacts threats.",

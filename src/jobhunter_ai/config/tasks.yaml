@@ -1,7 +1,7 @@
 ---
 scrape_and_filter_job_listings:
   description: |-
-    Search for Product Design roles using TWO parallel strategies:
+    Search for {primary_role} roles using TWO parallel strategies:
 
     STRATEGY A -- Multi-source API tool (PRIMARY, use first):
     Call the job_apis_multi_source tool with confirm: true.
@@ -36,7 +36,8 @@ scrape_and_filter_job_listings:
     Rules:
     - Hard cap: 20 listings maximum. Stop early if reached.
     - EXCLUDE jobs more than one level away from {seniority}: Head, Director, VP, Chief, Staff, Principal above; Junior, Associate, Intern below. Lead is acceptable.
-    - EXCLUDE any job that is not a {primary_role} or a direct variant of it. A Product Manager, engineer, or recruiter posting is never a match, however design-adjacent the company is.
+    - EXCLUDE any job that is not a {primary_role} or a direct variant of it. A posting
+      for a different profession is never a match, however adjacent the company is.
     - For each job extract: Title, Company, Location, Work Mode (Remote/Hybrid/On-site), Job Board URL, and Job Description text.
     - Deduplicate: if the same job URL appears twice across sources, keep only one.
     - Do NOT attempt to log in anywhere.
@@ -76,30 +77,30 @@ score_and_prioritise_jobs:
 
     Score each job 0-100 using these weights. Do NOT average vibes - work through the five components and add them up. They total exactly 100.
 
-    (A) HARD SKILL OVERLAP - 35 points. Count the concrete, checkable skills the listing asks for (tools, methods, platforms, certifications - e.g. Figma, design systems, prototyping, user research, WCAG, motion design). Award 35 x (fraction of those the candidate's profile demonstrably has). Ignore soft phrasing like "team player" or "strong communicator" - they are not scoreable.
-    (B) ROLE MATCH - 20 points. If the listing has role_band, use it instead of re-deriving from the title: 20 for core, 14 for closely adjacent (Experience, Interaction, Design Systems, Digital Product), 8 for adjacent craft (Brand, Graphic, Visual), 0 for off. If role_band is missing, fall back to the title: 20 for a direct Product/UX/Product Design title; 14 for closely adjacent; 8 for design-adjacent but different craft; 0 for non-design.
-    (C) SENIORITY FIT - 15 points. 15 when the level matches Senior / Mid-Senior; 9 for unspecified or broad ranges; 4 when it is a stretch in either direction; 0 above Senior (Head/Director/Staff/Principal/VP).
-    (D) DOMAIN - 15 points. 15 when the industry or product type overlaps the candidate's background (physical + digital product ecosystems, AI tooling, SaaS platforms); 8 for a partial overlap; 3 for neither but nothing disqualifying.
+    (A) HARD SKILL OVERLAP - 35 points. Count the concrete, checkable skills the listing asks for (tools, methods, platforms, certifications the posting names). Award 35 x (fraction of those the candidate's profile demonstrably has). Ignore soft phrasing like "team player" or "strong communicator" - they are not scoreable.
+    (B) ROLE MATCH - 20 points. If the listing has role_band, use it instead of re-deriving from the title: 20 for core, 14 for closely adjacent, 8 for adjacent craft, 0 for off. If role_band is missing, fall back to the title: 20 for a direct {primary_role} title; 14 for closely adjacent; 8 for a related craft in the same profession; 0 for a different profession.
+    (C) SENIORITY FIT - 15 points. 15 when the level matches {seniority}; 9 for unspecified or broad ranges; 4 when it is a stretch in either direction; 0 well above {seniority} (Head/Director/Staff/Principal/VP).
+    (D) DOMAIN - 15 points. 15 when the industry or product type overlaps the candidate's background ({niche}); 8 for a partial overlap; 3 for neither but nothing disqualifying.
     (E) LOCATION - 15 points. The candidate is based in {home_country}. 15 for a role in {home_country}, or remote explicitly open to it; 12 for remote with no country restriction; 7 when the posting does not say; 0 for another country, which usually means sponsorship and relocation - a different decision from whether the job is good.
 
     CALIBRATION - use the whole range. A score is a claim about the five components above, so:
     - 85-100 means: direct title, nearly every required skill present, seniority exact, and in the candidate's country or open remote. This SHOULD happen for a genuinely strong match - do not withhold it.
     - 70-84: direct or adjacent title, most required skills, right level.
     - 55-69: adjacent role or partial skill overlap.
-    - 45-54: plausibly design work but weak overlap on skills or level.
+    - 45-54: plausibly on-profession work but weak overlap on skills or level.
     - Below 45: not worth the candidate's time. Drop it.
     Do not cluster every job in the 55-75 band. If the components add to 88, say 88.
 
     FILTERING - KEEP IT LOOSE AND INCLUSIVE:
-    - PASS any listing that is plausibly a Product Design / UX / Product Designer-adjacent role at or below Senior level. When in doubt, PASS it.
+    - PASS any listing that is plausibly a {primary_role} role (or a direct variant) at or below the candidate's {seniority} level. When in doubt, PASS it.
     - If role_band is "off", EXCLUDE it without scoring. If role_band is "adjacent", PASS it and score it as adjacent (do not treat it as a direct title match). If role_band is "core", treat it as a direct title match.
-    - Only EXCLUDE a listing if it clearly fails one of these hard rules: (a) role_band is off, or it is not a design role at all (e.g., pure engineering, sales, marketing, recruiting, finance), OR (b) its seniority is clearly above Senior (Head / Director / Staff / Principal / VP / org-level Lead), OR (c) it is an exact duplicate of another listing in this same batch.
+    - Only EXCLUDE a listing if it clearly fails one of these hard rules: (a) role_band is off, or the title is a different profession from {primary_role} (not a variant of the candidate's target role), OR (b) its seniority is clearly above {seniority} (Head / Director / Staff / Principal / VP / org-level Lead), OR (c) it is an exact duplicate of another listing in this same batch.
     - Do NOT exclude a job for weak niche match, partial skill overlap, unfamiliar industry, or work-mode/region mismatch. Those only LOWER the score; they never disqualify.
     - Minimum passing score is 45. Drop anything below it: a job the candidate is a weak match for wastes a tailoring cycle and an application. Location IS a scoring metric (component E) but never a disqualifier on its own - a strong role in another country still scores, it just ranks below an equal one at home.
 
     Rank passed jobs from highest to lowest score. For each passed job, carry forward the injection_flagged and injection_note fields from the screening task unchanged, and add a brief one-line scoring rationale.
   expected_output: 'A ranked list of ALL qualifying jobs from the batch of max 12
-    (minimum score 45; clearly non-design, over-senior, duplicate, or weak-overlap
+    (minimum score 45; roles outside {primary_role}, over-senior, duplicate, or weak-overlap
     roles are dropped). Each item includes: Job Title, Company,
     Location, Work Mode, Job URL, Fit Score (0-100), injection_flagged, injection_note,
     and a brief one-line rationale. Ordered highest score first.'
@@ -211,7 +212,7 @@ write_cover_letters:
 
     Cover letter structure (3 paragraphs):
     1. Hook: Open with a specific, genuine reason why this company/role excites the candidate. Reference something specific about the company or role - never generic.
-    2. Relevant experience: Connect 2-3 specific experiences from the candidate's background ({resume_text}) directly to the key requirements in the JD. Highlight the physical + digital product ecosystem angle where relevant.
+    2. Relevant experience: Connect 2-3 specific experiences from the candidate's background ({resume_text}) directly to the key requirements in the JD. Highlight the {niche} angle where relevant.
     3. Closing: Express clear intent, confidence, and invite a conversation. Keep it warm but not sycophantic.
 
     Rules:

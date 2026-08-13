@@ -85,15 +85,25 @@ def keep_listing(
     provider: str = "",
     *,
     prefer_design: bool = True,
+    role: dict[str, Any] | None = None,
 ) -> bool:
     """Shared keep/drop gate used before role-band tagging.
 
-    Seniority hard-exclude always wins. Non-design titles always drop.
-    Design-tagged open boards (Remotive and similar) are trusted when the
-    title is not a clear non-design role.
+    Seniority hard-exclude always wins. When the active role has core titles,
+    a listing stays if it is core or adjacent for that profession (so a
+    Marketing pack is not killed by the design-era "nondesign" list). With no
+    role derived yet, the design-union gate is the fallback.
     """
     if is_hard_excluded(title):
         return False
+    core = list((role or {}).get("core_titles") or [])
+    family = str((role or {}).get("family") or "")
+    if core:
+        band = role_profile.classify_title(title, role)
+        if band in ("core", "adjacent"):
+            return True
+        if family and family not in ("product_design", "ux_research", "graphic_design"):
+            return False
     if not prefer_design:
         return not is_nondesign(title)
     if is_nondesign(title):
@@ -237,6 +247,7 @@ def fetch_job_feed(
     fetch_query = resolve_feed_query(query)
     source_pairs = _build_source_pairs(cfg, wanted)
     jobs_norm, stats = fetch_all(source_pairs, query=fetch_query, max_workers=8)
+    role = role_profile.load()
 
     items = [_job_to_item(j) for j in jobs_norm]
     per_source_cap = max(8, min(20, int(limit or 20)))
@@ -258,6 +269,7 @@ def fetch_job_feed(
                 j.get("title") or "",
                 j.get("description") or "",
                 j.get("provider") or "",
+                role=role,
             )
         ]
         if not batch:
