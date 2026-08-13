@@ -155,15 +155,66 @@ class GoogleDrivePdfUploadToolInput(BaseModel):
     )
 
 
+_LAST_COMPILE_B64_PATH = Path("dashboard/.cache/last_compile.b64")
+_ALLOWED_FILE_REFS = frozenset(
+    {
+        "last_compile.b64",
+        "dashboard/.cache/last_compile.b64",
+    }
+)
+_FILE_REF_RE = re.compile(r"FILE:\s*([^\s`'\"<>]+)", re.IGNORECASE)
+_PDF_MAGIC = b"%PDF-"
+_MIN_PDF_BYTES = 1000
+_WRAP_CHARS = "'\"`"
+
+
+def _unwrap_pdf_input(value: str) -> str:
+    """Strip whitespace and surrounding quotes/backticks the LLM often adds."""
+    raw = (value or "").strip()
+    while len(raw) >= 2 and raw[0] in _WRAP_CHARS and raw[-1] in _WRAP_CHARS:
+        raw = raw[1:-1].strip()
+    return raw
+
+
+def _extract_file_ref(raw: str) -> Optional[str]:
+    """Return a FILE: name if one appears anywhere in the (unwrapped) input."""
+    match = _FILE_REF_RE.search(raw)
+    if not match:
+        return None
+    name = match.group(1).replace("\\", "/").lstrip("/")
+    name = name.rstrip(".,;:)]}")
+    return name or None
+
+
+def _validate_pdf_bytes(pdf_bytes: bytes) -> None:
+    """Reject anything that is not a real PDF before it can be uploaded."""
+    data = pdf_bytes or b""
+    size = len(data)
+    if size < _MIN_PDF_BYTES or not data.startswith(_PDF_MAGIC):
+        raise ValueError(
+            "decoded bytes are not a valid PDF "
+            f"(size={size} bytes, magic={data[:8]!r}). "
+            "Do not upload. Retry with FILE:last_compile.b64 from Latex To Pdf Compiler."
+        )
+
+
 def _resolve_pdf_base64(pdf_base64: str) -> bytes:
-    """Decode Base64 or load the compiler cache FILE: ref."""
-    raw = (pdf_base64 or "").strip()
-    if raw.startswith("FILE:"):
-        name = raw[5:].strip().replace("\\", "/").lstrip("/")
+    """Decode Base64 or load the compiler cache FILE: ref.
+
+    FILE: detection is tolerant of wrapping quotes/backticks, extra prose, and
+    casing, so a near-correct LLM echo still loads the cached compile instead
+    of silently decoding the malformed string itself.
+    """
+    raw = _unwrap_pdf_input(pdf_base64)
+    file_name = _extract_file_ref(raw)
+    if file_name is not None:
         # Only allow the known compiler cache file (no path traversal).
-        if name not in ("last_compile.b64", "dashboard/.cache/last_compile.b64"):
-            raise ValueError(f"Unsupported FILE ref: {raw[:80]}")
-        path = Path("dashboard/.cache/last_compile.b64")
+        if file_name.lower() not in {item.lower() for item in _ALLOWED_FILE_REFS}:
+            raise ValueError(
+                f"Unsupported FILE ref: {raw[:80]}. "
+                "Use FILE:last_compile.b64 from Latex To Pdf Compiler."
+            )
+        path = _LAST_COMPILE_B64_PATH
         if not path.is_file():
             raise FileNotFoundError(
                 "No cached compile at dashboard/.cache/last_compile.b64. "
@@ -188,6 +239,7 @@ class GoogleDrivePdfUploadTool(BaseTool):
     def _run(self, pdf_base64: str, filename: str) -> str:
         try:
             pdf_bytes = _resolve_pdf_base64(pdf_base64)
+            _validate_pdf_bytes(pdf_bytes)
         except Exception as exc:
             return f"Error: Could not resolve PDF content. Details: {exc}"
 
