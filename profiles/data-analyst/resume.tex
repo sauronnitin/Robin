@@ -1,0 +1,72 @@
+% Example JobCrew resume (fictional). Replace with your own after onboarding.
+\documentclass[letterpaper,11pt]{article}
+\usepackage[T1]{fontenc}
+\usepackage[empty]{fullpage}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}
+\usepackage{tabularx}
+
+\addtolength{\oddsidemargin}{-0.5in}
+\addtolength{\evensidemargin}{-0.5in}
+\addtolength{\textwidth}{1in}
+\addtolength{\topmargin}{-.5in}
+\addtolength{\textheight}{1.0in}
+
+\titleformat{\section}{\vspace{-4pt}\scshape\raggedright\large}{}{0em}{}[\titlerule\vspace{-5pt}]
+
+\newcommand{\resumeItem}[1]{\item\small{#1 \vspace{2pt}}}
+\newcommand{\resumeSubheading}[4]{
+  \vspace{-2pt}\item
+  \begin{tabular*}{0.97\textwidth}[t]{l@{\extracolsep{\fill}}r}
+    \textbf{#1} & #2 \\
+    \textit{\small#3} & \textit{\small #4} \\
+  \end{tabular*}\vspace{-7pt}
+}
+\newcommand{\resumeSubHeadingListStart}{\begin{itemize}[leftmargin=0.15in, label={}]}
+\newcommand{\resumeSubHeadingListEnd}{\end{itemize}}
+\newcommand{\resumeItemListStart}{\begin{itemize}}
+\newcommand{\resumeItemListEnd}{\end{itemize}\vspace{-5pt}}
+
+\begin{document}
+
+\begin{center}
+  \textbf{\Huge \scshape Casey Nguyen} \\ \vspace{2pt}
+  \small \scshape Data Analyst \\ \vspace{8pt}
+  \footnotesize Remote (US)
+  \enspace$\vert$\enspace
+  \href{mailto:casey.nguyen.example@email.com}{\underline{casey.nguyen.example@email.com}}
+  \enspace$\vert$\enspace
+  \href{https://example.com/casey-nguyen}{\underline{example.com/casey-nguyen}}
+\end{center}
+
+\section{Summary}
+\small{
+Data Analyst with 5+ years turning SQL, experiments, and dashboards into decisions teams can act on.
+Comfortable with messy event data, stakeholder-ready readouts, and a clear null result.
+Builds the metric definitions first so the chart is not an argument later.
+}
+
+\section{Experience}
+\resumeSubHeadingListStart
+  \resumeSubheading
+  {Lumen Metrics}{2023 -- Present}
+  {Data Analyst}{Remote}
+  \resumeItemListStart
+    \resumeItem{Owned the core product funnel model in SQL used by growth, CS, and finance}
+    \resumeItem{Designed experiment readouts that stopped a pricing test two weeks early}
+    \resumeItem{Replaced a slide-only weekly report with a live dashboard stakeholders actually open}
+  \resumeItemListEnd
+  \resumeSubheading
+  {Fairharbor Retail}{2020 -- 2023}
+  {Business Analyst}{Seattle, WA}
+  \resumeItemListStart
+    \resumeItem{Built cohort views that explained a seasonal drop in repeat purchase}
+    \resumeItem{Partnered with merchandising on inventory queries that cut overstock write-downs}
+  \resumeItemListEnd
+\resumeSubHeadingListEnd
+
+\section{Skills}
+\small{SQL, dashboards, experimentation, funnel analysis, stakeholder readouts, Python, spreadsheet modeling}
+
+\end{document}

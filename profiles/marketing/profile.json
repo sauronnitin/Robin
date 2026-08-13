@@ -57,7 +57,7 @@
     "role_family": "marketing"
   },
   "files": {
-    "resume_tex": null,
+    "resume_tex": "resume.tex",
     "resume_pdf": "resume.pdf"
   }
 }

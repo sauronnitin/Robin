@@ -1,0 +1,72 @@
+% Example JobCrew resume (fictional). Replace with your own after onboarding.
+\documentclass[letterpaper,11pt]{article}
+\usepackage[T1]{fontenc}
+\usepackage[empty]{fullpage}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}
+\usepackage{tabularx}
+
+\addtolength{\oddsidemargin}{-0.5in}
+\addtolength{\evensidemargin}{-0.5in}
+\addtolength{\textwidth}{1in}
+\addtolength{\topmargin}{-.5in}
+\addtolength{\textheight}{1.0in}
+
+\titleformat{\section}{\vspace{-4pt}\scshape\raggedright\large}{}{0em}{}[\titlerule\vspace{-5pt}]
+
+\newcommand{\resumeItem}[1]{\item\small{#1 \vspace{2pt}}}
+\newcommand{\resumeSubheading}[4]{
+  \vspace{-2pt}\item
+  \begin{tabular*}{0.97\textwidth}[t]{l@{\extracolsep{\fill}}r}
+    \textbf{#1} & #2 \\
+    \textit{\small#3} & \textit{\small #4} \\
+  \end{tabular*}\vspace{-7pt}
+}
+\newcommand{\resumeSubHeadingListStart}{\begin{itemize}[leftmargin=0.15in, label={}]}
+\newcommand{\resumeSubHeadingListEnd}{\end{itemize}}
+\newcommand{\resumeItemListStart}{\begin{itemize}}
+\newcommand{\resumeItemListEnd}{\end{itemize}\vspace{-5pt}}
+
+\begin{document}
+
+\begin{center}
+  \textbf{\Huge \scshape Jordan Lee} \\ \vspace{2pt}
+  \small \scshape Software Engineer \\ \vspace{8pt}
+  \footnotesize Remote (US)
+  \enspace$\vert$\enspace
+  \href{mailto:jordan.lee.example@email.com}{\underline{jordan.lee.example@email.com}}
+  \enspace$\vert$\enspace
+  \href{https://example.com/jordan-lee}{\underline{example.com/jordan-lee}}
+\end{center}
+
+\section{Summary}
+\small{
+Software Engineer with 5+ years building web and cloud products in TypeScript and Python.
+Comfortable across APIs, background jobs, and production observability.
+Ships small, reviewable changes and writes the tests that keep them honest.
+}
+
+\section{Experience}
+\resumeSubHeadingListStart
+  \resumeSubheading
+  {Harborline Systems}{2023 -- Present}
+  {Software Engineer}{Remote}
+  \resumeItemListStart
+    \resumeItem{Owned the TypeScript API layer for a multi-tenant SaaS billing product}
+    \resumeItem{Cut p95 checkout latency by introducing a queued invoice worker}
+    \resumeItem{Added contract tests that caught two breaking schema changes before release}
+  \resumeItemListEnd
+  \resumeSubheading
+  {Pinnacle Ledger}{2020 -- 2023}
+  {Software Engineer}{Austin, TX}
+  \resumeItemListStart
+    \resumeItem{Built Python services that synced ledger events into a customer-facing dashboard}
+    \resumeItem{Migrated a legacy REST surface onto a versioned OpenAPI contract}
+  \resumeItemListEnd
+\resumeSubHeadingListEnd
+
+\section{Skills}
+\small{TypeScript, Python, REST APIs, PostgreSQL, cloud functions, CI, automated tests, observability}
+
+\end{document}

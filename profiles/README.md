@@ -9,10 +9,18 @@ profiles/
   product-designer/     # shipped example (fictional candidate)
     profile.json
     resume.tex
-  software-engineer/
-  product-manager/
-  data-analyst/
-  marketing/
+  software-engineer/    # Jordan Lee (fictional)
+    profile.json
+    resume.tex
+  product-manager/      # Sam Okonkwo (fictional)
+    profile.json
+    resume.tex
+  data-analyst/         # Casey Nguyen (fictional)
+    profile.json
+    resume.tex
+  marketing/            # Riley Chen (fictional)
+    profile.json
+    resume.tex
 ```
 
 Your private uploads after onboarding go in `user/` (gitignored):

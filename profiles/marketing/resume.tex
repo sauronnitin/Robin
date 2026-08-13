@@ -1,0 +1,72 @@
+% Example JobCrew resume (fictional). Replace with your own after onboarding.
+\documentclass[letterpaper,11pt]{article}
+\usepackage[T1]{fontenc}
+\usepackage[empty]{fullpage}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}
+\usepackage{tabularx}
+
+\addtolength{\oddsidemargin}{-0.5in}
+\addtolength{\evensidemargin}{-0.5in}
+\addtolength{\textwidth}{1in}
+\addtolength{\topmargin}{-.5in}
+\addtolength{\textheight}{1.0in}
+
+\titleformat{\section}{\vspace{-4pt}\scshape\raggedright\large}{}{0em}{}[\titlerule\vspace{-5pt}]
+
+\newcommand{\resumeItem}[1]{\item\small{#1 \vspace{2pt}}}
+\newcommand{\resumeSubheading}[4]{
+  \vspace{-2pt}\item
+  \begin{tabular*}{0.97\textwidth}[t]{l@{\extracolsep{\fill}}r}
+    \textbf{#1} & #2 \\
+    \textit{\small#3} & \textit{\small #4} \\
+  \end{tabular*}\vspace{-7pt}
+}
+\newcommand{\resumeSubHeadingListStart}{\begin{itemize}[leftmargin=0.15in, label={}]}
+\newcommand{\resumeSubHeadingListEnd}{\end{itemize}}
+\newcommand{\resumeItemListStart}{\begin{itemize}}
+\newcommand{\resumeItemListEnd}{\end{itemize}\vspace{-5pt}}
+
+\begin{document}
+
+\begin{center}
+  \textbf{\Huge \scshape Riley Chen} \\ \vspace{2pt}
+  \small \scshape Marketing Manager \\ \vspace{8pt}
+  \footnotesize Remote (US)
+  \enspace$\vert$\enspace
+  \href{mailto:riley.chen.example@email.com}{\underline{riley.chen.example@email.com}}
+  \enspace$\vert$\enspace
+  \href{https://example.com/riley-chen}{\underline{example.com/riley-chen}}
+\end{center}
+
+\section{Summary}
+\small{
+Marketing Manager with 6+ years in content, lifecycle, and growth experiments for software companies.
+Writes the narrative, then measures whether it moved activation or expansion.
+Comfortable partnering with product on launches without turning every feature into a campaign.
+}
+
+\section{Experience}
+\resumeSubHeadingListStart
+  \resumeSubheading
+  {Cobalt Loop}{2023 -- Present}
+  {Marketing Manager}{Remote}
+  \resumeItemListStart
+    \resumeItem{Owned lifecycle email and in-product prompts that lifted week-4 retention}
+    \resumeItem{Ran content experiments that doubled demo requests from the docs hub}
+    \resumeItem{Partnered with product marketing on a launch narrative used across web, email, and sales}
+  \resumeItemListEnd
+  \resumeSubheading
+  {Maple Street Media}{2020 -- 2023}
+  {Content Marketing Manager}{Brooklyn, NY}
+  \resumeItemListStart
+    \resumeItem{Built an editorial calendar tied to search intent, not a leftover blog backlog}
+    \resumeItem{Grew organic signups with a comparison-guide series and a monthly customer story}
+  \resumeItemListEnd
+\resumeSubHeadingListEnd
+
+\section{Skills}
+\small{Content marketing, lifecycle email, growth experiments, product launches, analytics, copy, campaign ops}
+
+\end{document}

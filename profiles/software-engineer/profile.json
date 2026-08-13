@@ -58,7 +58,7 @@
     "role_family": "engineering"
   },
   "files": {
-    "resume_tex": null,
+    "resume_tex": "resume.tex",
     "resume_pdf": "resume.pdf"
   }
 }

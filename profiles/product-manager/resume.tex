@@ -1,0 +1,72 @@
+% Example JobCrew resume (fictional). Replace with your own after onboarding.
+\documentclass[letterpaper,11pt]{article}
+\usepackage[T1]{fontenc}
+\usepackage[empty]{fullpage}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}
+\usepackage{tabularx}
+
+\addtolength{\oddsidemargin}{-0.5in}
+\addtolength{\evensidemargin}{-0.5in}
+\addtolength{\textwidth}{1in}
+\addtolength{\topmargin}{-.5in}
+\addtolength{\textheight}{1.0in}
+
+\titleformat{\section}{\vspace{-4pt}\scshape\raggedright\large}{}{0em}{}[\titlerule\vspace{-5pt}]
+
+\newcommand{\resumeItem}[1]{\item\small{#1 \vspace{2pt}}}
+\newcommand{\resumeSubheading}[4]{
+  \vspace{-2pt}\item
+  \begin{tabular*}{0.97\textwidth}[t]{l@{\extracolsep{\fill}}r}
+    \textbf{#1} & #2 \\
+    \textit{\small#3} & \textit{\small #4} \\
+  \end{tabular*}\vspace{-7pt}
+}
+\newcommand{\resumeSubHeadingListStart}{\begin{itemize}[leftmargin=0.15in, label={}]}
+\newcommand{\resumeSubHeadingListEnd}{\end{itemize}}
+\newcommand{\resumeItemListStart}{\begin{itemize}}
+\newcommand{\resumeItemListEnd}{\end{itemize}\vspace{-5pt}}
+
+\begin{document}
+
+\begin{center}
+  \textbf{\Huge \scshape Sam Okonkwo} \\ \vspace{2pt}
+  \small \scshape Product Manager \\ \vspace{8pt}
+  \footnotesize Remote (US)
+  \enspace$\vert$\enspace
+  \href{mailto:sam.okonkwo.example@email.com}{\underline{sam.okonkwo.example@email.com}}
+  \enspace$\vert$\enspace
+  \href{https://example.com/sam-okonkwo}{\underline{example.com/sam-okonkwo}}
+\end{center}
+
+\section{Summary}
+\small{
+Product Manager with 6+ years on B2B SaaS, from first-release discovery through growth loops.
+Partners with design and engineering on roadmaps that a small team can actually ship.
+Uses research, experiments, and customer calls, not slide decks, to decide what to build next.
+}
+
+\section{Experience}
+\resumeSubHeadingListStart
+  \resumeSubheading
+  {Brightpath Cloud}{2023 -- Present}
+  {Product Manager}{Remote}
+  \resumeItemListStart
+    \resumeItem{Led a 0-to-1 workflow product from problem interviews to a paid beta with 18 accounts}
+    \resumeItem{Cut time-to-value in onboarding by rewriting the first-week activation path}
+    \resumeItem{Ran a weekly discovery cadence with sales and CS that retired three low-usage features}
+  \resumeItemListEnd
+  \resumeSubheading
+  {Oak Street Commerce}{2020 -- 2023}
+  {Associate Product Manager}{Chicago, IL}
+  \resumeItemListStart
+    \resumeItem{Owned the merchant dashboard roadmap across checkout, catalog, and reporting}
+    \resumeItem{Shipped a self-serve analytics view that reduced recurring reporting tickets}
+  \resumeItemListEnd
+\resumeSubHeadingListEnd
+
+\section{Skills}
+\small{Product discovery, roadmaps, user interviews, experimentation, PRDs, B2B SaaS, cross-functional delivery}
+
+\end{document}
