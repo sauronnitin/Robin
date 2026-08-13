@@ -2610,12 +2610,12 @@ html.dark .jh-asst-send { background: var(--st-peach); color: var(--st-sienna); 
         <div class="st-wordmark-sub">AI Job Crew</div>
       </div>
     </div>
-    <!-- User -->
+    <!-- User: filled from the active profile; placeholders until one is loaded -->
     <div class="flex items-center gap-2.5 px-4 py-3.5 border-b border-ash">
-      <div class="w-8 h-8 rounded-full border border-ash flex items-center justify-center text-xs font-medium text-ink flex-shrink-0">NS</div>
+      <div id="navUserAv" class="w-8 h-8 rounded-full border border-ash flex items-center justify-center text-xs font-medium text-ink flex-shrink-0">?</div>
       <div class="overflow-hidden">
-        <div class="nav-user-name truncate">Alex Rivera</div>
-        <div class="nav-user-email truncate">you@example.com</div>
+        <div id="navUserName" class="nav-user-name truncate">Your Name</div>
+        <div id="navUserEmail" class="nav-user-email truncate">you@example.com</div>
       </div>
     </div>
 
@@ -5831,6 +5831,7 @@ async function saveProfile(){
     }
     if(msg) msg.textContent = 'Saved';
     showT('Profile saved');
+    updateNavUser(payload);
     setTimeout(()=>{ if(msg && msg.textContent === 'Saved') msg.textContent = ''; }, 2500);
   }catch(e){
     if(msg) msg.textContent = 'Save failed';
@@ -5852,6 +5853,7 @@ async function loadSavedProfile(){
       return false;
     }
     applyParsedProfile(p);
+    updateNavUser(p);
     return true;
   }catch(_e){
     return false;
@@ -6329,16 +6331,42 @@ function applyParsedProfile(data){
     if(body && body.classList.contains('closed')) tgl('ps-lang');
   }
   const score = updateProfileProgress();
+  updateNavUser(data);
   return score;
 }
 
+const NAV_USER_PLACEHOLDER = { name: 'Your Name', email: 'you@example.com', initials: '?' };
+
+function navUserInitials(first, last, name){
+  const a = String(first || '').trim();
+  const b = String(last || '').trim();
+  if(a && b) return (a.charAt(0) + b.charAt(0)).toUpperCase();
+  if(a) return a.slice(0, 2).toUpperCase();
+  const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
+  if(parts.length >= 2) return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+  if(parts[0]) return parts[0].slice(0, 2).toUpperCase();
+  return NAV_USER_PLACEHOLDER.initials;
+}
+
+function updateNavUser(data){
+  const first = data && data.firstName ? String(data.firstName).trim() : '';
+  const last = data && data.lastName ? String(data.lastName).trim() : '';
+  const email = data && data.email ? String(data.email).trim() : '';
+  const candidate = data && data.candidate && typeof data.candidate === 'object' ? data.candidate : {};
+  const name = [first, last].filter(Boolean).join(' ')
+    || String(candidate.display_name || '').trim();
+  const nameEl = document.getElementById('navUserName');
+  const emailEl = document.getElementById('navUserEmail');
+  const av = document.getElementById('navUserAv');
+  if(nameEl) nameEl.textContent = name || NAV_USER_PLACEHOLDER.name;
+  if(emailEl) emailEl.textContent = email || NAV_USER_PLACEHOLDER.email;
+  if(av) av.textContent = navUserInitials(first, last, name);
+}
+
 function fallbackAutofill(){
-  setVal('pFN','Nitin');
-  setVal('pLN','Sauran');
-  setVal('pEm','you@example.com');
-  setVal('pCi','San Francisco');
-  setVal('pSt','CA');
+  // Parse failed: leave Profile empty so the user fills it in. Never invent identity.
   updateProfileProgress();
+  showT('Resume parsing failed -- please fill in your details manually');
 }
 
 async function parseResumeFile(file, btn){
@@ -6406,16 +6434,9 @@ async function enterApp(resume){
       const ok = await applyResumeUpload(pendingResumeFile, btn, 'Profile filled from resume');
       if(!ok){
         fallbackAutofill();
-        if(currentScreen === 'profile'){
-          showT('Resume parse returned few fields · review Profile');
-        }
       }
     }catch(e){
       fallbackAutofill();
-      if(currentScreen === 'profile'){
-        const msg = (e && e.message) ? String(e.message).replace(/[\u2013\u2014–—]/g,'-') : '';
-        showT(msg && msg.length < 120 ? msg : 'Resume parse offline. Used sample profile');
-      }
     }
   } else {
     await loadSavedProfile();
