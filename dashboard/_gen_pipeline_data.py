@@ -26,26 +26,26 @@ MAIN_ORDER = [
      [], "groq/llama-3.1-8b-instant", 1, 2, 3400, 900, 1),
     ("job_fit_analyst", "score_and_prioritise_jobs", "Score",
      "Scores jobs 0-100 for fit and ranks the shortlist.",
-     [], "groq/llama-3.3-70b-versatile", 1, 2, 4600, 2200, 0),
+     [], "gemini/gemini-2.5-flash", 1, 2, 4600, 2200, 0),
     ("resume_tailor", "tailor_resume_per_job", "Tailor",
      "Keyword-weaves resumes for the top five roles.",
-     ["Google Docs: Create"], "groq/llama-3.3-70b-versatile", 1, 2, 6100, 2800, 0),
+     ["Google Docs: Create"], "gemini/gemini-2.5-flash", 1, 2, 6100, 2800, 0),
     ("cover_letter_writer", "write_cover_letters", "Cover",
      "Writes cover letters only when the listing requires one.",
      ["Google Docs: Create", "Google Docs: Get", "Google Docs: Replace"],
-     "groq/llama-3.3-70b-versatile", 1, 2, 5800, 2600, 0),
+     "gemini/gemini-2.5-flash", 1, 2, 5800, 2600, 0),
     ("content_humanizer_ai_detection_specialist", "humanize_content", "Humanize",
      "Rewrites content to pass AI detection under 10%.",
      ["Google Docs: Get", "Google Docs: Replace"],
-     "groq/llama-3.3-70b-versatile", 1, 2, 7400, 3200, 0),
+     "gemini/gemini-2.5-flash", 1, 2, 7400, 3200, 0),
     ("latex_resume_compiler_drive_publisher", "compile_and_upload_resume_pdfs", "Compile",
      "Compiles LaTeX resumes to PDF and uploads to Drive.",
      ["LaTeX to PDF Compiler", "Google Drive: PDF Upload"],
-     "groq/llama-3.1-8b-instant", 2, 2, 6600, 1500, 0),
+     "gemini/gemini-2.5-flash", 2, 2, 6600, 1500, 0),
     ("human_like_application_specialist", "submit_job_applications", "Apply",
      "Applies on non-LinkedIn boards with human-like pacing.",
      ["Google Sheets: Search", "Playwright Apply"],
-     "groq/llama-3.1-8b-instant", 1, 2, 8200, 2000, 0),
+     "gemini/gemini-2.5-flash", 1, 2, 8200, 2000, 0),
     ("application_logger", "log_applications_to_google_sheets", "Log",
      "Logs every result to daily and master trackers.",
      ["Google Sheets: Create", "Google Sheets: Append", "Google Sheets: Search",
@@ -94,12 +94,36 @@ LI_ORDER = [
 ORDER = MAIN_ORDER
 
 
-def _default_fallback_llm(llm):
-    """Gemini Flash backs up the Groq 70B thinking-agent primary (AutoFix
-    promotes this into `llm` in run_plan.json on transient Groq errors).
-    Mechanical Groq 8B agents keep no default fallback, matching prior behavior.
+# LinkedIn's own Groq 70B agents deliberately have no fallback_llm in
+# crew.py -- a separate routing decision from the main loop, not an
+# oversight (see AGENTS.md's LLM routing bullet). Naming them explicitly
+# here instead of inferring from llm string alone: after the main loop
+# moved to Gemini-primary, "any 70B Groq agent" would otherwise only ever
+# mean these three, and the blanket rule below would wrongly give them a
+# fallback crew.py never wires.
+_LINKEDIN_NO_FALLBACK_AGENTS = frozenset({
+    "linkedin_job_fit_analyst",
+    "linkedin_resume_tailor",
+    "linkedin_cover_letter_writer",
+})
+
+
+def _default_fallback_llm(llm, agent_id=""):
+    """Mirrors crew.py's three actual fallback buckets -- see the 2026-08-12
+    LLM routing bullet in AGENTS.md and DEFERRED.md D-10/D-11 for why this
+    exists as an explicit table rather than a single string-matching rule.
+
+    - Gemini-primary main-loop agents -> Groq 70B fallback
+      (_gemini_flash.fallback_llm = _groq_70b).
+    - Groq 8B mechanical agents -> Gemini fallback
+      (_groq_8b.fallback_llm = _gemini_flash).
+    - LinkedIn's Groq 70B agents -> no fallback, deliberately.
     """
-    if llm.startswith("groq/") and "8b" not in llm and "instant" not in llm:
+    if agent_id in _LINKEDIN_NO_FALLBACK_AGENTS:
+        return ""
+    if llm.startswith("gemini/"):
+        return "groq/llama-3.3-70b-versatile"
+    if llm.startswith("groq/") and ("8b" in llm or "instant" in llm):
         return "gemini/gemini-2.5-flash"
     return ""
 
@@ -128,7 +152,7 @@ def _build_nodes(order_rows, agents_map, tasks_map, index_offset=0):
             "description": str(t["description"]),
             "expected_output": str(t["expected_output"]),
             "llm": llm,
-            "fallback_llm": _default_fallback_llm(llm),
+            "fallback_llm": _default_fallback_llm(llm, agent_id),
             "max_iter": max_iter,
             "max_rpm": max_rpm,
             "tools": tools,
