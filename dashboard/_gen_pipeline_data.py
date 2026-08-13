@@ -4,7 +4,7 @@ import pathlib
 
 import yaml
 
-root = pathlib.Path(r"E:\Claude Projects\Projects\Jobhunter AI")
+root = pathlib.Path(__file__).resolve().parents[1]
 cfg = root / "src/jobhunter_ai/config"
 
 agents = yaml.safe_load((cfg / "agents.yaml").read_text(encoding="utf-8")) or {}

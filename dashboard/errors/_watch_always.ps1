@@ -1,5 +1,5 @@
 ﻿$ErrorActionPreference = 'SilentlyContinue'
-$log = 'E:\Claude Projects\Projects\Jobhunter AI\dashboard\errors\_watch_always.log'
+$log = Join-Path $PSScriptRoot '_watch_always.log'
 $since = 0
 $lastState = ''
 function Stamp($s) {
