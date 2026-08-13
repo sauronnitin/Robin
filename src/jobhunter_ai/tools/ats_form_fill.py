@@ -6,8 +6,8 @@ Ashby / Workday / LinkedIn external forms. Applicant values load from:
 2. env APPLICANT_* overrides
 3. profiles / user profile.json candidate block
 
-Never invent years-of-experience, salary, or sensitive EEO answers. Leave those
-blank so Simplify (fallback) or the user can complete them.
+Never invent years-of-experience, salary, country, or sensitive EEO answers.
+Leave those blank so Simplify (fallback) or the user can complete them.
 """
 
 from __future__ import annotations
@@ -222,7 +222,7 @@ def load_applicant_payload(
             os.environ.get("APPLICANT_COUNTRY")
             or stored.get("country")
             or str(prof.get("country") or "")
-            or "United States"
+            or ""
         ).strip(),
         "zip": (os.environ.get("APPLICANT_ZIP") or stored.get("zip") or "").strip(),
         "address": (
@@ -459,6 +459,7 @@ def direct_fill_ats_form(
     payload = load_applicant_payload(cover_letter_text=cover_letter_text)
     filled = 0
     matched_keys: list[str] = []
+    needs_review: list[str] = []
 
     if resume_path:
         if attach_resume(page, resume_path):
@@ -493,6 +494,8 @@ def direct_fill_ats_form(
             continue
         value = payload.get(key) or ""
         if not value:
+            if key == "country":
+                needs_review.append("country")
             continue
         if _set_input_value(page, el, value):
             filled += 1
@@ -504,6 +507,7 @@ def direct_fill_ats_form(
         "filled": filled,
         "keys": matched_keys,
         "payload_keys": sorted(payload.keys()),
+        "needs_review": sorted(set(needs_review)),
     }
 
 
@@ -643,6 +647,15 @@ def fill_form_direct_then_simplify(
             )
             stats["filled"] = int(stats.get("filled") or 0) + int(extra.get("filled") or 0)
             stats["keys"] = list(dict.fromkeys((stats.get("keys") or []) + (extra.get("keys") or [])))
+            filled_keys = set(stats["keys"])
+            stats["needs_review"] = sorted(
+                {
+                    k
+                    for k in list(stats.get("needs_review") or [])
+                    + list(extra.get("needs_review") or [])
+                    if k not in filled_keys
+                }
+            )
     stats["mode"] = mode
     stats["still_missing_required"] = missing_required_fields(page)
     return stats
