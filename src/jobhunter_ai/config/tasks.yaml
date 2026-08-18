@@ -293,12 +293,12 @@ humanize_content:
     job may be omitted or merged with another. Company Name, Job Title, Job URL, and
     Fit Score are always carried forward unchanged from the input.'
   agent: content_humanizer_ai_detection_specialist
-  context:
-  - write_cover_letters
-  - tailor_resume_per_job
+  # No context: intentionally disconnected from the default pipeline (bypassed,
+  # not deleted -- Compile/Apply read straight from Tailor/Cover instead). Still
+  # runnable standalone from the canvas, which wires its own context per run.
 compile_and_upload_resume_pdfs:
   description: |-
-    The Humanize Content step's output is a JSON array, one object per job, each with
+    The Tailor step's output is a JSON array, one object per job, each with
     Company Name, Job Title, Job URL, Fit Score, and a resume_latex field holding a
     short `FILE:<name>.tex` ref to that job's resume source. Process every object in
     the array. Never reuse one object's resume_latex ref for a different job.
@@ -332,11 +332,8 @@ compile_and_upload_resume_pdfs:
     be omitted from the output, and Job URL/Fit Score must always be carried over from
     the input context, never left blank.'
   agent: latex_resume_compiler_drive_publisher
-  # tailor_resume_per_job deliberately NOT in context: humanize_content already
-  # carries Company/Title/URL/Fit forward verbatim, so including Tailor only added
-  # a second full copy of every resume's LaTeX to this agent's prompt.
   context:
-  - humanize_content
+  - tailor_resume_per_job
 submit_job_applications:
   description: |-
     Process ONLY jobs whose Job URL is NOT on linkedin.com.
@@ -364,14 +361,14 @@ submit_job_applications:
     - If job_url contains linkedin.com: SKIP with "Skipped - LinkedIn (use LI loop)"
 
     Before applying: check Google Sheet ({spreadsheet_id}) for duplicates.
-    Use humanized cover letter text when a cover field exists.
+    Use the cover letter text from Cover when a cover field exists.
     Use the Google Drive PDF link from Compile for resume upload.
   expected_output: 'A list of non-LinkedIn jobs processed with: Company Name, Job Title,
     Job URL, Application Status (Applied / Skipped - External ATS / Skipped - CAPTCHA
     / Skipped - Missing Info / Failed), and any confirmation notes.'
   agent: human_like_application_specialist
   context:
-  - humanize_content
+  - write_cover_letters
   - compile_and_upload_resume_pdfs
 log_applications_to_google_sheets:
   description: |-

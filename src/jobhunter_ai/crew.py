@@ -593,7 +593,14 @@ def _tailor_ats_guardrail(task_output) -> tuple[bool, Any]:
                 "Experience bullet. Do not invent employment, tools, or metrics. "
                 "Re-output the full JSON array.\n" + "\n".join(shortfalls)
             )
-        return True, json.dumps(jobs, ensure_ascii=False)
+        # Humanize is bypassed by default (see tasks.yaml's humanize_content),
+        # so Tailor is now the terminal stage before Compile -- offload each
+        # job's LaTeX blob to a FILE: ref here rather than leave it inline.
+        return True, _offload_latex_in_raw(
+            json.dumps(jobs, ensure_ascii=False),
+            agent_id="resume_tailor",
+            task_key="tailor_resume_per_job",
+        )
     except (json.JSONDecodeError, TypeError) as exc:
         print(f"[ats] guardrail skipped (passing tailor output through): {exc}")
         return True, raw
@@ -629,24 +636,22 @@ def _record_ats_after(entry: dict[str, Any], score: float) -> None:
 _LATEX_OUTPUT_KEYS = ("humanized_latex", "resume_latex")
 
 
-def _offload_latex_guardrail(task_output) -> tuple[bool, Any]:
-    """After Humanize: swap each job's LaTeX blob for a short ``FILE:`` ref.
+def _offload_latex_in_raw(raw: str, *, agent_id: str, task_key: str) -> str:
+    """Swap each job's LaTeX blob for a short ``FILE:`` ref.
 
     Compile needs the *identity* of each resume, never its 3.5k tokens of
     source — it only hands the value straight to the compiler tool, which now
     resolves refs itself. Leaving the blob inline made it context for Compile,
     then a tool argument, then conversation history re-sent on every ReAct
-    round: 158k tokens for a single job. The LaTeX still round-trips fully
-    through Tailor -> Humanize, which genuinely rewrite it.
+    round: 158k tokens for a single job.
     """
-    raw = getattr(task_output, "raw", None) or str(task_output)
     try:
         start, end = raw.find("["), raw.rfind("]")
         if start == -1 or end <= start:
-            return True, raw
+            return raw
         jobs = json.loads(raw[start : end + 1])
         if not isinstance(jobs, list) or not jobs:
-            return True, raw
+            return raw
 
         offloaded = 0
         for i, job in enumerate(jobs, start=1):
@@ -661,7 +666,7 @@ def _offload_latex_guardrail(task_output) -> tuple[bool, Any]:
                 offloaded += 1
 
         if not offloaded:
-            return True, raw
+            return raw
 
         rewritten = (
             raw[:start]
@@ -675,8 +680,8 @@ def _offload_latex_guardrail(task_output) -> tuple[bool, Any]:
         )
         events_bus.emit(
             "step",
-            agent_id="content_humanizer_ai_detection_specialist",
-            task_key="humanize_content",
+            agent_id=agent_id,
+            task_key=task_key,
             status="done",
             detail={
                 "label": "latex_offloaded",
@@ -684,11 +689,23 @@ def _offload_latex_guardrail(task_output) -> tuple[bool, Any]:
                 "chars_saved": saved,
             },
         )
-        return True, rewritten
+        return rewritten
     except (json.JSONDecodeError, OSError, TypeError) as exc:
         # Never block the pipeline on this optimization.
-        print(f"[latex_offload] skipped (passing humanize output through): {exc}")
-        return True, raw
+        print(f"[latex_offload] skipped (passing output through): {exc}")
+        return raw
+
+
+def _offload_latex_guardrail(task_output) -> tuple[bool, Any]:
+    """Standalone Humanize's own guardrail (bypassed by default -- see
+    tasks.yaml's humanize_content -- but still wired for manual canvas runs).
+    """
+    raw = getattr(task_output, "raw", None) or str(task_output)
+    return True, _offload_latex_in_raw(
+        raw,
+        agent_id="content_humanizer_ai_detection_specialist",
+        task_key="humanize_content",
+    )
 
 
 # A core title match has already proved the two components the rubric scores
@@ -1829,13 +1846,17 @@ class JobhunterAiCrew:
         LinkedIn loop agents/tasks are registered for graph_crew / canvas plans;
         they are not part of this default sequential crew.
         """
+        # Humanize (content_humanizer_ai_detection_specialist / humanize_content)
+        # is intentionally bypassed here, not deleted: its card and task
+        # definitions stay in place for manual canvas runs, but Compile now
+        # reads resume_latex straight from Tailor (guardrail-offloaded there
+        # instead) and Apply reads cover_letter_text straight from Cover.
         main_agents = [
             self.global_product_design_job_scout(),
             self.content_safety_injection_screener(),
             self.job_fit_analyst(),
             self.resume_tailor(),
             self.cover_letter_writer(),
-            self.content_humanizer_ai_detection_specialist(),
             self.latex_resume_compiler_drive_publisher(),
             self.human_like_application_specialist(),
             self.application_logger(),
@@ -1846,7 +1867,6 @@ class JobhunterAiCrew:
             self.score_and_prioritise_jobs(),
             self.tailor_resume_per_job(),
             self.write_cover_letters(),
-            self.humanize_content(),
             self.compile_and_upload_resume_pdfs(),
             self.submit_job_applications(),
             self.log_applications_to_google_sheets(),

@@ -217,10 +217,7 @@ const AGENTS = [
       "Google Docs: Get",
       "Google Docs: Replace"
     ],
-    "dependsOn": [
-      "cover_letter_writer",
-      "resume_tailor"
-    ],
+    "dependsOn": [],
     "baseDurationMs": 7400,
     "tokenEstimate": 3200,
     "flags": 0,
@@ -241,7 +238,7 @@ const AGENTS = [
     "role": "LaTeX Resume Compiler & Drive Publisher",
     "goal": "Take the tailored LaTeX resume source from the pipeline, compile it into a PDF using the LaTeX compiler tool, and upload the resulting PDF to Google Drive. Return the Google Drive link to the compiled PDF for use in job applications.",
     "backstory": "You are a document production specialist. You receive LaTeX source code representing a perfectly tailored resume, compile it into a polished PDF, then publish it to Google Drive so it's ready to be attached to job applications. You always confirm the PDF was compiled and uploaded successfully before reporting back.",
-    "description": "The Humanize Content step's output is a JSON array, one object per job, each with\nCompany Name, Job Title, Job URL, Fit Score, and a resume_latex field holding a\nshort `FILE:<name>.tex` ref to that job's resume source. Process every object in\nthe array. Never reuse one object's resume_latex ref for a different job.\n\nFor each job object, take its resume_latex ref and:\n\n1. Use the LaTeX compiler tool to compile it into a PDF. Pass the resume_latex value through as latex_source EXACTLY as given: it is a short ref and the tool loads the source itself. Never expand, retype, or paste LaTeX source into the argument. (The tool sanitizes double-escaped backslashes and may fall back to the active profile resume in user/ or the selected role pack.)\n2. From the compiler output, copy the short pdf_base64 ref exactly (e.g. FILE:last_compile.b64). Do NOT paste giant Base64 blobs into the next tool call.\n3. Use the Google Drive PDF uploader tool with that FILE: ref as pdf_base64 and filename: \"[Company Name] - [Job Title] - Resume.pdf\"\n4. Capture the returned Google Drive shareable link for each uploaded PDF.\n5. If a job has no usable Company/Title (Not Found / empty), skip upload for that job and note it.\n\nRepeat for every valid job in the shortlist. Ensure every PDF is successfully compiled and uploaded before reporting back.\n\nCRITICAL OUTPUT FORMAT: for every job, whether it succeeded or was skipped, you MUST\noutput a block in exactly this structure (the next agent parses these exact labels\nto submit applications — omitting any field breaks the pipeline):\n\nJob N:\n- Company Name: <value>\n- Job Title: <value>\n- Job URL: <value from context, copy verbatim, never blank>\n- Fit Score: <value from context>\n- Resume PDF Link: <Google Drive shareable link, or \"SKIPPED - <reason>\" if upload failed>\n\nDo not summarize or omit the Job URL or Fit Score for any job — copy them verbatim\nfrom the input context you were given. Every job from the input must appear exactly\nonce in this format.",
+    "description": "The Tailor step's output is a JSON array, one object per job, each with\nCompany Name, Job Title, Job URL, Fit Score, and a resume_latex field holding a\nshort `FILE:<name>.tex` ref to that job's resume source. Process every object in\nthe array. Never reuse one object's resume_latex ref for a different job.\n\nFor each job object, take its resume_latex ref and:\n\n1. Use the LaTeX compiler tool to compile it into a PDF. Pass the resume_latex value through as latex_source EXACTLY as given: it is a short ref and the tool loads the source itself. Never expand, retype, or paste LaTeX source into the argument. (The tool sanitizes double-escaped backslashes and may fall back to the active profile resume in user/ or the selected role pack.)\n2. From the compiler output, copy the short pdf_base64 ref exactly (e.g. FILE:last_compile.b64). Do NOT paste giant Base64 blobs into the next tool call.\n3. Use the Google Drive PDF uploader tool with that FILE: ref as pdf_base64 and filename: \"[Company Name] - [Job Title] - Resume.pdf\"\n4. Capture the returned Google Drive shareable link for each uploaded PDF.\n5. If a job has no usable Company/Title (Not Found / empty), skip upload for that job and note it.\n\nRepeat for every valid job in the shortlist. Ensure every PDF is successfully compiled and uploaded before reporting back.\n\nCRITICAL OUTPUT FORMAT: for every job, whether it succeeded or was skipped, you MUST\noutput a block in exactly this structure (the next agent parses these exact labels\nto submit applications — omitting any field breaks the pipeline):\n\nJob N:\n- Company Name: <value>\n- Job Title: <value>\n- Job URL: <value from context, copy verbatim, never blank>\n- Fit Score: <value from context>\n- Resume PDF Link: <Google Drive shareable link, or \"SKIPPED - <reason>\" if upload failed>\n\nDo not summarize or omit the Job URL or Fit Score for any job — copy them verbatim\nfrom the input context you were given. Every job from the input must appear exactly\nonce in this format.",
     "expected_output": "For every job in the input, one block with exactly these labeled fields: Company Name, Job Title, Job URL, Fit Score, Resume PDF Link. No job may be omitted from the output, and Job URL/Fit Score must always be carried over from the input context, never left blank.",
     "llm": "gemini/gemini-2.5-flash",
     "fallback_llm": "groq/llama-3.3-70b-versatile",
@@ -252,7 +249,7 @@ const AGENTS = [
       "Google Drive: PDF Upload"
     ],
     "dependsOn": [
-      "content_humanizer_ai_detection_specialist"
+      "resume_tailor"
     ],
     "baseDurationMs": 6600,
     "tokenEstimate": 1500,
@@ -274,7 +271,7 @@ const AGENTS = [
     "role": "Human-Like Application Specialist",
     "goal": "Apply to non-LinkedIn job URLs only (Indeed, company sites, other boards) using the tailored resume and cover letter. Default: direct Playwright form fill from profile/autofill (Simplify-style fields). Fallback: Simplify if required fields remain empty. Skip any linkedin.com URL (those are handled by the separate LinkedIn agentic loop). If CAPTCHA or still-missing info, skip and flag. Never apply twice.",
     "backstory": "You are a meticulous job application specialist for non-LinkedIn boards. You leave every linkedin.com listing to the LinkedIn agentic loop. On other boards you fill forms directly when possible, fall back to Simplify only when needed, never bypass CAPTCHAs, and flag anything unusual before moving on.",
-    "description": "Process ONLY jobs whose Job URL is NOT on linkedin.com.\nSkip every linkedin.com URL (LinkedIn Easy Apply / External Apply live in the\nseparate LinkedIn agentic loop).\n\nFor each remaining job (with compiled resume PDF and cover letter ready), navigate\nto the job URL and submit the application.\n\nHuman-like behaviour rules (CRITICAL):\n- Before clicking anything: scroll the full page to read it as a human would\n- Default: direct form fill from profile + apply_autofill.json (name, email, phone,\n  location, LinkedIn, portfolio, resume upload, cover letter when present)\n- Fallback: Simplify extension only if required fields remain empty; harvest fills\n- Never invent years of experience, work auth, salary, or EEO answers\n- Pause 3-8 seconds between each form field interaction\n- Type at a natural human speed - do not instantly fill fields\n- Read each page/step fully before proceeding to the next\n- After submitting: stay on the confirmation page for 5+ seconds before moving on\n\nPlatform rules:\n- If the application is a complex multi-step external ATS, SKIP with \"Skipped - External ATS\"\n- If CAPTCHA appears: STOP, flag \"Skipped - CAPTCHA\", move on\n- If a form field asks for unavailable info: flag \"Skipped - Missing Info\"\n- If job_url contains linkedin.com: SKIP with \"Skipped - LinkedIn (use LI loop)\"\n\nBefore applying: check Google Sheet ({spreadsheet_id}) for duplicates.\nUse humanized cover letter text when a cover field exists.\nUse the Google Drive PDF link from Compile for resume upload.",
+    "description": "Process ONLY jobs whose Job URL is NOT on linkedin.com.\nSkip every linkedin.com URL (LinkedIn Easy Apply / External Apply live in the\nseparate LinkedIn agentic loop).\n\nFor each remaining job (with compiled resume PDF and cover letter ready), navigate\nto the job URL and submit the application.\n\nHuman-like behaviour rules (CRITICAL):\n- Before clicking anything: scroll the full page to read it as a human would\n- Default: direct form fill from profile + apply_autofill.json (name, email, phone,\n  location, LinkedIn, portfolio, resume upload, cover letter when present)\n- Fallback: Simplify extension only if required fields remain empty; harvest fills\n- Never invent years of experience, work auth, salary, or EEO answers\n- Pause 3-8 seconds between each form field interaction\n- Type at a natural human speed - do not instantly fill fields\n- Read each page/step fully before proceeding to the next\n- After submitting: stay on the confirmation page for 5+ seconds before moving on\n\nPlatform rules:\n- If the application is a complex multi-step external ATS, SKIP with \"Skipped - External ATS\"\n- If CAPTCHA appears: STOP, flag \"Skipped - CAPTCHA\", move on\n- If a form field asks for unavailable info: flag \"Skipped - Missing Info\"\n- If job_url contains linkedin.com: SKIP with \"Skipped - LinkedIn (use LI loop)\"\n\nBefore applying: check Google Sheet ({spreadsheet_id}) for duplicates.\nUse the cover letter text from Cover when a cover field exists.\nUse the Google Drive PDF link from Compile for resume upload.",
     "expected_output": "A list of non-LinkedIn jobs processed with: Company Name, Job Title, Job URL, Application Status (Applied / Skipped - External ATS / Skipped - CAPTCHA / Skipped - Missing Info / Failed), and any confirmation notes.",
     "llm": "gemini/gemini-2.5-flash",
     "fallback_llm": "groq/llama-3.3-70b-versatile",
@@ -285,7 +282,7 @@ const AGENTS = [
       "Playwright Apply"
     ],
     "dependsOn": [
-      "content_humanizer_ai_detection_specialist",
+      "cover_letter_writer",
       "latex_resume_compiler_drive_publisher"
     ],
     "baseDurationMs": 8200,
@@ -356,19 +353,11 @@ const EDGES = [
     "to": "cover_letter_writer"
   },
   {
-    "from": "cover_letter_writer",
-    "to": "content_humanizer_ai_detection_specialist"
-  },
-  {
     "from": "resume_tailor",
-    "to": "content_humanizer_ai_detection_specialist"
-  },
-  {
-    "from": "content_humanizer_ai_detection_specialist",
     "to": "latex_resume_compiler_drive_publisher"
   },
   {
-    "from": "content_humanizer_ai_detection_specialist",
+    "from": "cover_letter_writer",
     "to": "human_like_application_specialist"
   },
   {
