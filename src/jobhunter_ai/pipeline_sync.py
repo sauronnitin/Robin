@@ -105,17 +105,85 @@ def _coerce_record(item: dict[str, Any]) -> dict[str, Any]:
     return record
 
 
+_VALID_JSON_ESCAPES = set('"\\/bfnrtu')
+
+
+def _repair_invalid_escapes(text: str) -> str:
+    """Drop a backslash immediately before a character JSON can't escape.
+
+    LLMs sometimes emit \\' for an apostrophe (not legal JSON - only
+    \\" \\\\ \\/ \\b \\f \\n \\r \\t \\uXXXX are). A regex substitution over
+    the whole string is unsafe here: it can't tell a lone bad backslash from
+    the second half of a legitimate escaped-backslash pair (LaTeX commands
+    like \\\\vspace are common in resume_latex), so this walks the string
+    once, only inside JSON string literals, consuming valid escape pairs
+    whole so a following bad escape is never misjudged.
+    """
+    out = []
+    in_string = False
+    i = 0
+    n = len(text)
+    while i < n:
+        ch = text[i]
+        if in_string and ch == "\\" and i + 1 < n:
+            nxt = text[i + 1]
+            if nxt in _VALID_JSON_ESCAPES:
+                out.append(ch)
+                out.append(nxt)
+                i += 2
+                continue
+            # Invalid escape - drop the backslash, keep the character.
+            out.append(nxt)
+            i += 2
+            continue
+        if ch == '"':
+            in_string = not in_string
+        out.append(ch)
+        i += 1
+    return "".join(out)
+
+
 def _parse_json_records(text: str) -> list[dict[str, Any]]:
     start, end = text.find("["), text.rfind("]")
-    if start == -1 or end <= start:
+    candidates = []
+    if start != -1 and end > start:
+        candidates.append(text[start : end + 1])
+    if start != -1:
+        candidates.append(text[start:])  # no closing ']' found at all
+
+    for candidate in candidates:
+        for attempt in (candidate, _repair_invalid_escapes(candidate)):
+            try:
+                parsed = json.loads(attempt)
+            except json.JSONDecodeError:
+                continue
+            if isinstance(parsed, list):
+                return [_coerce_record(item) for item in parsed if isinstance(item, dict)]
+
+    # Nothing parsed whole. Salvage complete leading objects out of a
+    # truncated array - a model cut off mid-listing shouldn't cost every
+    # listing that came before it.
+    if start == -1:
         return []
-    try:
-        parsed = json.loads(text[start : end + 1])
-    except json.JSONDecodeError:
-        return []
-    if not isinstance(parsed, list):
-        return []
-    return [_coerce_record(item) for item in parsed if isinstance(item, dict)]
+    decoder = json.JSONDecoder()
+    salvaged: list[dict[str, Any]] = []
+    repaired = _repair_invalid_escapes(text[start:])
+    body = repaired[1:]  # drop the leading '[' to match `idx` bookkeeping below
+    idx = 0
+    n = len(body)
+    while idx < n:
+        while idx < n and body[idx] in " \t\r\n,":
+            idx += 1
+        if idx >= n or body[idx] == "]":
+            break
+        try:
+            obj, next_idx = decoder.raw_decode(body, idx)
+        except json.JSONDecodeError:
+            break  # this is the truncated tail - stop, keep what we have
+        if isinstance(obj, dict):
+            salvaged.append(_coerce_record(obj))
+        idx = next_idx
+    return salvaged
 
 
 _HEADING_NOISE_RE = re.compile(r"^[\s*_#]+|[\s*_#]+$")
@@ -357,6 +425,18 @@ def sync_task_output(
 
     dry_run = _is_dry_run(text) if task_key == "submit_job_applications" else False
     records = parse_records(text or "")
+    if not records and (text or "").strip():
+        try:
+            from jobhunter_ai import error_bus
+
+            error_bus.upsert_live_open(
+                error=f"pipeline_sync: {task_key} produced output but zero records parsed",
+                suggestion="Check dashboard/events.jsonl for this task's raw output - likely truncated JSON (model hit its completion ceiling) or an escape sequence the repair pass doesn't cover yet.",
+                task_key=task_key,
+                event_type="pipeline_sync_parse_failure",
+            )
+        except Exception:  # noqa: BLE001 - visibility must never break a run
+            pass
     summary: dict[str, Any] = {
         "task": task_key,
         "handled": True,

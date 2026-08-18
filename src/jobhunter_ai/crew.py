@@ -1430,7 +1430,7 @@ _GEMINI_FLASH = "gemini/gemini-2.5-flash"
 _GROQ_8B = "groq/llama-3.1-8b-instant"
 _GROQ_70B = "groq/llama-3.3-70b-versatile"
 
-_groq_8b = GroqLLM(model=_GROQ_8B, temperature=0.1)
+_groq_8b = GroqLLM(model=_GROQ_8B, temperature=0.1, max_tokens=4096)
 _groq_70b = GroqLLM(model=_GROQ_70B, temperature=0.2)
 # is_litellm=True keeps our GeminiLLM subclass (retry/events) instead of
 # CrewAI swapping in native GeminiCompletion.
