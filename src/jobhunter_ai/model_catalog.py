@@ -22,8 +22,8 @@ _ENV_PATH = _PROJECT_ROOT / ".env"
 
 # Offline / disconnected fallback when live provider lists cannot be fetched.
 FALLBACK_MODELS: list[dict[str, str]] = [
-    {"id": "groq/llama-3.1-8b-instant", "provider": "groq", "label": "Llama 3.1 8B Instant"},
-    {"id": "groq/llama-3.3-70b-versatile", "provider": "groq", "label": "Llama 3.3 70B Versatile"},
+    {"id": "groq/openai/gpt-oss-20b", "provider": "groq", "label": "GPT OSS 20B"},
+    {"id": "groq/qwen/qwen3.8-27b", "provider": "groq", "label": "Qwen 3.8 27B"},
     {"id": "gemini/gemini-2.5-flash", "provider": "gemini", "label": "Gemini 2.5 Flash"},
     {"id": "gemini/gemini-2.5-flash-lite", "provider": "gemini", "label": "Gemini 2.5 Flash Lite"},
     {"id": "gemini/gemini-2.5-pro", "provider": "gemini", "label": "Gemini 2.5 Pro"},
@@ -38,7 +38,7 @@ _FALLBACK_HINTS: dict[str, str] = {
     "gemini/gemini-2.5-flash-lite": "Lower demand than Flash",
     "gemini/gemini-3.1-flash-lite": "Lite capacity, usually quieter",
     "gemini/gemini-3.5-flash": "Newer Flash line if available",
-    "groq/llama-3.1-8b-instant": "Fast Groq escape hatch",
+    "groq/openai/gpt-oss-20b": "Fast Groq escape hatch",
     "groq/gemma2-9b-it": "Light Groq chat model",
 }
 
@@ -54,6 +54,7 @@ _HIGH_DEMAND_FLASH = frozenset(
 _HEAVY_TOKENS = (
     "pro",
     "70b",
+    "120b",
     "405b",
     "ultra",
     "versatile",  # e.g. llama-3.3-70b-versatile
@@ -83,6 +84,8 @@ _GEMINI_SHUTDOWN_DATES: dict[str, date] = {
 
 # Retired / bad canvas pins remapped before kickoff.
 RETIRED_MODEL_REMAP: dict[str, str] = {
+    "groq/llama-3.1-8b-instant": "groq/openai/gpt-oss-20b",
+    "groq/llama-3.3-70b-versatile": "groq/qwen/qwen3.8-27b",
     "gemini/gemini-2.0-flash": "gemini/gemini-3.5-flash",
     "gemini/gemini-2.0-flash-001": "gemini/gemini-3.5-flash",
     "gemini/gemini-2.0-flash-lite": "gemini/gemini-3.1-flash-lite",
@@ -162,6 +165,8 @@ def is_low_demand_fallback(model_id: str) -> bool:
     if short.startswith("gemma"):
         return True
     # Tier 4: Groq 8B Instant escape hatch
+    if short.endswith("gpt-oss-20b"):
+        return True
     if short.startswith("llama-3.1-8b") or short.startswith("llama3.1-8b"):
         return True
     if "8b-instant" in short:
@@ -216,7 +221,8 @@ def fallback_rank(model_id: str, *, relative_to: str | None = None) -> tuple:
         )
         is_gemma = short.startswith("gemma")
         is_groq_8b = (
-            short.startswith("llama-3.1-8b")
+            short.endswith("gpt-oss-20b")
+            or short.startswith("llama-3.1-8b")
             or short.startswith("llama3.1-8b")
             or "8b-instant" in short
         )

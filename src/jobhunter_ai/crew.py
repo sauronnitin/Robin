@@ -957,11 +957,11 @@ class GroqLLM(LLM):
     before the request goes out. Groq's API rejects the unknown property,
     so strip it here for every non-Anthropic completion call.
 
-    Also retries on Groq's tokens-per-minute rate limit (free/on-demand tier
-    caps llama-3.3-70b-versatile at 12k TPM, which a 9-agent multi-job crew
-    burns through easily). Groq's error message tells us exactly how long to
-    wait, so we sleep that long (plus margin) and retry instead of failing
-    the whole task.
+    Also retries on Groq's tokens-per-minute rate limit. This account's
+    on-demand tier caps remaining Groq chat models (gpt-oss-20b/120b and
+    qwen3.8-27b) at 8k TPM, which a multi-job batch (~18k tokens) exceeds
+    in a single request. Those "request too large" 429s never succeed on
+    retry, so we skip the ladder and fall back (or fail) immediately.
 
     Hard failures emit dashboard awaiting_retry and pause for user confirm.
     """
@@ -1027,12 +1027,12 @@ class GroqLLM(LLM):
             except litellm.RateLimitError as exc:
                 print(f"[GroqLLM] rate-limit raw: {str(exc)[:300]}")
                 match = _RETRY_AFTER_RE.search(str(exc))
-                # A 429 with no "try again in Xs" that mentions the request
-                # being too large is a permanent rejection of THIS payload
-                # against the TPM ceiling, not a transient rate limit -
-                # sleeping through the normal ladder just re-learns the same
-                # rejection 5 times (~100s wasted) before falling back.
-                payload_too_large = not match and "too large" in str(exc).lower()
+                # A 429 that says the request itself is too large for the
+                # TPM ceiling is permanent for THIS payload. Do not require
+                # the absence of a retry-after clause: Groq often includes
+                # both "Request too large" and "try again". Retrying the
+                # same oversized body 6 times just burns the ladder.
+                payload_too_large = "too large" in str(exc).lower()
                 if match:
                     minutes = float(match.group(1)) if match.group(1) else 0.0
                     wait_s = minutes * 60 + float(match.group(2)) + 2
@@ -1068,10 +1068,16 @@ class GroqLLM(LLM):
                 if attempt == max_attempts or payload_too_large:
                     fallback = getattr(self, "fallback_llm", None)
                     if fallback is not None and _fallback_depth < 1:
-                        print(
-                            f"[GroqLLM] TPM exhausted after {max_attempts} attempts, "
-                            f"falling back to {fallback.model}..."
-                        )
+                        if payload_too_large:
+                            print(
+                                "[GroqLLM] Request exceeds TPM ceiling, "
+                                f"falling back to {fallback.model}..."
+                            )
+                        else:
+                            print(
+                                f"[GroqLLM] TPM exhausted after {max_attempts} attempts, "
+                                f"falling back to {fallback.model}..."
+                            )
                         events_bus.emit(
                             "llm",
                             status="retrying",
@@ -1108,6 +1114,21 @@ class GroqLLM(LLM):
                         status="failed",
                         detail={"error": str(exc)[:800]},
                     )
+                    if payload_too_large:
+                        self._pause_for_user(
+                            error=(
+                                "Request exceeds this Groq model's TPM ceiling. "
+                                "The same payload cannot succeed on retry."
+                            ),
+                            suggestion=(
+                                "Lower the job cap / batch size, or keep this "
+                                "agent on Gemini Flash (the Groq fallback cannot "
+                                "fit a full multi-job prompt on this account)."
+                            ),
+                        )
+                        raise RuntimeError(
+                            "GroqLLM payload exceeds TPM ceiling"
+                        ) from exc
                     self._pause_for_user(
                         error=f"TPM rate limit exhausted after {max_attempts} attempts.",
                         suggestion="Wait ~1 minute for TPM headroom, then confirm retry.",
@@ -1442,11 +1463,15 @@ class InjectionScreenerAgent(Agent):
         return super().execute_task(task, context=context, tools=tools)
 
 
-# Hybrid routing: Groq 8B for tool/mechanical agents; Groq 70B for thinking
-# agents. Never gemini-2.5-pro (Studio cost trap).
+# Hybrid routing: Groq 8B for tool/mechanical agents; Groq heavy-tier for
+# thinking fallbacks / LinkedIn thinking agents. Never gemini-2.5-pro.
+# gpt-oss-120b is 8k TPM on this on-demand account and a single ~18k-token
+# batch can never succeed there. qwen3.8-27b is the same 8k TPM (verified
+# live against x-ratelimit-limit-tokens) but 2M TPD vs 200k, so it is the
+# better heavy Groq default. Fail-fast on "request too large" still applies.
 _GEMINI_FLASH = "gemini/gemini-2.5-flash"
-_GROQ_8B = "groq/llama-3.1-8b-instant"
-_GROQ_70B = "groq/llama-3.3-70b-versatile"
+_GROQ_8B = "groq/openai/gpt-oss-20b"
+_GROQ_70B = "groq/qwen/qwen3.8-27b"
 
 _groq_8b = GroqLLM(model=_GROQ_8B, temperature=0.1, max_tokens=4096)
 _groq_70b = GroqLLM(model=_GROQ_70B, temperature=0.2)

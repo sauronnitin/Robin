@@ -118,7 +118,7 @@ def _pick_model() -> tuple[str, str | None]:
     if gemini:
         return "gemini/gemini-2.5-flash", None
     if groq:
-        return "groq/llama-3.1-8b-instant", None
+        return "groq/openai/gpt-oss-20b", None
     return "", "No GEMINI_API_KEY or GROQ_API_KEY in .env. Connect a key in the model picker."
 
 
@@ -131,7 +131,7 @@ def _pick_fallback_model(primary_model: str, *, has_media: bool = False) -> str 
     if has_media or not primary_model.startswith("gemini/"):
         return None
     groq = (os.environ.get("GROQ_API_KEY") or "").strip()
-    return "groq/llama-3.1-8b-instant" if groq else None
+    return "groq/openai/gpt-oss-20b" if groq else None
 
 
 def estimate_tokens(text: str, *, reply_budget: int = 600) -> dict[str, Any]:

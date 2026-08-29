@@ -14,12 +14,12 @@ should read.
   `_fallback_depth` kwarg caps that at exactly one hop so a double failure
   cannot ping-pong (`tests/test_llm_fallback.py`).
 - LinkedIn-equivalent agents (`linkedin_job_fit_analyst`,
-  `linkedin_resume_tailor`, `linkedin_cover_letter_writer`) are
-  `groq/llama-3.3-70b-versatile` with no fallback. That is a deliberate
-  separate routing, not an oversight. Do not "fix" them to match the main
-  pipeline.
+ `linkedin_resume_tailor`, `linkedin_cover_letter_writer`) are
+ `groq/qwen/qwen3.8-27b` with no fallback. That is a deliberate
+ separate routing, not an oversight. Do not "fix" them to match the main
+ pipeline.
 - Tool/mechanical agents (Scout and others on `_groq_8b`) stay on
-  `groq/llama-3.1-8b-instant` with Gemini Flash as fallback. Never Gemini Pro.
+  `groq/openai/gpt-oss-20b` with Gemini Flash as fallback. Never Gemini Pro.
 
 ## Pipeline rules
 

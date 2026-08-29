@@ -20,10 +20,10 @@ tasks = {**tasks, **li_tasks}
 MAIN_ORDER = [
     ("global_product_design_job_scout", "scrape_and_filter_job_listings", "Scout",
      "Fetches roles via 6 free APIs: RemoteOK, Remotive, Jobicy, Freehire, Rise, SerpAPI.",
-     ["Job APIs (multi-source)", "Website Scraper (truncated)"], "groq/llama-3.1-8b-instant", 3, 2, 5200, 1800, 0),
+     ["Job APIs (multi-source)", "Website Scraper (truncated)"], "groq/openai/gpt-oss-20b", 3, 2, 5200, 1800, 0),
     ("content_safety_injection_screener", "screen_listings_for_prompt_injection", "Screen",
      "Scans listings for prompt injection and redacts threats.",
-     [], "groq/llama-3.1-8b-instant", 1, 2, 3400, 900, 1),
+     [], "groq/openai/gpt-oss-20b", 1, 2, 3400, 900, 1),
     ("job_fit_analyst", "score_and_prioritise_jobs", "Score",
      "Scores jobs 0-100 for fit and ranks the shortlist.",
      [], "gemini/gemini-2.5-flash", 1, 2, 4600, 2200, 0),
@@ -50,44 +50,44 @@ MAIN_ORDER = [
      "Logs every result to daily and master trackers.",
      ["Google Sheets: Create", "Google Sheets: Append", "Google Sheets: Search",
       "Google Docs: Create", "Google Docs: Get", "Google Docs: Replace"],
-     "groq/llama-3.1-8b-instant", 20, 2, 5000, 2400, 0),
+     "groq/openai/gpt-oss-20b", 20, 2, 5000, 2400, 0),
 ]
 
 # LinkedIn agentic loop (no Humanize).
 LI_ORDER = [
     ("linkedin_job_scout", "linkedin_scout_jobs", "LI Scout",
      "Searches LinkedIn Jobs with the 9 alert queries (USA>Canada>EMEA).",
-     ["LinkedIn Scout"], "groq/llama-3.1-8b-instant", 2, 2, 5600, 1600, 0),
+     ["LinkedIn Scout"], "groq/openai/gpt-oss-20b", 2, 2, 5600, 1600, 0),
     ("linkedin_bot_check_specialist", "linkedin_bot_check_listings", "LI BotCheck",
      "Flags honeypot / bot-trap listings to the review queue.",
-     ["LinkedIn Bot Check"], "groq/llama-3.1-8b-instant", 1, 2, 3200, 900, 1),
+     ["LinkedIn Bot Check"], "groq/openai/gpt-oss-20b", 1, 2, 3200, 900, 1),
     ("linkedin_job_fit_analyst", "linkedin_score_jobs", "LI Fit",
      "Scores clean LinkedIn listings 0-100 for fit.",
-     [], "groq/llama-3.3-70b-versatile", 1, 2, 4600, 2200, 0),
+     [], "groq/qwen/qwen3.8-27b", 1, 2, 4600, 2200, 0),
     ("linkedin_resume_tailor", "linkedin_tailor_resumes", "LI Tailor",
      "Keyword-weaves resumes for shortlisted LinkedIn roles.",
-     ["Google Docs: Create"], "groq/llama-3.3-70b-versatile", 1, 2, 6100, 2800, 0),
+     ["Google Docs: Create"], "groq/qwen/qwen3.8-27b", 1, 2, 6100, 2800, 0),
     ("linkedin_cover_letter_writer", "linkedin_write_covers", "LI Cover",
      "Writes cover letters only when the LinkedIn JD requires one.",
      ["Google Docs: Create", "Google Docs: Get", "Google Docs: Replace"],
-     "groq/llama-3.3-70b-versatile", 1, 2, 5800, 2600, 0),
+     "groq/qwen/qwen3.8-27b", 1, 2, 5800, 2600, 0),
     ("linkedin_latex_compiler", "linkedin_compile_pdfs", "LI Compile",
      "Compiles LinkedIn-loop LaTeX resumes to PDF and uploads to Drive.",
      ["LaTeX to PDF Compiler", "Google Drive: PDF Upload"],
-     "groq/llama-3.1-8b-instant", 2, 2, 6600, 1500, 0),
+     "groq/openai/gpt-oss-20b", 2, 2, 6600, 1500, 0),
     ("linkedin_easy_apply_specialist", "submit_linkedin_easy_apply", "LI Easy",
      "LinkedIn Easy Apply specialist: multi-step modal, resume, cover.",
      ["Google Sheets: Search", "LinkedIn Easy Apply"],
-     "groq/llama-3.1-8b-instant", 2, 2, 9000, 1800, 0),
+     "groq/openai/gpt-oss-20b", 2, 2, 9000, 1800, 0),
     ("linkedin_external_apply_specialist", "linkedin_external_simplify_apply", "LI Ext",
      "External ATS apply via Simplify for non-Easy-Apply LinkedIn jobs.",
      ["Google Sheets: Search", "LinkedIn External Simplify Apply"],
-     "groq/llama-3.1-8b-instant", 2, 2, 9200, 1800, 0),
+     "groq/openai/gpt-oss-20b", 2, 2, 9200, 1800, 0),
     ("linkedin_application_logger", "linkedin_log_applications", "LI Log",
      "Logs LinkedIn-loop results (Needs Review / Easy / External Applied).",
      ["Google Sheets: Create", "Google Sheets: Append", "Google Sheets: Search",
       "Google Docs: Create", "Google Docs: Get", "Google Docs: Replace"],
-     "groq/llama-3.1-8b-instant", 20, 2, 5000, 2400, 0),
+     "groq/openai/gpt-oss-20b", 20, 2, 5000, 2400, 0),
 ]
 
 # Backward-compatible alias
@@ -113,17 +113,19 @@ def _default_fallback_llm(llm, agent_id=""):
     LLM routing bullet in AGENTS.md and DEFERRED.md D-10/D-11 for why this
     exists as an explicit table rather than a single string-matching rule.
 
-    - Gemini-primary main-loop agents -> Groq 70B fallback
+    - Gemini-primary main-loop agents -> Groq qwen3.8-27b fallback
       (_gemini_flash.fallback_llm = _groq_70b).
     - Groq 8B mechanical agents -> Gemini fallback
       (_groq_8b.fallback_llm = _gemini_flash).
-    - LinkedIn's Groq 70B agents -> no fallback, deliberately.
+    - LinkedIn's Groq heavy-tier agents -> no fallback, deliberately.
     """
     if agent_id in _LINKEDIN_NO_FALLBACK_AGENTS:
         return ""
     if llm.startswith("gemini/"):
-        return "groq/llama-3.3-70b-versatile"
-    if llm.startswith("groq/") and ("8b" in llm or "instant" in llm):
+        return "groq/qwen/qwen3.8-27b"
+    if llm == "groq/openai/gpt-oss-20b" or (
+        llm.startswith("groq/") and ("8b" in llm or "instant" in llm)
+    ):
         return "gemini/gemini-2.5-flash"
     return ""
 
@@ -225,9 +227,9 @@ meta = {
     "shared": {
         "allow_delegation": False,
         "max_rpm_default": 2,
-        "model_heavy": "groq/llama-3.3-70b-versatile",
-        "model_scout": "groq/llama-3.1-8b-instant",
-        "model_tools": "groq/llama-3.1-8b-instant",
+        "model_heavy": "groq/qwen/qwen3.8-27b",
+        "model_scout": "groq/openai/gpt-oss-20b",
+        "model_tools": "groq/openai/gpt-oss-20b",
     },
     "source": "agents.yaml + tasks.yaml + linkedin_agents.yaml + linkedin_tasks.yaml + crew.py",
     "loops": {

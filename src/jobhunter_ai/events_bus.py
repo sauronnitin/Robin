@@ -29,6 +29,9 @@ HISTORY_FILE = DASHBOARD_DIR / "run_history.jsonl"
 _MODEL_COST_PER_M_TOKENS: dict[str, tuple[float, float]] = {
     "groq/llama-3.1-8b-instant": (0.05, 0.08),
     "groq/llama-3.3-70b-versatile": (0.59, 0.79),
+    "groq/openai/gpt-oss-20b": (0.05, 0.08),
+    "groq/openai/gpt-oss-120b": (0.59, 0.79),
+    "groq/qwen/qwen3.8-27b": (0.29, 0.59),
     "gemini/gemini-2.5-flash": (0.30, 2.50),
     "gemini/gemini-2.5-flash-lite": (0.10, 0.40),
 }

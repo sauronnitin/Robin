@@ -128,7 +128,7 @@ def _pick_model() -> str:
     if (os.environ.get("GEMINI_API_KEY") or "").strip():
         return "gemini/gemini-2.5-flash"
     if (os.environ.get("GROQ_API_KEY") or "").strip():
-        return "groq/llama-3.1-8b-instant"
+        return "groq/openai/gpt-oss-20b"
     return ""
 
 

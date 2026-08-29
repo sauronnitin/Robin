@@ -51,14 +51,14 @@
     active_ids: [],
   };
   const FALLBACK_MODELS = [
-    { id: "groq/llama-3.1-8b-instant", provider: "groq", label: "Llama 3.1 8B Instant", status: "disconnected", status_label: "Disconnected", selectable: false, fallback: true, fallback_hint: "Fast Groq escape hatch" },
-    { id: "groq/llama-3.3-70b-versatile", provider: "groq", label: "Llama 3.3 70B Versatile", status: "disconnected", status_label: "Disconnected", selectable: false, fallback: false },
+    { id: "groq/openai/gpt-oss-20b", provider: "groq", label: "GPT OSS 20B", status: "disconnected", status_label: "Disconnected", selectable: false, fallback: true, fallback_hint: "Fast Groq escape hatch" },
+    { id: "groq/qwen/qwen3.8-27b", provider: "groq", label: "Qwen 3.8 27B", status: "disconnected", status_label: "Disconnected", selectable: false, fallback: false },
     { id: "gemini/gemini-2.5-flash", provider: "gemini", label: "Gemini 2.5 Flash", status: "disconnected", status_label: "Disconnected", selectable: false, fallback: false },
     { id: "gemini/gemini-2.5-flash-lite", provider: "gemini", label: "Gemini 2.5 Flash Lite", status: "disconnected", status_label: "Disconnected", selectable: false, fallback: true, fallback_hint: "Lower demand than Flash" },
     { id: "gemini/gemini-2.5-pro", provider: "gemini", label: "Gemini 2.5 Pro", status: "disconnected", status_label: "Disconnected", selectable: false, fallback: false },
   ];
   const HIGH_DEMAND_FLASH = new Set(["gemini-2.5-flash", "gemini-2.5-flash-001"]);
-  const HEAVY_TOKENS = ["pro", "70b", "405b", "ultra", "versatile"];
+  const HEAVY_TOKENS = ["pro", "70b", "120b", "405b", "ultra", "versatile"];
   function catalogModels() {
     return (modelCatalog.models && modelCatalog.models.length)
       ? modelCatalog.models
@@ -89,7 +89,7 @@
       return true;
     }
     if (short.startsWith("gemma")) return true;
-    if (short.startsWith("llama-3.1-8b") || short.startsWith("llama3.1-8b") || short.includes("8b-instant")) {
+    if (short.startsWith("llama-3.1-8b") || short.startsWith("llama3.1-8b") || short.includes("8b-instant") || short.endsWith("gpt-oss-20b")) {
       return true;
     }
     return false;
@@ -100,14 +100,14 @@
       "gemini/gemini-2.5-flash-lite": "Lower demand than Flash",
       "gemini/gemini-3.1-flash-lite": "Lite capacity, usually quieter",
       "gemini/gemini-3.5-flash": "Newer Flash line if available",
-      "groq/llama-3.1-8b-instant": "Fast Groq escape hatch",
+      "groq/openai/gpt-oss-20b": "Fast Groq escape hatch",
       "groq/gemma2-9b-it": "Light Groq chat model",
     };
     if (hints[mid]) return hints[mid];
     const short = shortModelId(mid);
     if (short.includes("flash-lite") || short.endsWith("-lite")) return "Lower demand than Flash";
     if (short.startsWith("gemma")) return "Light Gemma alternative";
-    if (short.includes("8b")) return "Fast Groq escape hatch";
+    if (short.endsWith("gpt-oss-20b")) return "Fast Groq escape hatch";
     if (short.includes("flash")) return "Quieter Flash alternative";
     return "Lower demand alternative";
   }
@@ -120,7 +120,7 @@
     const isFlashLite = short.includes("flash-lite") || (short.startsWith("gemini-") && short.endsWith("-lite"));
     const isQuietFlash = short.startsWith("gemini-") && short.includes("flash") && !isFlashLite;
     const isGemma = short.startsWith("gemma");
-    const isGroq8b = short.startsWith("llama-3.1-8b") || short.startsWith("llama3.1-8b") || short.includes("8b-instant");
+    const isGroq8b = short.startsWith("llama-3.1-8b") || short.startsWith("llama3.1-8b") || short.includes("8b-instant") || short.endsWith("gpt-oss-20b");
     let band = 60;
     if (groqPrimary) {
       if (isGroq8b) band = 0;
@@ -226,7 +226,7 @@
   ]);
   const REC_FLASH = "gemini/gemini-2.5-flash";
   const REC_FLASH_LITE = "gemini/gemini-2.5-flash-lite";
-  const REC_GROQ_8B = "groq/llama-3.1-8b-instant";
+  const REC_GROQ_8B = "groq/openai/gpt-oss-20b";
 
   function agentRoutingKind(agentId) {
     const id = String(agentId || "");
@@ -1856,7 +1856,7 @@
         backstory: field("backstory", ""),
         description: field("description", ""),
         expected_output: field("expected_output", ""),
-        llm: field("llm", "groq/llama-3.1-8b-instant"),
+        llm: field("llm", "groq/openai/gpt-oss-20b"),
         fallback_llm: field("fallback_llm", ""),
         max_iter: field("max_iter", 3),
         max_rpm: field("max_rpm", 2),
