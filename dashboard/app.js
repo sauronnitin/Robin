@@ -1354,6 +1354,13 @@
       // token tally kept accumulating across unrelated runs indefinitely.
       // Detect the run_id changing underneath us and reset here too.
       if (st.run_id && st.run_id !== lastPolledRunId) {
+        if (lastPolledRunId != null) {
+          resetLiveViews();
+          clearLogBuffer();
+          completeCount = 0;
+          flagCount = 0;
+          eventCursor = 0;
+        }
         lastPolledRunId = st.run_id;
         tokens = {};
         renderTokens();
@@ -1408,6 +1415,41 @@
       }
     } catch (_) {
       /* server may be restarting */
+    }
+  }
+
+  async function bootstrapLiveSession() {
+    try {
+      const statusRes = await fetch("/api/run/status");
+      if (!statusRes.ok) return;
+      const statusData = await statusRes.json();
+      const eventsRes = await fetch("/api/events?since=0");
+      if (!eventsRes.ok) return;
+      const eventsData = await eventsRes.json();
+      const st = (eventsData.run && eventsData.run.state) || statusData.state || {};
+      if (typeof eventsData.next === "number") {
+        eventCursor = eventsData.next;
+      }
+      lastPolledRunId = st.run_id || null;
+      if (!statusData.live) {
+        return;
+      }
+      resetLiveViews();
+      clearLogBuffer();
+      eventCursor = 0;
+      runMode = "live";
+      setModeLabel(true);
+      consoleDot.classList.add("live");
+      setRunControls("running");
+      activityAgent.textContent = "Running";
+      statStage.textContent = "Running";
+      startClock();
+      stopPolling();
+      pollTimer = setInterval(pollEvents, 500);
+      pollEvents();
+      logLine(null, `re-attached to live run ${String(st.run_id || "").slice(0, 12)}`, "system");
+    } catch (_) {
+      /* server may still be starting */
     }
   }
 

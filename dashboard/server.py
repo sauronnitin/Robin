@@ -501,6 +501,70 @@ def _resolve_runner() -> list[str]:
     return [sys.executable, "-m", "jobhunter_ai.main"]
 
 
+def _pid_alive(pid: int | None) -> bool:
+    if not pid:
+        return False
+    try:
+        if os.name == "nt":
+            import ctypes
+
+            handle = ctypes.windll.kernel32.OpenProcess(0x1000, False, int(pid))
+            if not handle:
+                return False
+            ctypes.windll.kernel32.CloseHandle(handle)
+            return True
+        os.kill(int(pid), 0)
+        return True
+    except OSError:
+        return False
+
+
+def _clear_stale_not_specified_error() -> None:
+    """Drop a pre-fix NotSpecified pipeline error so the UI does not block retries."""
+    try:
+        latest = error_bus.read_latest()
+        stale = [
+            str(item.get("id"))
+            for item in (latest.get("open") or [])
+            if str(item.get("id")) == "live_error:pipeline"
+            and "NotSpecified" in str(item.get("message") or "")
+        ]
+        if stale:
+            error_bus.resolve_ids(stale, note="pre_live_run_clear")
+    except Exception as exc:
+        print(f"[dashboard] stale-error clear failed: {exc!r}")
+
+
+def _reconcile_run_state() -> None:
+    """Sync run_state.json with the server's tracked subprocess."""
+    global _run_proc, _run_meta
+    with _run_lock:
+        proc = _run_proc
+        live = proc is not None and proc.poll() is None
+        state = _read_json(STATE_FILE, {})
+        state_pid = state.get("pid")
+        proc_pid = proc.pid if live and proc is not None else None
+
+        if live and proc_pid and state_pid and int(state_pid) != int(proc_pid):
+            state["pid"] = proc_pid
+            _write_json(STATE_FILE, state)
+
+        if not live:
+            status = str(state.get("status") or "").lower()
+            if status in ("running", "starting", "paused") and state_pid:
+                if not _pid_alive(int(state_pid)):
+                    next_status = "failed" if state.get("error") else "done"
+                    state["status"] = next_status
+                    state["pid"] = None
+                    _write_json(STATE_FILE, state)
+                    _run_meta = {**_run_meta, "status": next_status, "pid": None}
+            elif status in ("running", "starting") and not state_pid and proc is None:
+                state["status"] = "failed"
+                state["pid"] = None
+                _write_json(STATE_FILE, state)
+                _run_meta = {**_run_meta, "status": "failed", "pid": None}
+
+
 def _watch_proc(proc: subprocess.Popen, stdout_log=None) -> None:
     global _run_proc, _run_meta
     code = proc.wait()
@@ -544,9 +608,51 @@ def _watch_proc(proc: subprocess.Popen, stdout_log=None) -> None:
                 threading.Thread(target=_restart, daemon=True).start()
 
 
+def _orphan_crew_running() -> int | None:
+    state = _read_json(STATE_FILE, {})
+    status = str(state.get("status") or "").lower()
+    pid = state.get("pid")
+    if status in ("running", "starting", "paused") and pid and _pid_alive(int(pid)):
+        return int(pid)
+    return None
+
+
+def _crew_is_live() -> bool:
+    with _run_lock:
+        proc_live = _run_proc is not None and _run_proc.poll() is None
+    return proc_live or _orphan_crew_running() is not None
+
+
+def _prepare_dashboard_session() -> None:
+    """On server boot, drop stale Activity events when no crew is running."""
+    global _run_meta
+    _reconcile_run_state()
+    if _crew_is_live():
+        return
+    try:
+        EVENTS_FILE.write_text("", encoding="utf-8")
+        state = _read_json(STATE_FILE, {})
+        state["status"] = "idle"
+        state["pid"] = None
+        state["error"] = None
+        state["suggestion"] = None
+        state.pop("run_id", None)
+        _write_json(STATE_FILE, state)
+        _run_meta = {
+            "status": "idle",
+            "pid": None,
+            "started_at": None,
+            "exit_code": None,
+        }
+    except OSError as exc:
+        print(f"[dashboard] session flush failed: {exc!r}")
+
+
 def _start_run_unlocked(plan: dict | None = None, force: bool = False) -> dict:
     """Start crew subprocess. Caller should hold _run_lock."""
     global _run_proc, _run_meta
+    _reconcile_run_state()
+    orphan_pid = _orphan_crew_running()
     if _run_proc is not None and _run_proc.poll() is None:
         if not force:
             return {"ok": False, "error": "A run is already in progress", "status": "running"}
@@ -559,7 +665,27 @@ def _start_run_unlocked(plan: dict | None = None, force: bool = False) -> dict:
         except Exception:
             pass
         _run_proc = None
+    elif orphan_pid is not None:
+        if not force:
+            return {
+                "ok": False,
+                "error": "A run is already in progress (orphan crew)",
+                "status": "running",
+                "pid": orphan_pid,
+            }
+        try:
+            if os.name == "nt":
+                os.kill(orphan_pid, signal.SIGTERM)
+            else:
+                os.kill(orphan_pid, signal.SIGTERM)
+        except OSError:
+            pass
+        state = _read_json(STATE_FILE, {})
+        state["status"] = "aborted"
+        state["pid"] = None
+        _write_json(STATE_FILE, state)
 
+    _clear_stale_not_specified_error()
     DASHBOARD_DIR.mkdir(parents=True, exist_ok=True)
     EVENTS_FILE.write_text("", encoding="utf-8")
     _write_json(CONTROL_FILE, {"action": "none", "ts": time.time()})
@@ -647,8 +773,10 @@ def signal_retry() -> dict:
 def signal_abort() -> dict:
     global _run_proc, _run_meta
     _write_json(CONTROL_FILE, {"action": "abort", "ts": time.time(), "user_paused": False})
+    orphan_pid = _orphan_crew_running()
     state = _read_json(STATE_FILE, {})
     state["status"] = "aborted"
+    state["pid"] = None
     _write_json(STATE_FILE, state)
     with _run_lock:
         proc = _run_proc
@@ -661,6 +789,11 @@ def signal_abort() -> dict:
             except OSError as exc:
                 return {"ok": False, "error": str(exc), "action": "abort"}
             _run_meta = {**_run_meta, "status": "aborted"}
+        if orphan_pid is not None:
+            try:
+                os.kill(orphan_pid, signal.SIGTERM)
+            except OSError as exc:
+                return {"ok": False, "error": str(exc), "action": "abort"}
     return {"ok": True, "action": "abort"}
 
 
@@ -707,9 +840,19 @@ def signal_resume() -> dict:
 
 
 def run_status() -> dict:
+    _reconcile_run_state()
     with _run_lock:
-        live = _run_proc is not None and _run_proc.poll() is None
+        proc_live = _run_proc is not None and _run_proc.poll() is None
+        orphan_pid = _orphan_crew_running()
+        live = proc_live or orphan_pid is not None
         meta = dict(_run_meta)
+        if not proc_live and orphan_pid is not None:
+            meta = {
+                **meta,
+                "status": "running",
+                "pid": orphan_pid,
+                "orphan": True,
+            }
     state = _read_json(STATE_FILE, {})
     return {
         "live": live,
@@ -1794,6 +1937,7 @@ class ThreadingHTTPServer(ThreadingMixIn, TCPServer):
 
 def main():
     os.chdir(DASHBOARD_DIR)
+    _prepare_dashboard_session()
     ensure_schedule_ticker()
     ensure_autofix_ticker()
     ensure_cursor_watch_ticker()
