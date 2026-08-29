@@ -1,6 +1,6 @@
 # Open Resume Parser (AGPL sidecar)
 
-Isolated Node CLI that runs the [Open Resume](https://github.com/xitanggg/open-resume) PDF parser and prints structured JSON. JobHunter calls this via subprocess; AGPL sources stay in this folder only.
+Isolated Node CLI that runs the [Open Resume](https://github.com/xitanggg/open-resume) PDF parser and prints structured JSON. Robin calls this via subprocess; AGPL sources stay in this folder only.
 
 ## License
 
