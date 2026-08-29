@@ -1,7 +1,8 @@
 import base64
+import subprocess
+import tempfile
 from pathlib import Path
 
-import requests
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
 from typing import Type
@@ -11,6 +12,7 @@ from jobhunter_ai.latex_sanitize import (
     resolve_latex_ref,
     sanitize_latex_source,
 )
+from jobhunter_ai.tectonic_runtime import resolve_tectonic
 
 # Short handle so the upload tool can load the PDF without stuffing Base64
 # into the next LLM turn (that blew past 350k tokens on the last live run).
@@ -34,11 +36,12 @@ class LatexToPdfCompilerInput(BaseModel):
 
 
 class LatexToPdfCompiler(BaseTool):
-    """Tool for compiling LaTeX source code to PDF via the YtoTech LaTeX-on-HTTP API."""
+    """Tool for compiling LaTeX source code to PDF using a local, bundled Tectonic engine."""
 
     name: str = "Latex To Pdf Compiler"
     description: str = (
-        "Compiles a resume into a PDF using the YtoTech LaTeX-on-HTTP API. "
+        "Compiles a resume into a PDF locally using Tectonic (no network dependency "
+        "for the LaTeX source itself). "
         "Pass latex_source as the short `FILE:<name>.tex` ref from the resume_latex "
         "field (preferred): the tool loads the source itself, so you never need to "
         "retype the LaTeX. A full LaTeX string is still accepted. "
@@ -67,66 +70,63 @@ class LatexToPdfCompiler(BaseTool):
                 "Retry once with the unchanged base resume_latex, or fix escaping."
             )[:_ERROR_BODY_CAP]
 
-        api_url = "https://latex.ytotech.com/builds/sync"
-        payload = {
-            "compiler": "pdflatex",
-            "resources": [
-                {
-                    "main": True,
-                    "content": cleaned,
-                }
-            ],
-        }
-
         try:
-            response = requests.post(
-                api_url,
-                json=payload,
-                headers={"Content-Type": "application/json"},
-                timeout=60,
-            )
-        except requests.exceptions.Timeout:
+            tectonic = resolve_tectonic()
+        except Exception as e:
             return (
-                "Error: The request to the LaTeX compiler API timed out after 60 seconds. "
-                "Try simplifying your LaTeX document or retry later."
-            )
-        except requests.exceptions.ConnectionError as e:
-            return f"Error: Could not connect to the LaTeX compiler API. Details: {str(e)[:200]}"
-        except requests.exceptions.RequestException as e:
-            return f"Error: Unexpected LaTeX compiler request failure. Details: {str(e)[:200]}"
-
-        if response.status_code not in (200, 201):
-            try:
-                error_body = (response.text or f"HTTP {response.status_code}")[:_ERROR_BODY_CAP]
-            except Exception:
-                error_body = f"HTTP {response.status_code}"
-            # One automatic retry with base resume when the LLM source failed compile.
-            if allow_base_retry and "fell_back_to_base_resume" not in notes:
-                from jobhunter_ai.latex_sanitize import load_base_resume
-
-                base = load_base_resume()
-                if base and is_plausible_latex(base) and base != cleaned:
-                    return self._compile(base, allow_base_retry=False)
-            return (
-                f"Error: LaTeX compilation failed with status {response.status_code}. "
-                f"notes={note_s}. API: {error_body}"
-            )[: _ERROR_BODY_CAP + 120]
-
-        content_type = response.headers.get("Content-Type", "")
-        if "application/pdf" not in content_type:
-            preview = (response.text or "")[:300]
-            return (
-                f"Error: Expected application/pdf but got '{content_type}'. "
-                f"Preview: {preview}"
+                f"Error: Could not obtain a local Tectonic LaTeX engine. Details: {str(e)[:300]}"
             )[:_ERROR_BODY_CAP]
 
-        try:
-            pdf_bytes = response.content
-            pdf_base64 = base64.b64encode(pdf_bytes).decode("utf-8")
-            _CACHE_DIR.mkdir(parents=True, exist_ok=True)
-            _LAST_B64_PATH.write_text(pdf_base64, encoding="utf-8")
-        except Exception as e:
-            return f"Error: Failed to encode/cache PDF. Details: {str(e)[:200]}"
+        with tempfile.TemporaryDirectory(prefix="jh_latex_") as tmp:
+            tmp_dir = Path(tmp)
+            tex_path = tmp_dir / "resume.tex"
+            tex_path.write_text(cleaned, encoding="utf-8")
+
+            try:
+                result = subprocess.run(
+                    [
+                        str(tectonic),
+                        str(tex_path),
+                        "-o",
+                        str(tmp_dir),
+                        "--untrusted",
+                    ],
+                    capture_output=True,
+                    text=True,
+                    timeout=90,
+                )
+            except subprocess.TimeoutExpired:
+                return (
+                    "Error: Local LaTeX compilation timed out after 90 seconds. "
+                    "Try simplifying your LaTeX document or retry later."
+                )
+            except Exception as e:
+                return f"Error: Failed to run the LaTeX compiler. Details: {str(e)[:200]}"
+
+            pdf_path = tmp_dir / "resume.pdf"
+            if result.returncode != 0 or not pdf_path.is_file():
+                error_body = (
+                    (result.stderr or result.stdout or f"exit code {result.returncode}")
+                )[:_ERROR_BODY_CAP]
+                # One automatic retry with base resume when the LLM source failed compile.
+                if allow_base_retry and "fell_back_to_base_resume" not in notes:
+                    from jobhunter_ai.latex_sanitize import load_base_resume
+
+                    base = load_base_resume()
+                    if base and is_plausible_latex(base) and base != cleaned:
+                        return self._compile(base, allow_base_retry=False)
+                return (
+                    f"Error: LaTeX compilation failed (exit code {result.returncode}). "
+                    f"notes={note_s}. Compiler output: {error_body}"
+                )[: _ERROR_BODY_CAP + 120]
+
+            try:
+                pdf_bytes = pdf_path.read_bytes()
+                pdf_base64 = base64.b64encode(pdf_bytes).decode("utf-8")
+                _CACHE_DIR.mkdir(parents=True, exist_ok=True)
+                _LAST_B64_PATH.write_text(pdf_base64, encoding="utf-8")
+            except Exception as e:
+                return f"Error: Failed to encode/cache PDF. Details: {str(e)[:200]}"
 
         used_fallback = "fell_back_to_base_resume" in notes or not allow_base_retry
         return (
