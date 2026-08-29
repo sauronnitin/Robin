@@ -24,6 +24,9 @@ jobhunter = "jobhunter_ai.main:run"
 jh-cursor-reply = "jobhunter_ai.cursor_chat_reply:main"
 jh-cursor-watch = "jobhunter_ai.cursor_chat_watch:main"
 
+[dependency-groups]
+dev = ["pytest>=8.0.0"]
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
