@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import os
+import time
 from pathlib import Path
 from typing import Any
 
@@ -46,6 +47,12 @@ PIPELINE_AGENT_TO_TASK: dict[str, str] = {
     "linkedin_external_apply_specialist": "linkedin_external_simplify_apply",
     "linkedin_application_logger": "linkedin_log_applications",
 }
+
+
+def _normalize_task_context(task: Task) -> None:
+    """CrewAI uses a truthy NOT_SPECIFIED sentinel when YAML omits context:."""
+    if not isinstance(task.context, list):
+        task.context = []
 
 
 def default_plan_path() -> Path:
@@ -125,7 +132,12 @@ def _resolve_llm(model: str | None, *, default: str | None = None):
         return GeminiLLM(model=raw, temperature=0.2, is_litellm=True)
     if not raw.startswith("groq/"):
         raw = default or _GROQ_8B
-    temp = 0.1 if ("8b" in raw or "instant" in raw or "gemma" in raw) else 0.2
+    temp = 0.1 if (
+        raw.endswith("gpt-oss-20b")
+        or "8b" in raw
+        or "instant" in raw
+        or "gemma" in raw
+    ) else 0.2
     return GroqLLM(model=raw, temperature=temp)
 
 
@@ -228,10 +240,12 @@ def build_crew_from_plan(plan: dict[str, Any]) -> Crew:
         agent = getattr(factory, agent_id)()
         _apply_llm_override(agent, node)
         task = getattr(factory, task_key)()
+        _normalize_task_context(task)
         # Keep task.agent pointing at the (possibly overridden) instance.
         task.agent = agent
         if prev_task is not None:
-            existing = list(getattr(task, "context", None) or [])
+            current_context = task.context
+            existing = current_context if isinstance(current_context, list) else []
             if prev_task not in existing:
                 task.context = existing + [prev_task]
         agents.append(agent)

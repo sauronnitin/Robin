@@ -1410,7 +1410,8 @@ class InjectionScreenerAgent(Agent):
     def execute_task(self, task, context=None, tools=None):
         text = context or ""
         if not text:
-            ctx_tasks = getattr(task, "context", None) or []
+            raw_ctx = getattr(task, "context", None)
+            ctx_tasks = raw_ctx if isinstance(raw_ctx, list) else []
             parts: list[str] = []
             for prior in ctx_tasks:
                 raw = getattr(prior, "output", None) or getattr(prior, "raw", None)
