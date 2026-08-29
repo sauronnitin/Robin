@@ -169,3 +169,20 @@ should read.
 - Mockup Ask Cursor (`#jhAssistantPanel`) uses `/api/cursor-chat` and
   `user/cursor_chat/` to reach the Cursor IDE agent. Canvas `#chatDock`
   remains Gemini Flash via `POST /api/chat`.
+
+## Learned User Preferences
+
+- Never ship the author's real name, email, or city in UI markup, autofill
+  fallbacks, or test fixtures. Use the active profile, or empty/generic
+  placeholders.
+
+## Learned Workspace Facts
+
+- Agent and task YAML interpolate `{primary_role}`, `{seniority}`, and
+  `{niche}` from the active profile. Do not hardcode Product Design or any
+  single profession into goals, backstories, or scoring exclusion lists.
+- `DEFAULT_WATCHLIST` and `DEFAULT_FREE_TARGETS` are demo company targets
+  for the Product Designer persona. Do not strip them as personal data.
+- `job.work_mode` is only `remote`, `hybrid`, `onsite`, or empty. All writes,
+  including `pipeline_sync._identity()`, go through `normalize_work_mode`.
+  Employment-type strings such as Full-Time become empty, not a location mode.
