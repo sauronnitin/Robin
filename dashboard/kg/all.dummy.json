@@ -7,7 +7,7 @@
   "privacy": {
     "mode": "opt_in_anonymized",
     "never": ["raw_resume", "chat", "email", "name", "exact_employer_dates"],
-    "copy": "Shared signals help improve JobHunter for everyone. We do not sell this data."
+    "copy": "Shared signals help improve Robin for everyone. We do not sell this data."
   },
   "nodes": [
     {

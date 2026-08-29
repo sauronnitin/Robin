@@ -25,7 +25,7 @@ load_dotenv(Path(__file__).resolve().parents[3] / ".env", override=False)
 
 _MAX_TOTAL = 20
 _MAX_DESC = 180
-_USER_AGENT = "JobHunterAI/1.0 (+https://github.com/jobcrew)"
+_USER_AGENT = "Robin/1.0 (+https://github.com/robin)"
 _TIMEOUT = 12
 
 

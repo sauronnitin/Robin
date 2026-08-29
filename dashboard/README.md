@@ -1,6 +1,6 @@
-# JobHunter AI — Linear canvas dashboard
+# Robin — Linear canvas dashboard
 
-Figma-like pan/zoom canvas with editable CrewAI agent cards, live DAG edges, activity log, and token usage. Visual language follows [Linear DESIGN.md](https://www.shadcn.io/design/linear) (canvas `#010102`, lavender `#5e6ad2`, surface ladder, Inter + JetBrains Mono).
+Figma-like pan/zoom canvas with editable AI agent cards, live DAG edges, activity log, and token usage. Visual language follows [Linear DESIGN.md](https://www.shadcn.io/design/linear) (canvas `#010102`, lavender `#5e6ad2`, surface ladder, Inter + JetBrains Mono).
 
 ## Run
 
@@ -43,4 +43,4 @@ python dashboard/_gen_pipeline_data.py
 
 ## Mode
 
-Start tries a live crew run (`POST /api/run`); falls back to sim if launch fails. Edges animate on the active hop.
+Start tries a live Robin run (`POST /api/run`); falls back to sim if launch fails. Edges animate on the active hop.

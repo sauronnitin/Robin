@@ -1,6 +1,6 @@
 """SQLite store for jobs, applications, sources, runs, and experiments.
 
-The dashboard server reads while a crew subprocess writes, so WAL mode and a
+The dashboard server reads while a Robin subprocess writes, so WAL mode and a
 busy_timeout are mandatory - not optional tuning.
 """
 from __future__ import annotations

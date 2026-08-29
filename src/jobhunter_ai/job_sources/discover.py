@@ -29,7 +29,7 @@ _SR_RE = re.compile(
 def _get_text(url: str, timeout: float = 15.0) -> str:
     req = urllib.request.Request(
         url,
-        headers={"User-Agent": "Mozilla/5.0 (compatible; JobHunterAI/1.0)"},
+        headers={"User-Agent": "Mozilla/5.0 (compatible; Robin/1.0)"},
     )
     with urllib.request.urlopen(req, timeout=timeout) as resp:
         return resp.read().decode("utf-8", errors="replace")

@@ -1,5 +1,5 @@
 """
-JobCrew -- Pipeline Visualizer dev server.
+Robin -- Pipeline Visualizer dev server.
 
 Serves dashboard/ static files and run-control APIs:
   GET  /                 -> mockup.html (Steep light/dark; jh-steep-theme)
@@ -143,7 +143,7 @@ from jobhunter_ai import metrics as metrics_mod  # noqa: E402
 from jobhunter_ai import outcomes  # noqa: E402
 from jobhunter_ai import pipeline_store  # noqa: E402
 from jobhunter_ai import pipeline_sync  # noqa: E402
-from jobhunter_ai import profile as jobcrew_profile  # noqa: E402
+from jobhunter_ai import profile as robin_profile  # noqa: E402
 from jobhunter_ai import resume_parse  # noqa: E402
 
 HOME = Path.home()
@@ -211,7 +211,7 @@ def _tag_locations(grouped: dict) -> str:
     and can change, and a cached band would quietly go stale behind it.
     """
     try:
-        home = location_fit.home_country(jobcrew_profile.load_profile())
+        home = location_fit.home_country(robin_profile.load_profile())
     except Exception as exc:  # noqa: BLE001 - the board must still render
         print(f"[location] banding skipped: {exc!r}")
         return ""
@@ -396,7 +396,7 @@ def ensure_autofix_ticker() -> None:
     if _autofix_started:
         return
     _autofix_started = True
-    # AutoFix is always on while the JobHunter dashboard server is up.
+    # AutoFix is always on while the Robin dashboard server is up.
     try:
         auto_fix.ensure_always_on()
     except Exception as exc:
@@ -595,13 +595,13 @@ def _watch_proc(proc: subprocess.Popen, stdout_log=None) -> None:
                         print(f"[dashboard] error_bus clear failed: {exc!r}")
                 elif code not in (75,):
                     try:
-                        err = state.get("error") or f"Crew exited with code {code}"
+                        err = state.get("error") or f"Run exited with code {code}"
                         error_bus.mark_run_failed(error=str(err))
                     except Exception as exc:
                         print(f"[dashboard] error_bus mark failed: {exc!r}")
             # Special exit: user asked retry after hard fail outside GroqLLM loop
             if code == 75:
-                print("[dashboard] exit 75 (retry requested) - restarting crew")
+                print("[dashboard] exit 75 (retry requested) - restarting run")
                 def _restart():
                     time.sleep(0.4)
                     with _run_lock:
@@ -609,7 +609,7 @@ def _watch_proc(proc: subprocess.Popen, stdout_log=None) -> None:
                 threading.Thread(target=_restart, daemon=True).start()
 
 
-def _orphan_crew_running() -> int | None:
+def _orphan_run_running() -> int | None:
     state = _read_json(STATE_FILE, {})
     status = str(state.get("status") or "").lower()
     pid = state.get("pid")
@@ -618,17 +618,17 @@ def _orphan_crew_running() -> int | None:
     return None
 
 
-def _crew_is_live() -> bool:
+def _is_run_live() -> bool:
     with _run_lock:
         proc_live = _run_proc is not None and _run_proc.poll() is None
-    return proc_live or _orphan_crew_running() is not None
+    return proc_live or _orphan_run_running() is not None
 
 
 def _prepare_dashboard_session() -> None:
-    """On server boot, drop stale Activity events when no crew is running."""
+    """On server boot, drop stale Activity events when nothing is running."""
     global _run_meta
     _reconcile_run_state()
-    if _crew_is_live():
+    if _is_run_live():
         return
     try:
         EVENTS_FILE.write_text("", encoding="utf-8")
@@ -650,10 +650,10 @@ def _prepare_dashboard_session() -> None:
 
 
 def _start_run_unlocked(plan: dict | None = None, force: bool = False) -> dict:
-    """Start crew subprocess. Caller should hold _run_lock."""
+    """Start Robin subprocess. Caller should hold _run_lock."""
     global _run_proc, _run_meta
     _reconcile_run_state()
-    orphan_pid = _orphan_crew_running()
+    orphan_pid = _orphan_run_running()
     if _run_proc is not None and _run_proc.poll() is None:
         if not force:
             return {"ok": False, "error": "A run is already in progress", "status": "running"}
@@ -670,7 +670,7 @@ def _start_run_unlocked(plan: dict | None = None, force: bool = False) -> dict:
         if not force:
             return {
                 "ok": False,
-                "error": "A run is already in progress (orphan crew)",
+                "error": "A run is already in progress (orphan run)",
                 "status": "running",
                 "pid": orphan_pid,
             }
@@ -722,7 +722,7 @@ def _start_run_unlocked(plan: dict | None = None, force: bool = False) -> dict:
     # instead - nothing needs to actively read it, and it's still there for
     # debugging (the dashboard's own progress comes from output_log_file +
     # the task/step callbacks -> events.jsonl, not this raw stream).
-    stdout_log = open(DASHBOARD_DIR / "crew_stdout.log", "w", encoding="utf-8", errors="replace")
+    stdout_log = open(DASHBOARD_DIR / "run_stdout.log", "w", encoding="utf-8", errors="replace")
 
     try:
         proc = subprocess.Popen(
@@ -774,7 +774,7 @@ def signal_retry() -> dict:
 def signal_abort() -> dict:
     global _run_proc, _run_meta
     _write_json(CONTROL_FILE, {"action": "abort", "ts": time.time(), "user_paused": False})
-    orphan_pid = _orphan_crew_running()
+    orphan_pid = _orphan_run_running()
     state = _read_json(STATE_FILE, {})
     state["status"] = "aborted"
     state["pid"] = None
@@ -818,7 +818,7 @@ def signal_pause() -> dict:
 
 
 def signal_resume() -> dict:
-    """Resume a user pause, or retry if the crew is awaiting_retry."""
+    """Resume a user pause, or retry if the run is awaiting_retry."""
     state = _read_json(STATE_FILE, {})
     status = str(state.get("status") or "").lower()
     if status == "awaiting_retry":
@@ -844,7 +844,7 @@ def run_status() -> dict:
     _reconcile_run_state()
     with _run_lock:
         proc_live = _run_proc is not None and _run_proc.poll() is None
-        orphan_pid = _orphan_crew_running()
+        orphan_pid = _orphan_run_running()
         live = proc_live or orphan_pid is not None
         meta = dict(_run_meta)
         if not proc_live and orphan_pid is not None:
@@ -997,7 +997,7 @@ class DashboardHandler(SimpleHTTPRequestHandler):
 <body><div class="card">
   <h1>{html.escape(title)}</h1>
   <p>{html.escape(message)}</p>
-  <div class="row">{action}<a href="/">Back to JobHunter</a></div>
+  <div class="row">{action}<a href="/">Back to Robin</a></div>
 </div></body></html>"""
         raw = body.encode("utf-8")
         self.send_response(status)
@@ -1235,8 +1235,8 @@ class DashboardHandler(SimpleHTTPRequestHandler):
             dry = str(os.environ.get("DRY_RUN", "True")).strip().lower() in ("1", "true", "yes", "on")
             return self._json({
                 "status": "ok",
-                "service": "jobcrew-dashboard",
-                "brand": "JobCrew",
+                "service": "robin-dashboard",
+                "brand": "Robin",
                 "dry_run": dry,
                 "DRY_RUN": "True" if dry else "False",
             })
@@ -1362,7 +1362,7 @@ class DashboardHandler(SimpleHTTPRequestHandler):
                 )
         if path.startswith("/api/profiles"):
             try:
-                return self._json({"ok": True, "presets": jobcrew_profile.list_presets()})
+                return self._json({"ok": True, "presets": robin_profile.list_presets()})
             except Exception as exc:
                 print(f"[dashboard] profiles error: {exc!r}")
                 return self._json({"ok": False, "error": str(exc), "presets": []}, status=500)
@@ -1370,13 +1370,13 @@ class DashboardHandler(SimpleHTTPRequestHandler):
             if path in ("/api/profile/resume-preview", "/api/profile/resume-preview.pdf"):
                 return self._serve_resume_preview(meta_only=(params.get("meta") == "1"))
             try:
-                data = jobcrew_profile.load_profile()
+                data = robin_profile.load_profile()
                 return self._json(
                     {
                         "ok": True,
                         "profile": data,
-                        "modules": jobcrew_profile.swarm_modules(data),
-                        "titles": jobcrew_profile.search_titles(data),
+                        "modules": robin_profile.swarm_modules(data),
+                        "titles": robin_profile.search_titles(data),
                     }
                 )
             except Exception as exc:
@@ -1558,13 +1558,13 @@ class DashboardHandler(SimpleHTTPRequestHandler):
                 out = user_dir / "profile.json"
                 payload = {k: v for k, v in body.items() if not str(k).startswith("_")}
                 out.write_text(json.dumps(payload, indent=2), encoding="utf-8")
-                data = jobcrew_profile.load_profile()
+                data = robin_profile.load_profile()
                 return self._json(
                     {
                         "ok": True,
                         "saved": str(out),
                         "profile": data,
-                        "modules": jobcrew_profile.swarm_modules(data),
+                        "modules": robin_profile.swarm_modules(data),
                     }
                 )
             except Exception as exc:
@@ -1855,7 +1855,7 @@ class DashboardHandler(SimpleHTTPRequestHandler):
                                     **auto_fix.set_enabled(False),
                                     "type": "autofix_disable",
                                     "ok": True,
-                                    "message": "AutoFix stays on while JobHunter is in use",
+                                    "message": "AutoFix stays on while Robin is in use",
                                 })
                             elif atype == "autofix_once":
                                 executed.append({**auto_fix.run_once(), "type": "autofix_once", "message": "AutoFix ran once"})
@@ -1961,7 +1961,7 @@ def main():
     server = ThreadingHTTPServer(("127.0.0.1", PORT), DashboardHandler)
     url = f"http://localhost:{PORT}"
     print("=" * 60)
-    print("  JobHunter AI -- Pipeline Visualizer")
+    print("  Robin -- Pipeline Visualizer")
     print(f"  Serving {DASHBOARD_DIR}")
     print(f"  -> {url}  (mockup UI)")
     print(f"  Mockup (Steep): {url}/  (Dark toggle in sidebar)")

@@ -747,7 +747,7 @@ def _latex_command_args(text: str, cmd: str, n: int, pos: int = 0) -> list[tuple
 
 
 def _parse_latex_experience(text: str) -> list[dict[str, Any]]:
-    """Parse JobCrew / Jake's resume LaTeX \\resumeSubheading + \\resumeItem blocks."""
+    """Parse Robin / Jake's resume LaTeX \\resumeSubheading + \\resumeItem blocks."""
     roles: list[dict[str, Any]] = []
     headings = _latex_command_args(text, "resumeSubheading", 4)
     if not headings:
@@ -1843,7 +1843,7 @@ def _edu_from_open_resume(rows: Any) -> list[dict[str, str]]:
 
 
 def _map_open_resume(resume: dict[str, Any]) -> dict[str, Any]:
-    """Map Open Resume JSON shape into JobHunter Profile parse fields."""
+    """Map Open Resume JSON shape into Robin profile parse fields."""
     profile = resume.get("profile") if isinstance(resume.get("profile"), dict) else {}
     first_name, last_name = _split_person_name(str(profile.get("name") or ""))
     city, state = _split_city_state(str(profile.get("location") or ""))

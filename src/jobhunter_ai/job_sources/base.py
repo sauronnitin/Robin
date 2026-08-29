@@ -13,7 +13,7 @@ import urllib.request
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
-_USER_AGENT = "Mozilla/5.0 (compatible; JobHunterAI/1.0)"
+_USER_AGENT = "Mozilla/5.0 (compatible; Robin/1.0)"
 
 
 @dataclass(frozen=True)

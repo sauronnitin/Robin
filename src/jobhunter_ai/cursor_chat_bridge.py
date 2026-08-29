@@ -1,4 +1,4 @@
-"""Bridge JobHunter Assistant panel messages to the local Cursor agent.
+"""Bridge Robin Assistant panel messages to the local Cursor agent.
 
 Messages from the dashboard land in ``user/cursor_chat/`` (gitignored). The
 Cursor agent reads ``latest_handoff.md``, responds via POST /api/cursor-chat/reply
@@ -165,7 +165,7 @@ def _write_handoff(entry: dict[str, Any]) -> None:
         )
     att_block = "\n".join(att_lines) if att_lines else "- none"
     context_block = _format_context(entry.get("context") if isinstance(entry.get("context"), dict) else None)
-    body = f"""# JobHunter Assistant inbox message
+    body = f"""# Robin Assistant inbox message
 
 Message id: `{entry.get('id')}`
 Queued at: {entry.get('created_at')}

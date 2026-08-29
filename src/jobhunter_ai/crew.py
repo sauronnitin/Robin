@@ -22,7 +22,7 @@ from jobhunter_ai import events_bus
 from jobhunter_ai import latex_sanitize
 from jobhunter_ai import pipeline_store
 from jobhunter_ai import pipeline_sync
-from jobhunter_ai import profile as jobcrew_profile
+from jobhunter_ai import profile as robin_profile
 from jobhunter_ai import role_profile
 from jobhunter_ai.screening import screen_listings
 
@@ -345,7 +345,7 @@ def _ats_target_line(job: dict[str, Any]) -> str:
     if not posting:
         return ""
     try:
-        resume_path = jobcrew_profile.profile_resume_path()
+        resume_path = robin_profile.profile_resume_path()
         if resume_path is None:
             return ""
         base_latex = resume_path.read_text(encoding="utf-8")
@@ -735,7 +735,7 @@ def _drop_off_role(jobs: list[dict[str, Any]]) -> list[dict[str, Any]]:
     lifted: list[str] = []
     for job in jobs:
         title = str(job.get("job_title") or "")
-        # Adjacent roles are the user's call from Browse, never the crew's.
+        # Adjacent roles are the user's call from Browse, never Robin's.
         if role_profile.classify_title(title, role) == "core":
             if _job_score(job) < _CORE_SCORE_FLOOR:
                 lifted.append(f"{title} ({_job_score(job):.0f} -> {_CORE_SCORE_FLOOR:.0f})")
@@ -770,7 +770,7 @@ def _prioritise_home_country(jobs: list[dict[str, Any]]) -> list[dict[str, Any]]
     try:
         from jobhunter_ai import location_fit
 
-        home = location_fit.home_country(jobcrew_profile.load_profile())
+        home = location_fit.home_country(robin_profile.load_profile())
     except Exception as exc:  # noqa: BLE001 - ordering must not break a run
         print(f"[location] priority skipped: {exc!r}")
         return jobs
@@ -1534,8 +1534,8 @@ def _agent_kwargs(**overrides):
 
 
 @CrewBase
-class JobhunterAiCrew:
-    """JobhunterAi crew"""
+class RobinCrew:
+    """Robin crew"""
 
     @agent
     def global_product_design_job_scout(self) -> Agent:
@@ -1867,7 +1867,7 @@ class JobhunterAiCrew:
 
     @crew
     def crew(self) -> Crew:
-        """Creates the main (non-LinkedIn) JobhunterAi crew.
+        """Creates the main (non-LinkedIn) Robin crew.
 
         LinkedIn loop agents/tasks are registered for graph_crew / canvas plans;
         they are not part of this default sequential crew.
@@ -1940,7 +1940,7 @@ def _merge_linkedin_configs(self) -> None:
             target.update(data)
 
 
-_orig_load_configurations = JobhunterAiCrew.load_configurations
+_orig_load_configurations = RobinCrew.load_configurations
 
 
 def _load_configurations_with_linkedin(self) -> None:
@@ -1948,4 +1948,4 @@ def _load_configurations_with_linkedin(self) -> None:
     _merge_linkedin_configs(self)
 
 
-JobhunterAiCrew.load_configurations = _load_configurations_with_linkedin
+RobinCrew.load_configurations = _load_configurations_with_linkedin

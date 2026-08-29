@@ -41,7 +41,7 @@ def build_agent_instruction(pending: dict[str, Any]) -> str:
             f"(reason: {nudge.get('reason')}, at: {nudge.get('created_at')})."
         )
     return (
-        "PRIORITY: JobHunter Ask Cursor panel has an unanswered queued message. "
+        "PRIORITY: Robin Ask Cursor panel has an unanswered queued message. "
         "You MUST read the handoff and post a bridge reply before unrelated work.\n\n"
         f"Message id: {msg_id}\n"
         f"Handoff: {HANDOFF_REL}{queued_note}{nudge_note}\n"
@@ -117,7 +117,7 @@ def run_daemon(interval_sec: int | None = None) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Watch JobHunter Ask Cursor pending inbox messages.")
+    parser = argparse.ArgumentParser(description="Watch Robin Ask Cursor pending inbox messages.")
     parser.add_argument(
         "--hook",
         choices=("sessionStart", "stop", "subagentStop", "beforeSubmitPrompt"),

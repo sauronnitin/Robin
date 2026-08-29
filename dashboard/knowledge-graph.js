@@ -1,4 +1,4 @@
-/* JobHunter Knowledge Graph - Individual page (mockup left sidebar).
+/* Robin Knowledge Graph - Individual page (mockup left sidebar).
  * Not part of the canvas Activity rail.
  */
 (function () {

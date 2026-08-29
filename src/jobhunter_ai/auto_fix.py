@@ -105,7 +105,7 @@ def load_state() -> dict[str, Any]:
     out.update(raw)
     out.setdefault("attempts", {})
     out.setdefault("backoff_until", {})
-    # AutoFix stays on whenever JobHunter dashboard is in use.
+    # AutoFix stays on whenever Robin dashboard is in use.
     out["enabled"] = True
     return out
 
@@ -145,7 +145,7 @@ def status() -> dict[str, Any]:
 
 
 def set_enabled(enabled: bool) -> dict[str, Any]:
-    """AutoFix cannot be disabled while JobHunter is in use."""
+    """AutoFix cannot be disabled while Robin is in use."""
     st = load_state()
     st["enabled"] = True
     st["last_action"] = "always_on"
@@ -155,10 +155,10 @@ def set_enabled(enabled: bool) -> dict[str, Any]:
         _emit_event(
             "autofix",
             status="ok",
-            detail={"message": "AutoFix stays on while JobHunter is in use"},
+            detail={"message": "AutoFix stays on while Robin is in use"},
         )
         out = status()
-        out["message"] = "AutoFix stays on while JobHunter is in use"
+        out["message"] = "AutoFix stays on while Robin is in use"
         return out
     _emit_event(
         "autofix",
@@ -364,7 +364,7 @@ def _rotate_events_if_huge() -> bool:
         return False
 
 
-def _clear_crew_cache_locks() -> list[str]:
+def _clear_crewai_cache_locks() -> list[str]:
     """Remove known ephemeral CrewAI / sqlite junk under project allowlist dirs."""
     cleared: list[str] = []
     candidates = [
@@ -657,7 +657,7 @@ def _deterministic_heal(issue: dict[str, Any], st: dict[str, Any]) -> dict[str, 
     # Disk I/O
     if code == "live_config" and ("disk i/o" in msg_l or "sqlite" in msg_l or "database" in msg_l):
         rotated = _rotate_events_if_huge()
-        cleared = _clear_crew_cache_locks()
+        cleared = _clear_crewai_cache_locks()
         action = "autofix_disk_cleanup"
         _mark_healed(issue, action)
         return {
@@ -790,7 +790,7 @@ def _llm_plan(issue: dict[str, Any]) -> dict[str, Any] | None:
 
     excerpts = _file_excerpts(issue)
     system = (
-        "You are JobHunter AutoFix. Diagnose a pipeline error and propose minimal "
+        "You are Robin AutoFix. Diagnose a pipeline error and propose minimal "
         "surgical patches. Never use Gemini Pro. Never edit .env, oauth tokens, "
         "browser-session, or set DRY_RUN=False. Never bypass LinkedIn bot-check. "
         "Only edit allowlisted project files. Prefer the smallest fix. "

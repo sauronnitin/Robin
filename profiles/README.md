@@ -1,6 +1,6 @@
 # Profiles
 
-Each folder under `profiles/` is a JobCrew **role pack**.
+Each folder under `profiles/` is a Robin **role pack**.
 
 ## Layout
 
@@ -38,7 +38,7 @@ user/
 2. Set in `.env`:
 
 ```env
-JOBCREW_PROFILE=product-designer
+ROBIN_PROFILE=product-designer
 ```
 
 If `user/profile.json` exists, it wins over the preset id.

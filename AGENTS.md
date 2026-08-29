@@ -1,4 +1,4 @@
-# JobCrew contributor conventions
+# Robin contributor conventions
 
 Session history, commit hashes, live run IDs, and case-study/archive workflow
 live in `.planning/AGENTS-NOTES.md`. This file is what a public contributor
@@ -31,7 +31,7 @@ should read.
   an agent that never sees the posting.
 - Prefer existing workspace Google Auth or Drive credentials over asking the
   user to hunt for keys. When Drive is configured, save pipeline/agent outputs
-  into the JobHunter Google Drive project folder, not only under local project
+  into the Robin Google Drive project folder, not only under local project
   paths.
 
 ## Dashboard and canvas
@@ -127,9 +127,9 @@ should read.
 
 ## Architecture
 
-- JobHunter AI / JobCrew is a local job-application pipeline. Public template
-  branded JobCrew. Role packs live under `profiles/`; active profile in
-  gitignored `user/profile.json` or `JOBCREW_PROFILE`. `src/jobhunter_ai/profile.py`
+- Robin is a local job-application pipeline. Public template
+  branded Robin. Role packs live under `profiles/`; active profile in
+  gitignored `user/profile.json` or `ROBIN_PROFILE`. `src/jobhunter_ai/profile.py`
   with `GET/POST /api/profile`. Resume parse via `src/jobhunter_ai/resume_parse.py`
   (PDF sidecar at `tools/open-resume-parser/`, pdfplumber fallback; DOCX/TEX
   stay Python). Static onboarding in `docs/`.

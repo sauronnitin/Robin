@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>JobHunter AI</title>
+<title>Robin</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script>
 tailwind.config = {
@@ -1725,7 +1725,7 @@ html.dark #jList .jh-job-logo-img { background: var(--st-fog); }
   white-space: nowrap;
 }
 /* Adjacent roles — same field, different craft. Quieter than the main list on
-   purpose: these are for the user to judge, not for the crew to act on. */
+   purpose: these are for the user to judge, not for Robin to act on. */
 #jList .jh-adj-wrap {
   margin-top: 18px;
   border-top: 1px solid var(--st-border);
@@ -2558,8 +2558,8 @@ html.dark .jh-asst-send { background: var(--st-peach); color: var(--st-sienna); 
 <!-- ═══════════ ONBOARDING ═══════════ -->
 <div id="ob" class="ob-bg fixed inset-0 z-50 flex flex-col items-center justify-center gap-3">
   <!-- Logo mark -->
-  <div class="st-mark mb-1" style="width:56px;height:56px;font-size:14px">JH</div>
-  <h1 class="st-h1">Welcome to JobHunter</h1>
+  <div class="st-mark mb-1" style="width:56px;height:56px;font-size:14px">R</div>
+  <h1 class="st-h1">Welcome to Robin</h1>
   <p class="text-smoke text-sm mb-3">How would you like to get started?</p>
 
   <div class="flex gap-4">
@@ -2624,10 +2624,10 @@ html.dark .jh-asst-send { background: var(--st-peach); color: var(--st-sienna); 
   <!-- ── SIDEBAR ── -->
   <nav class="w-[220px] flex-shrink-0 flex flex-col border-r border-ash">
     <div class="st-brand-row">
-      <div class="st-mark">JH</div>
+      <div class="st-mark">R</div>
       <div>
-        <div class="st-wordmark">JobHunter</div>
-        <div class="st-wordmark-sub">AI Job Crew</div>
+        <div class="st-wordmark">Robin</div>
+        <div class="st-wordmark-sub">AI Job Search</div>
       </div>
     </div>
     <!-- User: filled from the active profile; placeholders until one is loaded -->
@@ -2960,12 +2960,12 @@ html.dark .jh-asst-send { background: var(--st-peach); color: var(--st-sienna); 
       <div class="jh-apply-wrap">
         <div class="jh-apply-main">
           <h1 class="st-h1 mb-1">Your application queue</h1>
-          <div class="text-[12px] text-slate-500 mb-4">Jobs you queue from Browse land here. Each one moves left to right as the crew tailors it, submits it, and picks up the reply.</div>
+          <div class="text-[12px] text-slate-500 mb-4">Jobs you queue from Browse land here. Each one moves left to right as Robin tailors it, submits it, and picks up the reply.</div>
 
           <!-- The flow, stated once so the page explains itself. -->
           <ol class="jh-apply-flow" aria-label="How a job reaches this page">
             <li><span class="jh-apply-flow-n">1</span><span><b>Browse</b> — search and open a job</span></li>
-            <li><span class="jh-apply-flow-n">2</span><span><b>Queue it</b> — you decide what the crew works on</span></li>
+            <li><span class="jh-apply-flow-n">2</span><span><b>Queue it</b> — you decide what Robin works on</span></li>
             <li><span class="jh-apply-flow-n">3</span><span><b>Track</b> — progress and replies show up here</span></li>
           </ol>
 
@@ -3529,7 +3529,7 @@ html.dark .jh-asst-send { background: var(--st-peach); color: var(--st-sienna); 
 
     <!-- ════ CANVAS (iframe — lazy-loaded to avoid freezing on startup) ════ -->
     <div class="screen hidden flex-1 flex flex-col overflow-hidden" id="s-canvas">
-      <iframe id="canvasFrame" src="" title="JobHunter Canvas"></iframe>
+      <iframe id="canvasFrame" src="" title="Robin Canvas"></iframe>
     </div>
 
     <!-- ════ SETTINGS ════ -->
@@ -3554,7 +3554,7 @@ html.dark .jh-asst-send { background: var(--st-peach); color: var(--st-sienna); 
           <div class="flex items-center justify-between gap-3">
             <div>
               <div class="text-[12.5px] text-slate-300">AutoFix</div>
-              <div id="setAutofixHint" class="text-[11px] text-slate-500">Always on while JobHunter is in use</div>
+              <div id="setAutofixHint" class="text-[11px] text-slate-500">Always on while Robin is in use</div>
             </div>
             <span id="setAutofixBadge" class="text-[11px] font-semibold text-emerald-400 bg-emerald-950/40 border border-emerald-900/50 px-2 py-0.5 rounded">ON</span>
           </div>
@@ -3621,7 +3621,7 @@ html.dark .jh-asst-send { background: var(--st-peach); color: var(--st-sienna); 
 
         <div class="st-mist-card space-y-3">
           <div class="text-[13.5px] font-semibold text-slate-100">Profile pack</div>
-          <p class="text-[12px] text-slate-500">Active pack under <code class="text-slate-400">profiles/</code> via JOBCREW_PROFILE.</p>
+          <p class="text-[12px] text-slate-500">Active pack under <code class="text-slate-400">profiles/</code> via ROBIN_PROFILE.</p>
           <select id="setProfilePack" class="w-full h-9 px-3 rounded-lg bg-slate-800 border border-slate-700 text-slate-100 text-[12.5px] outline-none focus:border-indigo-500">
             <option value="">Select preset…</option>
           </select>
@@ -4547,7 +4547,7 @@ async function fixBrowseApiErrors(){
       const row = matchRow(item);
       if(row){
         row.fixState = 'unfixed';
-        row.fixMessage = item.message || data.universal_message || 'Cannot fix this source from JobHunter.';
+        row.fixMessage = item.message || data.universal_message || 'Cannot fix this source from Robin.';
       }
     });
     renderBrowseApiErrors();
@@ -4559,7 +4559,7 @@ async function fixBrowseApiErrors(){
       else msg.textContent = uc ? `${uc} cannot be fixed here. Third-party outage or block.` : 'Done.';
     }
     if(fc) showT(`${fc} API source${fc===1?'':'s'} recovered. Run Search to refresh listings.`);
-    else if(uc) showT('Those API errors cannot be fixed from JobHunter. See Errors tab.');
+    else if(uc) showT('Those API errors cannot be fixed from Robin. See Errors tab.');
   }catch(e){
     if(msg) msg.textContent = (e && e.message) ? String(e.message).slice(0,120) : 'Fix failed';
     showT('Could not run API error fix. Is the server running?');
@@ -4664,7 +4664,7 @@ async function loadJobs(q=''){
     const data = await res.json();
     apiCount = Array.isArray(data.jobs) ? data.jobs.length : -1;
     // Adjacent roles are real design work in a different craft. They are kept
-    // out of the main list on purpose — the crew never pursues them — but the
+    // out of the main list on purpose — Robin never pursues them — but the
     // user should still see them and be able to queue one deliberately.
     ADJACENT_JOBS = Array.isArray(data.adjacent) ? data.adjacent.map(normalizeJob) : [];
     ROLE_INFO = data.role || null;
@@ -4957,7 +4957,7 @@ function renderJobs(){
 }
 
 // Adjacent roles: same field, different craft. Collapsed by default so the
-// main list stays the candidate's own role, per the queue rule — the crew only
+// main list stays the candidate's own role, per the queue rule — Robin only
 // works on what the user deliberately queues, and never on these by default.
 function renderAdjacentJobs(){
   if(!ADJACENT_JOBS.length && !DROPPED_OFF_ROLE) return '';
@@ -4990,7 +4990,7 @@ function renderAdjacentJobs(){
         Adjacent roles
         <span class="jh-adj-count">${ADJACENT_JOBS.length}</span>
       </summary>
-      <div class="jh-adj-note">Design work in a different craft to ${esc(roleName)} — brand, visual, motion, graphic. The crew never applies to these on its own; queue one if you want it.</div>
+      <div class="jh-adj-note">Design work in a different craft to ${esc(roleName)} — brand, visual, motion, graphic. Robin never applies to these on its own; queue one if you want it.</div>
       <div class="jh-adj-list">${cards}</div>
       ${dropped}
     </details>`;
@@ -6665,7 +6665,7 @@ function applySettingsPayload(data){
   }
   if(afHint) afHint.textContent = (data.autofix && data.autofix.last_action)
     ? `Always on · last: ${data.autofix.last_action}`
-    : 'Always on while JobHunter is in use';
+    : 'Always on while Robin is in use';
 
   const gem = document.getElementById('setKeyGeminiStatus');
   const groq = document.getElementById('setKeyGroqStatus');
@@ -6775,7 +6775,7 @@ async function saveSettings(){
     MASTER_SHEET_ID: (document.getElementById('setSheetId')||{}).value || '',
     GOOGLE_DRIVE_FOLDER_ID: (document.getElementById('setDriveId')||{}).value || '',
     JH_LOGIN_WAIT_SECONDS: (document.getElementById('setLoginWait')||{}).value || '600',
-    JOBCREW_PROFILE: (document.getElementById('setProfilePack')||{}).value || '',
+    ROBIN_PROFILE: (document.getElementById('setProfilePack')||{}).value || '',
     APPLICANT_WORK_AUTH: (document.getElementById('setWorkAuth')||{}).value || '',
     APPLICANT_SPONSORSHIP: (document.getElementById('setSponsorship')||{}).value || '',
     APPLICANT_YEARS_EXPERIENCE: (document.getElementById('setYearsExp')||{}).value || '',

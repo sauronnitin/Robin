@@ -1,7 +1,7 @@
-"""Build a sequential CrewAI crew from a canvas run plan.
+"""Build a sequential agent crew from a canvas run plan.
 
 Used when the dashboard posts dashboard/run_plan.json (or JH_RUN_PLAN).
-Pipeline nodes reuse JobhunterAiCrew factories; custom cards become LLM-only
+Pipeline nodes reuse RobinCrew factories; custom cards become LLM-only
 Agent + Task pairs. Triggers are schedule metadata only and never become agents.
 """
 
@@ -19,7 +19,7 @@ from jobhunter_ai import events_bus
 from jobhunter_ai.crew import (
     GeminiLLM,
     GroqLLM,
-    JobhunterAiCrew,
+    RobinCrew,
     _dashboard_step_callback,
     _dashboard_task_callback,
     _GEMINI_FLASH,
@@ -213,7 +213,7 @@ def build_crew_from_plan(plan: dict[str, Any]) -> Crew:
     """Assemble a sequential Crew matching plan order."""
     _register_aliases(plan)
     by_id = _node_map(plan)
-    factory = JobhunterAiCrew()
+    factory = RobinCrew()
     agents: list[Agent] = []
     tasks: list[Task] = []
     prev_task: Task | None = None

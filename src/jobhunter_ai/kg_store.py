@@ -363,7 +363,7 @@ def normalize_graph(raw: dict[str, Any] | None, *, kind: str) -> dict[str, Any]:
             "mode": "opt_in_anonymized",
             "never": ["raw_resume", "chat", "email", "name", "exact_employer_dates"],
             "copy": (
-                "Shared signals help improve JobHunter for everyone. "
+                "Shared signals help improve Robin for everyone. "
                 "We do not sell this data."
             ),
         },
@@ -1369,7 +1369,7 @@ def load_share_prefs() -> dict[str, Any]:
         "opt_in_all": False,
         "updated_at": None,
         "copy": (
-            "Shared signals help improve JobHunter for everyone. "
+            "Shared signals help improve Robin for everyone. "
             "We do not sell this data."
         ),
     }
@@ -1487,7 +1487,7 @@ def fetch_market_pulse(query: str, *, num: int = 8) -> dict[str, Any]:
         req = urllib.request.Request(
             url,
             headers={
-                "User-Agent": "JobHunterAI/1.0 (+local; market-pulse)",
+                "User-Agent": "Robin/1.0 (+local; market-pulse)",
                 "Accept": "application/json",
             },
         )

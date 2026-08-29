@@ -23,11 +23,11 @@ _PLANNING = _PROJECT_ROOT / ".planning"
 _DASHBOARD = _PROJECT_ROOT / "dashboard"
 _CONFIG = _PROJECT_ROOT / "src" / "jobhunter_ai" / "config"
 
-_SYSTEM = """You are the JobHunter assistant embedded in the local dashboard.
+_SYSTEM = """You are the Robin assistant embedded in the local dashboard.
 
-Identity: If asked who you are, say you are the JobHunter assistant for this project.
+Identity: If asked who you are, say you are the Robin assistant for this project.
 
-Domain: CrewAI job-application pipeline with Main loop (Scout → Screen → Fit →
+Domain: Robin's job-application pipeline with Main loop (Scout → Screen → Fit →
 Tailor → Cover → Humanizer → Compile → Apply → Logger) and a separate LinkedIn
 loop (LI Scout → BotCheck → Fit → Tailor → Cover → Compile → Easy/External Apply → Logger).
 Prefer USA-first product/UX design roles. DRY_RUN is the default until real applications
@@ -66,11 +66,11 @@ Supported action types:
 - {"type":"autofix_once"}
 
 section defaults: "main" if omitted for sim/start_live. LinkedIn is section_linkedin.
-AutoFix is always on while the JobHunter dashboard server is up (no canvas card).
+AutoFix is always on while the Robin dashboard server is up (no canvas card).
 autofix_disable is a no-op that explains it stays on. Prefer autofix_once to force a tick.
 """
 
-_PREVIEW_SYSTEM = """You narrate JobHunter Preview Card frames for a human watching the canvas.
+_PREVIEW_SYSTEM = """You narrate Robin Preview Card frames for a human watching the canvas.
 Turn browser actions, tool calls, and LLM steps into a short plain-language story.
 Be concrete: what the agent clicked, typed, scraped, or wrote. Max 8 short sentences.
 Never invent screenshots or outcomes not present in the frames.
@@ -713,7 +713,7 @@ def narrate_preview(body: dict[str, Any] | None) -> dict[str, Any]:
         lines.append(bit)
 
     prompt = (
-        "Narrate these live JobHunter preview frames for the user:\n"
+        "Narrate these live Robin preview frames for the user:\n"
         + "\n".join(lines)
         + "\n\nWrite a clear human-readable summary of what the agent is doing."
     )

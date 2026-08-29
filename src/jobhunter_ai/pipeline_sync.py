@@ -1,6 +1,6 @@
-"""Persist crew task output into the application pipeline (SPEC.md §3).
+"""Persist Robin's task output into the application pipeline (SPEC.md §3).
 
-The crew already emits everything needed - scored jobs, tailoring results, PDF
+Robin already emits everything needed - scored jobs, tailoring results, PDF
 links, submission outcomes - as task output the dashboard parses today. This
 module reads that same text and writes `job` / `application` rows. It adds no
 task context and enlarges no prompt (SPEC.md Rules 1 and 2): nothing here is
@@ -18,7 +18,7 @@ from typing import Any
 
 from jobhunter_ai import ats_score
 from jobhunter_ai import pipeline_store
-from jobhunter_ai import profile as jobcrew_profile
+from jobhunter_ai import profile as robin_profile
 from jobhunter_ai.job_sources.base import NormalizedJob
 from jobhunter_ai.job_sources.normalize import normalize_work_mode
 
@@ -340,7 +340,7 @@ def base_resume_ats(posting: str) -> float | None:
     """The base resume's keyword match against a posting, or None if unknown."""
     if not (posting or "").strip():
         return None
-    resume_path = jobcrew_profile.profile_resume_path()
+    resume_path = robin_profile.profile_resume_path()
     if resume_path is None:
         return None
     try:
@@ -356,7 +356,7 @@ def queue_job(record: dict[str, Any], *, conn=None) -> dict[str, Any]:
     """Queue one job the user deliberately picked in Browse.
 
     This is the only way a job enters the pipeline by hand. It lands at
-    `discovered` - the crew decides nothing here, the user did.
+    `discovered` - Robin decides nothing here, the user did.
     """
     canonical = _coerce_record(record or {})
     job = _identity(canonical)

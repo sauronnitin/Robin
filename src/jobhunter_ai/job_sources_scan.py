@@ -25,7 +25,7 @@ from jobhunter_ai.job_sources_config import (
 from jobhunter_ai.job_sources.registry import REGISTRY
 
 _UA = {
-    "User-Agent": "JobHunterAI/1.0 (+local source scanner)",
+    "User-Agent": "Robin/1.0 (+local source scanner)",
     "Accept": "application/json",
 }
 

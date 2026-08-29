@@ -1,4 +1,4 @@
-"""Load JobCrew user/profile packs for scout, fit, and canvas swarm modules."""
+"""Load Robin user/profile packs for scout, fit, and canvas swarm modules."""
 
 from __future__ import annotations
 
@@ -53,7 +53,7 @@ def _read_json(path: Path) -> dict[str, Any] | None:
 
 
 def load_profile(profile_id: str | None = None) -> dict[str, Any]:
-    """Prefer user/profile.json, else JOBCREW_PROFILE preset, else product-designer."""
+    """Prefer user/profile.json, else ROBIN_PROFILE preset, else product-designer."""
     user_profile = _USER / "profile.json"
     if user_profile.is_file():
         data = _read_json(user_profile)
@@ -62,7 +62,7 @@ def load_profile(profile_id: str | None = None) -> dict[str, Any]:
             data["_dir"] = str(_USER)
             return data
 
-    pid = (profile_id or os.environ.get("JOBCREW_PROFILE") or "product-designer").strip()
+    pid = (profile_id or os.environ.get("ROBIN_PROFILE") or "product-designer").strip()
     preset = _PROFILES / pid / "profile.json"
     data = _read_json(preset)
     if not data:
@@ -103,7 +103,7 @@ def profile_resume_path(profile: dict[str, Any] | None = None) -> Path | None:
 
     Order: active profile dir (user/ or profiles/<id>/) via ``files.*`` then
     conventional names; if the active profile is a user overlay with no
-    resume file, the JOBCREW_PROFILE preset pack; then the legacy path.
+    resume file, the ROBIN_PROFILE preset pack; then the legacy path.
     """
     profile = profile or load_profile()
     seen: set[Path] = set()
@@ -134,7 +134,7 @@ def profile_resume_path(profile: dict[str, Any] | None = None) -> Path | None:
         return _LEGACY_BASE_RESUME
 
     if profile.get("_source") == "user":
-        pid = (os.environ.get("JOBCREW_PROFILE") or "product-designer").strip()
+        pid = (os.environ.get("ROBIN_PROFILE") or "product-designer").strip()
         preset_dir = _PROFILES / pid
         preset = _read_json(preset_dir / "profile.json") or {}
         found = _first_existing(_resume_candidates(preset_dir, preset))

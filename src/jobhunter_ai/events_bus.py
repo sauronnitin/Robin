@@ -540,7 +540,7 @@ _listeners_registered = False
 
 
 def register_crewai_listeners() -> None:
-    """Hook CrewAI event bus so task start/fail update the dashboard timeline."""
+    """Hook the agent framework's event bus so task start/fail update the dashboard timeline."""
     global _listeners_registered
     if _listeners_registered:
         return

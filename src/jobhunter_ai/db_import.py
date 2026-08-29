@@ -116,7 +116,7 @@ DEFAULT_JOB_QUEUE = Path("logs/job_queue.json")
 def import_job_queue(queue_path: str | Path = DEFAULT_JOB_QUEUE) -> int:
     """Move the legacy `logs/job_queue.json` pool into the application table.
 
-    The file was the crew's cross-run queue before the pipeline tables existed.
+    The file was Robin's cross-run queue before the pipeline tables existed.
     Keeping both meant two answers to "what is queued", so the file is retired -
     but the jobs in it are real scored work and must not be thrown away.
 

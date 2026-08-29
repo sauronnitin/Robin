@@ -153,9 +153,9 @@ def load_applicant_payload(
     links: dict[str, Any] = {}
     prof: dict[str, Any] = {}
     try:
-        from jobhunter_ai import profile as jobcrew_profile
+        from jobhunter_ai import profile as robin_profile
 
-        prof = jobcrew_profile.load_profile()
+        prof = robin_profile.load_profile()
         candidate = prof.get("candidate") if isinstance(prof.get("candidate"), dict) else {}
         links = candidate.get("links") if isinstance(candidate.get("links"), dict) else {}
     except Exception:
@@ -297,7 +297,7 @@ def download_resume_pdf(resume_pdf_link: str) -> Path | None:
             m = re.search(r"/file/d/([^/]+)", link)
             if m:
                 url = f"https://drive.google.com/uc?export=download&id={m.group(1)}"
-        req = urllib.request.Request(url, headers={"User-Agent": "JobHunterAI/1.0"})
+        req = urllib.request.Request(url, headers={"User-Agent": "Robin/1.0"})
         with urllib.request.urlopen(req, timeout=45) as resp:
             data = resp.read()
         if not data or len(data) < 100:

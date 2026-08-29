@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from jobhunter_ai import profile as jobcrew_profile
+from jobhunter_ai import profile as robin_profile
 from jobhunter_ai import role_profile
 
 _AI = '("AI" OR "GenAI" OR "LLM" OR "machine learning")'
@@ -27,7 +27,7 @@ def _title_terms(role: dict[str, Any] | None = None) -> list[str]:
             return terms
         primary = str(role.get("primary_title") or "").strip()
         return [primary] if primary else []
-    pack = jobcrew_profile.search_titles()
+    pack = robin_profile.search_titles()
     if pack:
         return pack[:8]
     stored = role_profile.load()

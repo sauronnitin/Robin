@@ -1,5 +1,5 @@
 /*
- * JobHunter AI — Infinite canvas dashboard
+ * Robin — Infinite canvas dashboard
  * Pan/zoom, draggable editable cards, live DAG edges, sim + tokens.
  */
 (function () {
@@ -654,7 +654,7 @@
   function setModeLabel(live) {
     if (!modeLabel) return;
     modeLabel.textContent = live
-      ? "Live · CrewAI pipeline · Editable"
+      ? "Live · Robin pipeline · Editable"
       : "Simulated · Infinite canvas · Editable";
   }
 
@@ -1529,7 +1529,7 @@
     }
 
     if (!started) {
-      showToast("Live start failed", "No crew process started. Check Activity, then retry Start.", "error");
+      showToast("Live start failed", "No Robin process started. Check Activity, then retry Start.", "error");
       setModeLabel(false);
       runMode = "sim";
       consoleDot.classList.remove("live");
@@ -7754,7 +7754,7 @@
   }
 
   function setChatStatus(text) {
-    if (chatStatus) chatStatus.textContent = text || "JobHunter assistant · ready";
+    if (chatStatus) chatStatus.textContent = text || "Robin assistant · ready";
   }
 
   function appendChatBubble(role, text, opts) {
@@ -7987,7 +7987,7 @@
     if (!message || chatBusy) return;
     chatBusy = true;
     if (chatSendBtn) chatSendBtn.disabled = true;
-    setChatStatus("JobHunter assistant · thinking…");
+    setChatStatus("Robin assistant · thinking…");
     appendChatBubble("user", message);
     chatHistory.push({ role: "user", content: message });
     saveChatHistory();
@@ -8011,7 +8011,7 @@
           pending.classList.add("error");
           pending.textContent = err;
         }
-        setChatStatus("JobHunter assistant · error");
+        setChatStatus("Robin assistant · error");
         return;
       }
       const reply = String(data.reply || "").trim() || "(empty reply)";
@@ -8031,14 +8031,14 @@
       if (notes.length) saveChatHistory();
 
       const model = data.model ? String(data.model).split("/").pop() : "flash";
-      setChatStatus("JobHunter assistant · " + model);
+      setChatStatus("Robin assistant · " + model);
     } catch (err) {
       if (pending) {
         pending.classList.remove("pending");
         pending.classList.add("error");
         pending.textContent = "Chat failed. Is the dashboard server running?";
       }
-      setChatStatus("JobHunter assistant · offline");
+      setChatStatus("Robin assistant · offline");
     } finally {
       chatBusy = false;
       if (chatSendBtn) chatSendBtn.disabled = false;
@@ -8053,7 +8053,7 @@
     chatHistory = [];
     saveChatHistory();
     renderChatHistory();
-    setChatStatus("JobHunter assistant · ready");
+    setChatStatus("Robin assistant · ready");
   }
 
   function initAssistantBridge() {
@@ -8192,14 +8192,14 @@
       const res = await fetch("/api/autofix");
       const data = await res.json();
       if (!data || data.ok === false) return;
-      // Always on while JobHunter dashboard is in use.
+      // Always on while Robin dashboard is in use.
       autofixEnabled.checked = true;
       autofixEnabled.disabled = true;
       if (autofixToggle) {
         autofixToggle.classList.add("is-locked");
         autofixToggle.classList.remove("is-off");
         autofixToggle.classList.toggle("is-busy", !!data.busy);
-        autofixToggle.title = "AutoFix is always on while JobHunter is in use";
+        autofixToggle.title = "AutoFix is always on while Robin is in use";
       }
       if (data.busy) autofixStatus.textContent = "busy";
       else if (data.last_action) autofixStatus.textContent = String(data.last_action).replace(/^autofix_/, "").slice(0, 18);

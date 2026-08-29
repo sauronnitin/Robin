@@ -8,7 +8,7 @@ queue of a product designer.
 Titles are sorted into three bands:
 
 - **core** - the same job under a different name. Product Designer, UX Designer,
-  UI/UX Designer, Digital Product Designer. This is what the crew pursues.
+  UI/UX Designer, Digital Product Designer. This is what Robin pursues.
 - **adjacent** - real design work, but a different craft or emphasis: Brand,
   Visual, Motion, Design Systems, Web. Surfaced for the user to judge; never
   auto-applied to.

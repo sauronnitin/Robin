@@ -80,7 +80,7 @@ def scan_log_payload(since: int = 0) -> dict[str, Any]:
 
 
 _UNFIXABLE_MSG = (
-    "This source is unavailable right now. JobHunter cannot fix third-party API outages. "
+    "This source is unavailable right now. Robin cannot fix third-party API outages. "
     "Try again later or turn the source off in Profile Job sources."
 )
 
@@ -177,7 +177,7 @@ def fix_scan_errors(errors: list[dict[str, Any]] | None) -> dict[str, Any]:
                     "fixable": False,
                     "message": (
                         "Source is rate-limiting. Wait a minute, then Search again. "
-                        "JobHunter cannot bypass third-party rate limits."
+                        "Robin cannot bypass third-party rate limits."
                     ),
                 }
             )
@@ -299,7 +299,7 @@ def _scan_note(
 
 
 _UA = {
-    "User-Agent": "JobHunterAI/1.0 (+https://github.com/jobcrew)",
+    "User-Agent": "Robin/1.0 (+https://github.com/robin)",
     "Accept": "application/json",
 }
 

@@ -1,4 +1,4 @@
-/* Apply — the queue board: every job the user sent to the crew, from queued
+/* Apply — the queue board: every job the user sent to Robin, from queued
  * through offer (SPEC.md §3, §5).
  *
  * The page is "Apply"; the data underneath is the application pipeline, which
@@ -22,7 +22,7 @@
 
   // §5.2 funnel ramp for the ordinal stages, §5.3 status colors for terminals.
   // Queued holds all three pre-submission stages: the user queued the job, and
-  // whether the crew has scored or tailored it yet is detail the card's own
+  // whether Robin has scored or tailored it yet is detail the card's own
   // pill carries. Burying a just-queued job in a collapsed group would break
   // the one flow this page exists for.
   var COLUMNS = [
@@ -361,7 +361,7 @@
         + '<div class="jh-apply-blank">'
         + '  <div class="jh-apply-blank-title">Nothing queued yet</div>'
         + '  <div class="jh-apply-blank-copy">Open Browse, find a job worth your time, and add it to the '
-        + 'queue. The crew only works on what you choose — it never queues jobs for you.</div>'
+        + 'queue. Robin only works on what you choose — it never queues jobs for you.</div>'
         + '  <div class="jh-apply-blank-actions">'
         + '    <button class="jh-apply-btn is-primary" id="applyGoBrowse" type="button">Browse jobs</button>'
         + '    <button class="jh-apply-btn" id="applySampleStart" type="button">See a sample queue</button>'
@@ -376,7 +376,7 @@
       + groupHtml('applyGroupClosed', 'Closed', CLOSED);
   }
 
-  // Which crew phases this job actually went through. Derived only from what
+  // Which Robin phases this job actually went through. Derived only from what
   // the pipeline persisted - a phase is "done" because there is evidence of it
   // (an event, a score, a PDF link), never because an earlier phase implies it.
   function phasesFor(app) {
@@ -457,7 +457,7 @@
       + '</div>'
       + (app.run_id
           ? '<div class="jh-apply-phase-run">run ' + esc(String(app.run_id).slice(0, 12)) + '</div>'
-          : '<div class="jh-apply-phase-run">no crew run yet — queued only</div>')
+          : '<div class="jh-apply-phase-run">no Robin run yet — queued only</div>')
       + '<ol class="jh-apply-phases">' + rows + '</ol>';
   }
 
@@ -506,7 +506,7 @@
       + '<select id="applyStatusSelect" class="jh-apply-select" data-app="' + app.id + '">' + options + '</select>'
       + (app.status === 'discovered' && !state.sample
           ? '<button class="jh-apply-btn" type="button" data-unqueue="' + app.id + '">Unqueue</button>'
-            + '<p class="jh-apply-unqueue-hint">Removes this job before the crew spends tokens on it. After scoring, skip it instead.</p>'
+            + '<p class="jh-apply-unqueue-hint">Removes this job before Robin spends tokens on it. After scoring, skip it instead.</p>'
           : '')
       + '<div class="jh-apply-detail-label">History</div>'
       + '<ul class="jh-apply-events">' + (events || '<li class="jh-apply-empty">No events</li>') + '</ul>'

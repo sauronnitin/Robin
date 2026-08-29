@@ -1,4 +1,4 @@
-"""CLI helper for Cursor agent replies to the JobHunter Assistant panel."""
+"""CLI helper for Cursor agent replies to the Robin Assistant panel."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from jobhunter_ai import cursor_chat_bridge
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Post a Cursor agent reply to the JobHunter Assistant bridge.")
+    parser = argparse.ArgumentParser(description="Post a Cursor agent reply to the Robin Assistant bridge.")
     parser.add_argument("--id", required=True, help="Inbox message id (jh-...)")
     parser.add_argument("--reply", required=True, help="Reply text for the Assistant panel")
     parser.add_argument(

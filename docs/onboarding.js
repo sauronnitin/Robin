@@ -203,7 +203,7 @@ function buildProfile() {
     },
     meta: {
       dry_run_recommended: document.getElementById("dry").value === "true",
-      created_via: "jobcrew-pages-onboarding",
+      created_via: "robin-pages-onboarding",
     },
   };
 }

@@ -5,17 +5,17 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from jobhunter_ai import events_bus
-from jobhunter_ai import profile as jobcrew_profile
-from jobhunter_ai.crew import JobhunterAiCrew
+from jobhunter_ai import profile as robin_profile
+from jobhunter_ai.crew import RobinCrew
 from jobhunter_ai.graph_crew import crew_from_env_or_default
 
 
 def run():
-    resume_path = jobcrew_profile.profile_resume_path()
+    resume_path = robin_profile.profile_resume_path()
     if resume_path is None:
         raise FileNotFoundError(
             "No resume found. Place resume.tex or resume.pdf in user/ "
-            "(see README), or use the shipped example via JOBCREW_PROFILE=product-designer."
+            "(see README), or use the shipped example via ROBIN_PROFILE=product-designer."
         )
     resume_latex = resume_path.read_text(encoding="utf-8")
     sheet_id = os.environ.get("MASTER_SHEET_ID")
@@ -32,10 +32,10 @@ def run():
     from jobhunter_ai import location_fit
     from jobhunter_ai import role_profile
 
-    user_profile = jobcrew_profile.load_profile()
+    user_profile = robin_profile.load_profile()
     role = role_profile.ensure(user_profile)
     home = location_fit.home_country(user_profile)
-    titles = jobcrew_profile.search_titles()
+    titles = robin_profile.search_titles()
     niche = str((user_profile.get("search") or {}).get("niche") or "").strip()
     print(
         f"[jobhunter] searching as {role.get('primary_title') or 'unknown role'}"
@@ -55,7 +55,7 @@ def run():
     }
     try:
         graph_crew = crew_from_env_or_default()
-        crew = graph_crew if graph_crew is not None else JobhunterAiCrew().crew()
+        crew = graph_crew if graph_crew is not None else RobinCrew().crew()
         crew.kickoff(inputs=inputs)
         events_bus.end_run("done", detail={"message": "crew.kickoff() finished"})
         print("[jobhunter] run complete")

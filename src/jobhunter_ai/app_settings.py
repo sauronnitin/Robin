@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 
 from jobhunter_ai import auto_fix
 from jobhunter_ai import gmail_verify
-from jobhunter_ai import profile as jobcrew_profile
+from jobhunter_ai import profile as robin_profile
 from jobhunter_ai.model_catalog import upsert_env_key
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -33,7 +33,7 @@ NON_SECRET_ENV_KEYS: tuple[str, ...] = (
     "GOOGLE_DRIVE_FOLDER_ID",
     "DRY_RUN",
     "JH_LOGIN_WAIT_SECONDS",
-    "JOBCREW_PROFILE",
+    "ROBIN_PROFILE",
     "APPLICANT_EMAIL",
     "APPLICANT_PHONE",
     "APPLICANT_FIRST_NAME",
@@ -173,11 +173,11 @@ def get_settings() -> dict[str, Any]:
         af = {"ok": False, "enabled": True, "error": str(exc)}
 
     try:
-        presets = jobcrew_profile.list_presets()
+        presets = robin_profile.list_presets()
     except Exception:
         presets = []
 
-    active_profile = non_secret.get("JOBCREW_PROFILE") or ""
+    active_profile = non_secret.get("ROBIN_PROFILE") or ""
     user_profile = _USER_DIR / "profile.json"
 
     return {

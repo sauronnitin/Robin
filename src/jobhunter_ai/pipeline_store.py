@@ -466,9 +466,9 @@ _WORK_STATUSES = ("discovered", "scored")
 
 
 def list_work_queue(limit: int | None = None, *, conn=None) -> list[dict[str, Any]]:
-    """Jobs waiting for the crew, the user's own picks first.
+    """Jobs waiting for Robin, the user's own picks first.
 
-    A deliberate pick outranks a higher-scoring job the crew found on its own -
+    A deliberate pick outranks a higher-scoring job Robin found on its own -
     that is the whole point of queueing something by hand.
     """
     own = conn is None
@@ -500,7 +500,7 @@ def list_work_queue(limit: int | None = None, *, conn=None) -> list[dict[str, An
 
 
 def unqueue_application(application_id: int, *, conn=None) -> dict[str, Any]:
-    """Remove a job the crew has not started. Later statuses stay put.
+    """Remove a job Robin has not started. Later statuses stay put.
 
     `discovered` is the only honest delete: no tokens spent yet. Once Score
     has run, the user should mark the job skipped rather than erase the work.
@@ -517,7 +517,7 @@ def unqueue_application(application_id: int, *, conn=None) -> dict[str, Any]:
         if row["status"] != "discovered":
             raise ValueError(
                 f"cannot unqueue a job at {row['status']!r}; "
-                "once the crew has spent tokens, mark it skipped instead"
+                "once Robin has spent tokens, mark it skipped instead"
             )
         with conn:
             conn.execute("DELETE FROM application WHERE id = ?", (application_id,))
