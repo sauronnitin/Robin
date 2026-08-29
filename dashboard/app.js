@@ -5149,6 +5149,29 @@
     return changed;
   }
 
+  /** After splicing a card onto an edge, join the section that owns either endpoint. */
+  function addCardToSectionOfEdge(nodeId, from, to) {
+    const host = sections.find((s) => {
+      const ids = s.memberIds || [];
+      return ids.includes(from) || ids.includes(to);
+    });
+    if (!host) return false;
+    if (!Array.isArray(host.memberIds)) host.memberIds = [];
+    if (!host.memberIds.includes(nodeId)) host.memberIds.push(nodeId);
+    sections.forEach((s) => {
+      if (s.id === host.id) return;
+      s.memberIds = (s.memberIds || []).filter((id) => id !== nodeId);
+    });
+    if (!host.manualBounds) {
+      const box = boundsFromMembers(host.memberIds);
+      host.x = box.x;
+      host.y = box.y;
+      host.w = box.w;
+      host.h = box.h;
+    }
+    return true;
+  }
+
   function memberBounds(memberIds) {
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
     let any = false;
@@ -6519,6 +6542,7 @@
             redoStack = [];
           }
           spliceNodeIntoEdge(dragCard, from, to);
+          addCardToSectionOfEdge(dragCard, from, to);
           logLine(null, `inserted ${agentById(dragCard)?.short || dragCard} between ${agentById(from)?.short || from} and ${agentById(to)?.short || to}`, "system");
           dropEdgeKey = null;
           const focus = dragCard;
@@ -6913,6 +6937,7 @@
     const hit = hitTestEdge(id);
     if (hit) {
       spliceNodeIntoEdge(id, hit.from, hit.to);
+      addCardToSectionOfEdge(id, hit.from, hit.to);
       saveGraph();
       relayoutChain(id);
       logLine(null, `placed card between ${agentById(hit.from)?.short || hit.from} and ${agentById(hit.to)?.short || hit.to}: in loop once Sim clears`, "system");
@@ -8268,6 +8293,7 @@
     if (reconcileSectionsLayout()) buildSections();
     if (!loadJSON(VIEW_KEY, null)) fitView();
     logLine(null, "canvas ready - run section Sim before Start", "system");
+    bootstrapLiveSession();
   });
 
 
