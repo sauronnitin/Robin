@@ -92,6 +92,16 @@ Never commit `.env`, OAuth tokens, `browser-session/`, or `user/` uploads.
 
 ---
 
+## Gmail (optional)
+
+Connecting Gmail is **optional**. The Apply board works without it: you move cards by hand.
+
+If you connect it, JobCrew requests `gmail.readonly` only. It classifies recruiter replies (and can move a card from Applied to Replied). It cannot send, delete, or modify mail.
+
+The token is stored locally as `gmail_token.json` (gitignored). Connect from Settings > Gmail replies, or `GET /api/gmail/connect` while the dashboard is running.
+
+---
+
 ## Profiles and swarms
 
 See [`profiles/README.md`](profiles/README.md).

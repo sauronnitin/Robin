@@ -1801,6 +1801,26 @@ html.dark #jList .jh-job-new {
   border-color: rgba(196,128,80,0.25) !important;
 }
 
+#jList .jh-job-card.is-queued {
+  border-color: rgba(42, 120, 214, 0.35) !important;
+}
+#jList .jh-job-queued {
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  color: var(--st-ink) !important;
+  background: var(--st-fog) !important;
+  border: 1px solid var(--st-border) !important;
+  padding: 2px 10px !important;
+  border-radius: var(--radius-pill) !important;
+  flex-shrink: 0;
+  line-height: 1.3;
+}
+html.dark #jList .jh-job-queued {
+  color: #c5d8ef !important;
+  background: rgba(42, 120, 214, 0.18) !important;
+  border-color: rgba(42, 120, 214, 0.35) !important;
+}
+
 /* JD preview header: same hierarchy + 14px floor */
 #jdPanel .jh-jd-company {
   font-family: var(--st-serif) !important;
@@ -2763,6 +2783,7 @@ html.dark .jh-asst-send { background: var(--st-peach); color: var(--st-sienna); 
             <!-- Filters -->
             <div class="px-5 py-2.5 border-b border-slate-800" id="browseFilters">
               <div class="flex items-center justify-end mb-2 gap-2 flex-wrap">
+                <button type="button" onclick="qFilteredJobs()" class="st-btn-ghost text-[12px]" id="browseQueueVisibleBtn">Queue visible (excl. LI)</button>
                 <button type="button" onclick="clearBrowseFilters()" class="text-[14px] text-slate-500 hover:text-indigo-400">Clear all</button>
               </div>
               <div class="flex gap-1.5 flex-wrap items-center" id="filterBar">
@@ -2917,7 +2938,7 @@ html.dark .jh-asst-send { background: var(--st-peach); color: var(--st-sienna); 
                 <div id="jdDesc" class="jd-prose"></div>
               </div>
               <div class="p-3 border-t border-slate-800 flex gap-2 flex-shrink-0">
-                <button type="button" onclick="qJob()" class="st-btn-ghost flex-1">Queue for Apply (excl. LI)</button>
+                <button type="button" onclick="qFilteredJobs()" class="st-btn-ghost flex-1">Queue visible (excl. LI)</button>
                 <a id="jdOpenLink" href="#" target="_blank" rel="noopener" class="st-btn-ghost hidden">Open</a>
                 <button type="button" class="st-btn-ghost">Save</button>
               </div>
@@ -3586,8 +3607,8 @@ html.dark .jh-asst-send { background: var(--st-peach); color: var(--st-sienna); 
           </div>
 
           <ul class="jh-gmail-facts">
-            <li><b>Read-only.</b> The scope is <code>gmail.readonly</code> — this app cannot send, delete, or edit mail.</li>
-            <li><b>Optional.</b> The board works without it; you just move cards by hand.</li>
+            <li><b>Read-only.</b> The scope is <code>gmail.readonly</code>. This app classifies replies. It cannot send, delete, or edit mail.</li>
+            <li><b>Optional.</b> Reply detection is optional. The Apply board works without it. You just move cards by hand.</li>
             <li><b>Local.</b> The token is written to <code>gmail_token.json</code> in the project folder and is gitignored.</li>
           </ul>
 
@@ -3825,6 +3846,7 @@ let selId=null;
 let pendingResumeFile=null;
 let ALL_JOBS = [];
 let ADJACENT_JOBS = [];
+let QUEUED_KEYS = new Set();
 let ROLE_INFO = null;
 let DROPPED_OFF_ROLE = 0;
 let jobsLoading = false;
@@ -4673,6 +4695,7 @@ async function loadJobs(q=''){
     stopBrowseApiLogPoll();
   }
   syncFilterChips();
+  await refreshQueuedKeys();
   applyBrowseFilters();
 }
 
@@ -4829,6 +4852,60 @@ function renderJobSkeletons(n=8){
   root.innerHTML = cards + `<span class="sr-only">Loading jobs...</span>`;
 }
 
+function jobQueueKeyParts(j){
+  const url = String(j.job_url || j.url || j.apply_url || j.link || '').trim().toLowerCase().replace(/\/+$/, '');
+  const company = String(j.company || '').trim().toLowerCase();
+  const title = String(j.title || '').trim().toLowerCase();
+  return { url, content: (company && title) ? (company + '|' + title) : '' };
+}
+
+function isLinkedInJob(j){
+  const url = String(j.job_url || j.url || j.apply_url || j.link || '').toLowerCase();
+  return url.includes('linkedin.com');
+}
+
+function isQueuedJob(j){
+  const parts = jobQueueKeyParts(j);
+  if(parts.url && QUEUED_KEYS.has('u:' + parts.url)) return true;
+  if(parts.content && QUEUED_KEYS.has('c:' + parts.content)) return true;
+  return false;
+}
+
+async function refreshQueuedKeys(){
+  try{
+    const res = await fetch(`${API}/api/pipeline`);
+    const data = await res.json().catch(()=>({}));
+    const keys = new Set();
+    Object.values(data.pipeline || {}).forEach(rows=>{
+      (rows || []).forEach(app=>{
+        const parts = jobQueueKeyParts(app);
+        if(parts.url) keys.add('u:' + parts.url);
+        if(parts.content) keys.add('c:' + parts.content);
+      });
+    });
+    QUEUED_KEYS = keys;
+  }catch(_e){}
+}
+
+function queuePayload(j){
+  return {
+    company: j.company,
+    title: j.title,
+    url: j.job_url || j.url || '',
+    location: j.location || j.loc || '',
+    work_mode: j.workplace || j.work_mode || '',
+    description: j.description || j.desc || ''
+  };
+}
+
+function syncQueueActionButtons(j){
+  const queued = !!(j && isQueuedJob(j));
+  document.querySelectorAll('#browseDetailFloat .st-btn-primary').forEach(btn=>{
+    if(btn.getAttribute('onclick') !== 'qJob()') return;
+    btn.textContent = queued ? 'Already queued' : 'Queue for Apply';
+  });
+}
+
 function jobReachMarker(j){
   const band = j.location_band || '';
   const icons = { home: '⌂', remote: '⌂', unknown: '?', elsewhere: '✈' };
@@ -4853,6 +4930,7 @@ function renderJobs(){
   }
   root.innerHTML=JOBS.map(j=>{
     const selected = sameJobId(selId, j.id);
+    const queued = isQueuedJob(j);
     const chips = (j.tags||[]).slice(0, 8).map(t=>{
       const cls = jobChipClass(t, j.ats_source);
       return `<span class="${cls}">${esc(t)}</span>`;
@@ -4862,7 +4940,7 @@ function renderJobs(){
       ${selected
         ? 'is-selected bg-indigo-950/25 border-indigo-500/50 ring-1 ring-indigo-500/20'
         : 'bg-slate-900 border-slate-800 hover:border-slate-700 hover:bg-slate-800/60'
-      }" data-job-id="${esc(j.id)}" role="button" tabindex="0">
+      }${queued ? ' is-queued' : ''}" data-job-id="${esc(j.id)}" role="button" tabindex="0">
       <div class="flex-1 min-w-0">
         <div class="jh-job-head">
           ${jobLogoHtml(j)}
@@ -4872,7 +4950,7 @@ function renderJobs(){
         <div class="jh-job-meta">${esc(j.loc)} · ${esc(j.time)}${jobReachMarker(j)}</div>
         <div class="flex gap-1.5 flex-wrap">${chips}</div>
       </div>
-      ${j.isNew?`<span class="jh-job-new">New</span>`:''}
+      ${queued ? `<span class="jh-job-queued">Queued</span>` : (j.isNew ? `<span class="jh-job-new">New</span>` : '')}
       <svg class="jh-job-chev" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M6 3.5 10.5 8 6 12.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </div>`;
   }).join('') + renderAdjacentJobs();
@@ -4890,8 +4968,10 @@ function renderAdjacentJobs(){
   if(!ADJACENT_JOBS.length){
     return `<div class="jh-adj-wrap">${dropped}</div>`;
   }
-  const cards = ADJACENT_JOBS.map(j=>`
-    <div class="jh-job-card jh-job-card--adjacent group flex items-start gap-3 p-3.5 rounded-xl border cursor-pointer bg-slate-900 border-slate-800 hover:border-slate-700"
+  const cards = ADJACENT_JOBS.map(j=>{
+    const queued = isQueuedJob(j);
+    return `
+    <div class="jh-job-card jh-job-card--adjacent group flex items-start gap-3 p-3.5 rounded-xl border cursor-pointer bg-slate-900 border-slate-800 hover:border-slate-700${queued ? ' is-queued' : ''}"
       data-job-id="${esc(j.id)}" role="button" tabindex="0">
       <div class="flex-1 min-w-0">
         <div class="jh-job-head">
@@ -4901,8 +4981,9 @@ function renderAdjacentJobs(){
         </div>
         <div class="jh-job-meta">${esc(j.loc)} · ${esc(j.time)}</div>
       </div>
-      <span class="jh-adj-tag">Adjacent</span>
-    </div>`).join('');
+      ${queued ? `<span class="jh-job-queued">Queued</span>` : `<span class="jh-adj-tag">Adjacent</span>`}
+    </div>`;
+  }).join('');
   return `
     <details class="jh-adj-wrap">
       <summary class="jh-adj-head">
@@ -4962,6 +5043,7 @@ function paintBrowseDetailFloat(j){
       open.classList.add('hidden');
     }
   }
+  syncQueueActionButtons(j);
 }
 
 function showBrowseDetailFloat(job){
@@ -5069,30 +5151,26 @@ function closeJD(){
   renderJobs();
 }
 
+async function postQueueJob(j){
+  const res = await fetch(`${API}/api/pipeline/queue`, {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(queuePayload(j))
+  });
+  return res.json().catch(()=>({}));
+}
+
 async function qJob(){
   const j = findJobById(selId);
   if(!j){ showT('Open a job first, then queue it'); return; }
+  if(isLinkedInJob(j)){ showT('LinkedIn jobs go through LinkedIn Lab, not Apply'); return; }
 
-  // The deliberate step: this is the only way a job enters the Apply queue.
-  // It persists, so it survives a reload and a restart — unlike the canvas
-  // card, which is a live-run display only.
   try{
-    const res = await fetch(`${API}/api/pipeline/queue`, {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({
-        company: j.company,
-        title: j.title,
-        url: j.job_url || j.url || '',
-        location: j.location || '',
-        work_mode: j.workplace || j.work_mode || '',
-        // The posting itself, so the crew can score and tailor against it
-        // instead of guessing from a title.
-        description: j.description || j.desc || ''
-      })
-    });
-    const data = await res.json().catch(()=>({}));
+    const data = await postQueueJob(j);
     if(!data.ok){ showT(data.error || 'Could not queue that job'); return; }
+    await refreshQueuedKeys();
+    renderJobs();
+    syncQueueActionButtons(j);
     showT(`Queued ${j.company} → Apply`);
   }catch(err){
     showT(`Could not queue that job: ${err.message}`);
@@ -5101,6 +5179,42 @@ async function qJob(){
 
   nav('apply');
   if(window.__jhApply) window.__jhApply.load();
+}
+
+async function qFilteredJobs(){
+  const batch = JOBS.filter(j => !isLinkedInJob(j));
+  if(!batch.length){
+    showT('No non-LinkedIn jobs in this filtered set');
+    return;
+  }
+  const btn = document.getElementById('browseQueueVisibleBtn');
+  if(btn){ btn.disabled = true; }
+  showT(`Queuing ${batch.length} job${batch.length===1?'':'s'}…`);
+  let ok = 0;
+  let failed = 0;
+  try{
+    for(const j of batch){
+      try{
+        const data = await postQueueJob(j);
+        if(data.ok) ok += 1;
+        else failed += 1;
+      }catch(_e){
+        failed += 1;
+      }
+    }
+  }finally{
+    if(btn){ btn.disabled = false; }
+  }
+  await refreshQueuedKeys();
+  renderJobs();
+  const selected = findJobById(selId);
+  if(selected) syncQueueActionButtons(selected);
+  const skippedLi = JOBS.length - batch.length;
+  const extra = [
+    failed ? `${failed} failed` : '',
+    skippedLi ? `${skippedLi} LinkedIn skipped` : ''
+  ].filter(Boolean).join(', ');
+  showT(`Queued ${ok} job${ok===1?'':'s'}` + (extra ? ` (${extra})` : ''));
 }
 function doSearch(){
   const q=document.getElementById('srchIn').value.trim();
@@ -5191,6 +5305,13 @@ function nav(s, opts){
   }
   if(screenId==='settings'){
     loadSettings();
+  }
+  if(screenId==='browse'){
+    refreshQueuedKeys().then(()=>{
+      renderJobs();
+      const selected = findJobById(selId);
+      if(selected) syncQueueActionButtons(selected);
+    });
   }
   if(screenId==='dashboard' && window.__jhMetrics){
     window.__jhMetrics.load();
@@ -6446,8 +6567,8 @@ async function enterApp(resume){
   renderJobSkeletons(8);
   await loadJobSources();
   await loadJobs();
-  renderKanban();
-  initPipelineSSE();
+  renderLiveRunBoard();
+  initLiveRunSSE();
   if(new URLSearchParams(location.search).get('gmail') === 'connected'){
     showT('Gmail connected. Watching for verification emails');
   }
@@ -6879,9 +7000,9 @@ function switchDashTab(t){
   });
 }
 
-// Kanban + SSE
-let PIPELINE = {discovered:[], tailoring:[], review:[], submitted:[], rejected:[]};
-const PIPELINE_SEED = {
+// Live run board (SSE). Unrelated to the Apply queue (/api/pipeline).
+let LIVE_RUN = {discovered:[], tailoring:[], review:[], submitted:[], rejected:[]};
+const LIVE_RUN_SEED = {
   discovered: [
     {id:'seed-stripe', company:'Stripe', title:'Senior Product Designer', ats:'Greenhouse', score:'94%'},
     {id:'seed-vercel', company:'Vercel', title:'Product Designer, DX', ats:'Ashby', score:'89%'},
@@ -6899,7 +7020,7 @@ const PIPELINE_SEED = {
     {id:'seed-meta', company:'Meta', title:'Sr. Product Designer', ats:'Workday', score:'74%', note:'✕ Rejected'},
   ],
 };
-PIPELINE = JSON.parse(JSON.stringify(PIPELINE_SEED));
+LIVE_RUN = JSON.parse(JSON.stringify(LIVE_RUN_SEED));
 
 function atsChip(ats){
   const label = (ats||'ATS');
@@ -6924,7 +7045,7 @@ function kanbanCard(c, colKey){
   </div>`;
 }
 
-function renderKanban(){
+function renderLiveRunBoard(){
   const cols = [
     {key:'discovered', label:'Discovered', pulse:false},
     {key:'tailoring',  label:'Tailoring',  pulse:true},
@@ -6934,8 +7055,9 @@ function renderKanban(){
   ];
   const root = document.getElementById('kanban');
   if(!root) return;
-  root.innerHTML = cols.map(col=>{
-    const items = PIPELINE[col.key]||[];
+  root.setAttribute('aria-label', 'Live run');
+  root.innerHTML = '<div class="st-kicker" style="margin-bottom:10px">Live run</div>' + cols.map(col=>{
+    const items = LIVE_RUN[col.key]||[];
     const dotClass = `st-stage-dot${col.pulse?' is-pulse':''}${col.peachDot?' is-peach':''}`;
     return `<div style="width:196px;flex-shrink:0">
       <div class="st-col-head">
@@ -6960,16 +7082,16 @@ function filterDashApps(which){
 }
 
 function removeFromAllColumns(id){
-  Object.keys(PIPELINE).forEach(k=>{
-    PIPELINE[k] = (PIPELINE[k]||[]).filter(x=>String(x.id)!==String(id));
+  Object.keys(LIVE_RUN).forEach(k=>{
+    LIVE_RUN[k] = (LIVE_RUN[k]||[]).filter(x=>String(x.id)!==String(id));
   });
 }
 
-function upsertPipelineCard(col, card){
+function upsertLiveRunCard(col, card){
   removeFromAllColumns(card.id);
-  PIPELINE[col] = PIPELINE[col] || [];
-  PIPELINE[col].unshift(card);
-  renderKanban();
+  LIVE_RUN[col] = LIVE_RUN[col] || [];
+  LIVE_RUN[col].unshift(card);
+  renderLiveRunBoard();
 }
 
 function agentToColumn(agent, stage){
@@ -6982,7 +7104,7 @@ function agentToColumn(agent, stage){
 }
 
 let _sse = null;
-async function initPipelineSSE(){
+async function initLiveRunSSE(){
   if(_sse) return;
   try{
     const head = await fetch(`${API}/api/health`, {method:'GET'});
@@ -7009,11 +7131,11 @@ async function initPipelineSSE(){
   function onAgentStart(data){
     const d = data.detail || data;
     const id = d.job_id || data.agent_id || data.task_key || ('run-'+Date.now());
-    upsertPipelineCard(agentToColumn(data.agent_id || d.agent, d.stage), {
+    upsertLiveRunCard(agentToColumn(data.agent_id || d.agent, d.stage), {
       id: String(id),
       company: d.company || data.agent_id || 'Agent',
       title: d.job_title || data.task_key || 'Running…',
-      ats: d.ats || 'Pipeline',
+      ats: d.ats || 'Live run',
       note: '⟳ '+(data.agent_id||'Working')+'…'
     });
   }
@@ -7023,11 +7145,11 @@ async function initPipelineSSE(){
     let col = 'submitted';
     if(d.stage === 'ready_for_review') col = 'review';
     else if(/tailor|cover|humaniz|compil|fit|scout/.test((data.agent_id||'').toLowerCase())) col = 'review';
-    upsertPipelineCard(col, {
+    upsertLiveRunCard(col, {
       id: String(id),
       company: d.company || data.agent_id || 'Done',
       title: d.job_title || data.task_key || 'Complete',
-      ats: d.ats || 'Pipeline',
+      ats: d.ats || 'Live run',
       note: '✓ Done',
       highlight: (d.stage==='ready_for_review' || col==='review')
     });
@@ -7035,11 +7157,11 @@ async function initPipelineSSE(){
   function onAgentError(data){
     const d = data.detail || data;
     const id = d.job_id || data.agent_id || ('err-'+Date.now());
-    upsertPipelineCard('rejected', {
+    upsertLiveRunCard('rejected', {
       id: String(id),
       company: d.company || data.agent_id || 'Error',
       title: d.job_title || data.task_key || 'Failed',
-      ats: d.ats || 'Pipeline',
+      ats: d.ats || 'Live run',
       error: (d.error || data.status || 'error').toString().slice(0,80)
     });
   }
@@ -7051,7 +7173,7 @@ async function initPipelineSSE(){
   onEv('task_completed', onAgentDone);
   onEv('job_discovered', (data)=>{
     const d = data.detail || data;
-    upsertPipelineCard('discovered', {
+    upsertLiveRunCard('discovered', {
       id: String(d.job_id || d.id || ('job-'+Date.now())),
       company: d.company || 'Company',
       title: d.title || d.job_title || 'New role',
@@ -7061,9 +7183,9 @@ async function initPipelineSSE(){
   });
   onEv('awaiting_retry', (data)=>{
     const d = data.detail || {};
-    upsertPipelineCard('review', {
+    upsertLiveRunCard('review', {
       id: String(data.agent_id || 'await'),
-      company: data.agent_id || 'Pipeline',
+      company: data.agent_id || 'Live run',
       title: data.task_key || 'Needs attention',
       ats: 'Retry',
       note: '✦ Review & Approve',
@@ -7084,7 +7206,7 @@ function showT(msg){
 }
 function hideT(){ document.getElementById('toast').classList.add('hidden'); }
 
-renderKanban();
+renderLiveRunBoard();
 </script>
 
 

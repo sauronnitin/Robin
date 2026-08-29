@@ -499,6 +499,34 @@ def list_work_queue(limit: int | None = None, *, conn=None) -> list[dict[str, An
             conn.close()
 
 
+def unqueue_application(application_id: int, *, conn=None) -> dict[str, Any]:
+    """Remove a job the crew has not started. Later statuses stay put.
+
+    `discovered` is the only honest delete: no tokens spent yet. Once Score
+    has run, the user should mark the job skipped rather than erase the work.
+    """
+    own = conn is None
+    conn = conn or connect()
+    try:
+        row = conn.execute(
+            "SELECT id, status FROM application WHERE id = ?",
+            (application_id,),
+        ).fetchone()
+        if row is None:
+            raise LookupError(f"no application with id {application_id}")
+        if row["status"] != "discovered":
+            raise ValueError(
+                f"cannot unqueue a job at {row['status']!r}; "
+                "once the crew has spent tokens, mark it skipped instead"
+            )
+        with conn:
+            conn.execute("DELETE FROM application WHERE id = ?", (application_id,))
+        return {"ok": True, "deleted": int(application_id)}
+    finally:
+        if own:
+            conn.close()
+
+
 def pending_confirmations(*, conn=None) -> list[dict[str, Any]]:
     """Inbound messages awaiting user confirmation (SPEC.md §3.2)."""
     own = conn is None

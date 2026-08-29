@@ -18,6 +18,7 @@ Serves dashboard/ static files and run-control APIs:
   GET  /api/pipeline
   GET  /api/pipeline/detail?id=N
   POST /api/pipeline/queue
+  DELETE /api/pipeline/<id>   (discovered only)
   POST /api/pipeline/status
   GET  /api/outcomes/scan?days=N
   POST /api/outcomes/confirm
@@ -1187,7 +1188,7 @@ class DashboardHandler(SimpleHTTPRequestHandler):
     def do_OPTIONS(self):
         self.send_response(204)
         self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "Content-Type")
         self.end_headers()
 
@@ -1928,6 +1929,25 @@ class DashboardHandler(SimpleHTTPRequestHandler):
                 print(f"[dashboard] linkedin/review/reject failed: {exc!r}")
                 return self._json({"ok": False, "error": str(exc)}, status=500)
         return self._json({"error": "not found"}, status=404)
+
+    def do_DELETE(self):
+        path = self.path.split("?", 1)[0]
+        prefix = "/api/pipeline/"
+        if not path.startswith(prefix):
+            return self._json({"ok": False, "error": "not found"}, status=404)
+        rest = path[len(prefix):]
+        if not rest.isdigit() or "/" in rest:
+            return self._json({"ok": False, "error": "id must be an integer"}, status=400)
+        try:
+            return self._json(pipeline_store.unqueue_application(int(rest)))
+        except LookupError as exc:
+            return self._json({"ok": False, "error": str(exc)}, status=404)
+        except ValueError as exc:
+            status = 409 if str(exc).startswith("cannot unqueue") else 400
+            return self._json({"ok": False, "error": str(exc)}, status=status)
+        except Exception as exc:
+            print(f"[dashboard] pipeline/unqueue failed: {exc!r}")
+            return self._json({"ok": False, "error": str(exc)}, status=500)
 
 
 class ThreadingHTTPServer(ThreadingMixIn, TCPServer):

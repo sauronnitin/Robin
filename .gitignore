@@ -62,10 +62,15 @@ dashboard/server.*.log
 # Local IDE / agent notes (optional publish later)
 .cursor/
 .claude/
+.agents/
+.impeccable/
 CONTEXT.md
 Screen Recordings/
 *.mp4
 *.mov
+
+# Exploratory design-reference images (not a deliverable)
+docs/pipeline-style-studies/
 
 # OS junk
 .DS_Store

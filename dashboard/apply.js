@@ -504,6 +504,10 @@
       + phasesHtml(app)
       + '<label class="jh-apply-detail-label" for="applyStatusSelect">Change status</label>'
       + '<select id="applyStatusSelect" class="jh-apply-select" data-app="' + app.id + '">' + options + '</select>'
+      + (app.status === 'discovered' && !state.sample
+          ? '<button class="jh-apply-btn" type="button" data-unqueue="' + app.id + '">Unqueue</button>'
+            + '<p class="jh-apply-unqueue-hint">Removes this job before the crew spends tokens on it. After scoring, skip it instead.</p>'
+          : '')
       + '<div class="jh-apply-detail-label">History</div>'
       + '<ul class="jh-apply-events">' + (events || '<li class="jh-apply-empty">No events</li>') + '</ul>'
       + '<div class="jh-apply-detail-label">Replies</div>'
@@ -645,6 +649,18 @@
     if (state.selected && state.selected.id === Number(applicationId)) openDetail(applicationId);
   }
 
+  async function unqueue(applicationId) {
+    if (state.sample) {
+      toast('Sample cards stay in memory until you clear the sample');
+      return;
+    }
+    var data = await api('/api/pipeline/' + encodeURIComponent(applicationId), { method: 'DELETE' });
+    if (!data.ok) { toast(data.error || 'Could not unqueue'); return; }
+    toast('Removed from queue');
+    closeDetail();
+    await load();
+  }
+
   async function scanReplies(button) {
     if (button) { button.disabled = true; button.dataset.busy = '1'; button.textContent = 'Checking…'; }
     try {
@@ -725,6 +741,9 @@
 
     if (event.target.closest('#applyDetailClose')) { closeDetail(); return; }
 
+    var unqueueBtn = event.target.closest('[data-unqueue]');
+    if (unqueueBtn) { unqueue(unqueueBtn.getAttribute('data-unqueue')); return; }
+
     var card = event.target.closest('.jh-apply-card');
     if (card) { openDetail(card.getAttribute('data-app')); }
   });
@@ -744,9 +763,9 @@
 
   // This file loads after the inline script has already restored the last
   // screen from localStorage, so nav()'s hook has nothing to call yet. Pick up
-  // that case here: if we loaded straight into Pipeline, fill the board.
+  // that case here: if we loaded straight into Apply, fill the board.
   function initIfVisible() {
-    var section = document.getElementById('s-pipeline');
+    var section = document.getElementById('s-apply');
     if (section && !section.classList.contains('hidden')) load();
   }
 
