@@ -1,0 +1,21 @@
+version: 2
+updates:
+  # Python deps (pyproject.toml)
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+
+  # Node deps for the resume-parser sidecar
+  - package-ecosystem: "npm"
+    directory: "/tools/open-resume-parser"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+
+  # Keep the CodeQL/Actions setup itself current
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"

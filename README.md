@@ -1,12 +1,27 @@
 # Robin
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](pyproject.toml)
+[![Dependabot](https://img.shields.io/badge/Dependabot-enabled-025E8C?logo=dependabot)](https://github.com/sauronnitin/Robin/security/dependabot)
+[![CodeQL](https://github.com/sauronnitin/Robin/actions/workflows/codeql.yml/badge.svg)](https://github.com/sauronnitin/Robin/actions/workflows/codeql.yml)
+
 Local-first AI **job application swarm**. Answer a few questions about the roles you want, drop in your resume and API keys, and run scout → fit → tailor → cover → apply agents from a visual canvas.
 
 Dry-run is the default. Real applications are opt-in.
 
-[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/YOUR_GITHUB_USER/Robin?quickstart=1)
+## 🚀 [**Try the live demo — click here**](https://sauronnitin.github.io/Robin/dashboard/mockup.html)
 
-Click the badge for a live instance with zero local install — Python, Node,
+**No install, no signup, no API key.** Walk through the real onboarding
+(with the animated bird) and every screen of the app — Browse, Apply board,
+Knowledge Graph, Metrics — pre-filled with sample data. Nothing here is a
+real job search; it's a static walkthrough hosted on GitHub Pages.
+
+---
+
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/sauronnitin/Robin?quickstart=1)
+
+Want the *real, running* app instead of the static demo? Click the badge
+above for a live instance with zero local install — Python, Node,
 Playwright, and the dashboard server are all set up automatically and the
 onboarding screen opens in a preview tab (~30-90s to spin up, then it's a
 real running copy of the app). Dry-run stays on and the shipped fictional
@@ -15,10 +30,6 @@ immediately. To go past onboarding into live Scout/Fit/Tailor/Cover runs,
 open the `.env` file it creates for you and paste in your own
 `GROQ_API_KEY` / `GEMINI_API_KEY` (see step 3 below for where to get them),
 then restart the server from the terminal: `python dashboard/server.py`.
-
-> **Site (GitHub Pages):** after you publish, open  
-> `https://YOUR_GITHUB_USER.github.io/Robin/`  
-> Start with **[Onboarding](docs/onboarding.html)** → download `profile.json` → follow **[Install](docs/install.html)**.
 
 ---
 
@@ -37,11 +48,11 @@ This repo ships a **fictional** Product Designer example (`profiles/product-desi
 
 ## Easiest path (10 minutes)
 
-1. Open the Pages onboarding (or [`docs/onboarding.html`](docs/onboarding.html) locally) and download `profile.json`.
+1. Open the [Pages onboarding](https://sauronnitin.github.io/Robin/docs/onboarding.html) (or [`docs/onboarding.html`](docs/onboarding.html) locally) and download `profile.json`.
 2. Clone and install:
 
 ```bash
-git clone https://github.com/YOUR_GITHUB_USER/Robin.git
+git clone https://github.com/sauronnitin/Robin.git
 cd Robin
 python -m venv .venv
 # Windows:
@@ -130,13 +141,19 @@ Onboarding choices map to `swarm.modules` and `swarm.optional` (LinkedIn loop, c
 
 ---
 
-## Publish checklist (maintainers)
+## Publish status (maintainers)
+
+Live at `github.com/sauronnitin/Robin`. For anyone re-running this playbook
+on a fork or a new template split-out:
 
 1. Create public GitHub repo named `Robin`.
 2. Push this tree (secrets already gitignored).
-3. Settings → Pages → Deploy from branch → `/docs`.
-4. Replace `YOUR_GITHUB_USER` in `README.md` and `docs/*.html`.
-5. Confirm Pages URL opens onboarding.
+3. Settings → Pages → Deploy from branch → `main`, folder **`/ (root)`** —
+   not `/docs`, since `dashboard/` needs to be reachable too.
+4. Replace `sauronnitin` in `README.md` and `docs/*.html` with your own
+   GitHub username.
+5. Confirm the Pages URL opens both `docs/onboarding.html` and
+   `dashboard/mockup.html` (the demo).
 6. Click the Codespaces badge on a fresh clone; confirm the preview tab opens
    on the onboarding screen without manual setup, `.env` exists with
    `DRY_RUN=True`, and the API-key paste + restart step in the badge's
