@@ -3,7 +3,7 @@ internal/private network targets -- CodeQL py/full-ssrf, alert #7."""
 
 from __future__ import annotations
 
-from jobhunter_ai.ats_jobs import _is_public_host, _probe_url
+from jobhunter_ai.ats_jobs import _is_public_host, _PROBE_ALLOWED_HOSTS, _probe_url
 
 
 def test_public_ip_is_allowed() -> None:
@@ -39,3 +39,13 @@ def test_probe_url_still_rejects_missing_url() -> None:
     ok, detail = _probe_url("")
     assert ok is False
     assert detail == "missing url"
+
+
+def test_probe_url_rejects_a_public_host_not_on_the_job_board_allowlist() -> None:
+    # example.com resolves to a real public IP -- would pass _is_public_host
+    # alone -- but it's not one of _HOST_SOURCE's known job-board hosts, so
+    # the explicit allowlist check must still refuse it.
+    assert "example.com" not in _PROBE_ALLOWED_HOSTS
+    ok, detail = _probe_url("https://example.com/x")
+    assert ok is False
+    assert detail == "blocked host"

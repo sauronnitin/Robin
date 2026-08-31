@@ -2036,9 +2036,14 @@ def parse_resume_bytes(filename: str, data: bytes) -> dict[str, Any]:
     # NamedTemporaryFile's suffix is appended to a securely-generated random
     # name -- but it's still a raw string concatenation, so an unvalidated
     # suffix (e.g. containing a path separator) could write outside the
-    # intended temp directory. Only the extensions Profile's upload actually
-    # accepts (PDF, DOC, DOCX) are allowed through.
-    suffix = Path(filename or "resume.pdf").suffix.lower()
+    # intended temp directory. Treat filename as untrusted end to end: drop
+    # any path components via basename, require the extension to already
+    # look like a plain ".ext" token, then enforce the allow-list of
+    # extensions Profile's upload actually accepts (PDF, DOC, DOCX, TEX).
+    raw_name = os.path.basename(filename or "resume.pdf")
+    suffix = Path(raw_name).suffix.lower()
+    if not re.fullmatch(r"\.[a-z0-9]+", suffix or ""):
+        suffix = ".pdf"
     if suffix not in _ALLOWED_RESUME_SUFFIXES:
         suffix = ".pdf"
     with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:

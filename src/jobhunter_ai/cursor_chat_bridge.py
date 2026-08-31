@@ -115,7 +115,13 @@ def _normalize_attachments(
     if not attachments:
         return saved, warnings
     message_id = _safe_path_segment(message_id, "unknown")
-    dest_root = _ATTACH_DIR / message_id
+    attach_root = _ATTACH_DIR.resolve()
+    dest_root = (_ATTACH_DIR / message_id).resolve()
+    if dest_root != attach_root and attach_root not in dest_root.parents:
+        # _safe_path_segment already blocks this; resolving and re-checking
+        # containment is the actual traversal guard CodeQL's path-injection
+        # query wants to see, not just an upstream character filter.
+        dest_root = attach_root / "unknown"
     dest_root.mkdir(parents=True, exist_ok=True)
     for idx, item in enumerate(attachments[: _MAX_ATTACHMENTS]):
         if not isinstance(item, dict):
@@ -142,8 +148,11 @@ def _normalize_attachments(
             warnings.append(f"{label} {name} exceeds {max_mb} MB.")
             continue
         rel_name = _safe_filename(name, f"{'image' if is_image else 'video'}-{idx + 1}")
-        rel_path = Path("attachments") / message_id / rel_name
-        abs_path = _CHAT_DIR / rel_path
+        abs_path = (dest_root / rel_name).resolve()
+        if abs_path != dest_root and dest_root not in abs_path.parents:
+            warnings.append(f"Skipped attachment with an unsafe name: {name}.")
+            continue
+        rel_path = abs_path.relative_to(_CHAT_DIR.resolve())
         abs_path.parent.mkdir(parents=True, exist_ok=True)
         abs_path.write_bytes(payload)
         saved.append(

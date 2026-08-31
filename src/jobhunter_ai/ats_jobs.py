@@ -24,6 +24,7 @@ from typing import Any
 
 from jobhunter_ai.job_feed import fetch_job_feed, item_to_normalized
 from jobhunter_ai.job_sources.base import NormalizedJob
+from jobhunter_ai.url_safety import host_matches
 
 _SCAN_LOCK = threading.Lock()
 _SCAN_LOG: deque[dict[str, Any]] = deque(maxlen=240)
@@ -115,10 +116,20 @@ def _is_public_host(hostname: str) -> bool:
     return True
 
 
+_PROBE_ALLOWED_HOSTS = tuple(h for h, _source in _HOST_SOURCE)
+
+
 def _probe_url(url: str, timeout: float = 5.0) -> tuple[bool, str]:
     """Return (ok, detail). Used by scan-fix retries."""
     if not url or not url.startswith("http"):
         return False, "missing url"
+    # Belt and braces: this only ever needs to re-probe the known job-board
+    # hosts already registered in _HOST_SOURCE, so an explicit allowlist
+    # check comes first (in addition to _is_public_host's private-IP check
+    # below) -- a request for any other host, reachable or not, is refused
+    # outright rather than merely IP-validated.
+    if not host_matches(url, *_PROBE_ALLOWED_HOSTS):
+        return False, "blocked host"
     host = urllib.parse.urlparse(url).hostname
     if not host or not _is_public_host(host):
         return False, "blocked host"
