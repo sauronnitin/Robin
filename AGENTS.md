@@ -175,6 +175,10 @@ should read.
 - Never ship the author's real name, email, or city in UI markup, autofill
   fallbacks, or test fixtures. Use the active profile, or empty/generic
   placeholders.
+- Everyday Start, Pause, and Stop for the main Scout-to-Log loop live on
+  Apply. Canvas stays. LinkedIn Lab, Knowledge Graph, and Canvas sit under a
+  Sandbox rail heading.
+- Do not use GitHub-green contribution color. Use existing Steep design tokens.
 
 ## Learned Workspace Facts
 
@@ -186,3 +190,14 @@ should read.
 - `job.work_mode` is only `remote`, `hybrid`, `onsite`, or empty. All writes,
   including `pipeline_sync._identity()`, go through `normalize_work_mode`.
   Employment-type strings such as Full-Time become empty, not a location mode.
+- `goal:` and `backstory:` in `src/jobhunter_ai/config/agents.yaml` and
+  `tasks.yaml` are unquoted plain multi-line scalars. A bare colon inside a
+  line is invalid YAML and blocks every live run. Use parenthetical
+  interpolations such as `({niche})`.
+- `GoogleDrivePdfUploadTool` must resolve `FILE:` refs even when quoted or
+  wrapped, and must reject non-PDF bytes before uploading.
+- Score/Apply sync must not fork duplicate `job` rows when the extracted
+  title is empty or leaks a `Job Title:` label. `pipeline_sync` upsert should
+  still match the same URL.
+- Flush `events.jsonl` at session start (server boot with no live crew, or a
+  new Start). Do not replay a prior run's Activity lines when idle.
