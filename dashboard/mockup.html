@@ -748,12 +748,28 @@ html.dark #ob {
       glide-in animation is untouched — see window.__obIntroReveal below,
       which only gates WHEN it starts. */
 #obIntroBlock {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   transform: translateY(var(--ob-intro-shift, 0px));
   transition: transform 900ms cubic-bezier(.22, 1, .36, 1);
 }
+.ob-volume-hint {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-top: 10px;
+  white-space: nowrap;
+  font-family: var(--st-sans);
+  font-size: 13px;
+  color: var(--st-smoke);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 350ms ease;
+}
+.ob-volume-hint.on { opacity: 1; }
 #obTitle {
   transition: transform 900ms ease, opacity 900ms ease;
 }
@@ -3050,6 +3066,7 @@ html.dark .jh-asst-send { background: var(--st-peach); color: var(--st-sienna); 
   <div id="obIntroBlock">
     <h1 class="st-h1" id="obTitle" style="margin-top:-28px">Welcome to Robin</h1>
     <p class="ob-tagline" id="obTagline">An AI swarm that finds, tailors, and applies to jobs for you.</p>
+    <p class="ob-volume-hint" id="obVolumeHint">Volume Up for best experience</p>
   </div>
   <p class="text-smoke text-sm mb-3" id="obSubtitle">How would you like to get started?</p>
 
@@ -3101,6 +3118,7 @@ html.dark .jh-asst-send { background: var(--st-peach); color: var(--st-sienna); 
   const ob = document.getElementById('ob');
   const title = document.getElementById('obTitle');
   const tagline = document.getElementById('obTagline');
+  const volumeHint = document.getElementById('obVolumeHint');
   const block = document.getElementById('obIntroBlock');
   if(!ob || !title || !block){ window.__obIntroReveal = Promise.resolve(); }
   else{
@@ -3126,7 +3144,8 @@ html.dark .jh-asst-send { background: var(--st-peach); color: var(--st-sienna); 
     // only once that's done does the rest of the UI slowly fade in.
     const TITLE_TRANSITION = 900;
     const TAGLINE_TRANSITION = 900;
-    const HOLD = 1200;             // both visible together, stationary
+    const HOLD = 2000;             // title + tagline + volume hint held, stationary
+    const HINT_FADE = 350;         // matches .ob-volume-hint's own opacity transition
     const MOVE_TRANSITION = 900;
     (async function sequence(){
       await wait(50);                              // let the pending state paint first
@@ -3134,7 +3153,10 @@ html.dark .jh-asst-send { background: var(--st-peach); color: var(--st-sienna); 
       await wait(TITLE_TRANSITION);
       if(tagline) tagline.classList.remove('ob-pending'); // tagline grows in, right after
       await wait(TAGLINE_TRANSITION);
-      await wait(HOLD);                             // both held, readable
+      if(volumeHint) volumeHint.classList.add('on'); // volume hint fades in under them
+      await wait(HOLD);                             // held, readable, for 2s
+      if(volumeHint) volumeHint.classList.remove('on'); // hint fades out before the move
+      await wait(HINT_FADE);
       block.style.setProperty('--ob-intro-shift', '0px'); // move up to original position
       await wait(MOVE_TRANSITION);
       ob.classList.remove('ob-intro');              // THEN the rest of the UI slowly appears
