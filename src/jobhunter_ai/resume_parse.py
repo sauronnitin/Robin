@@ -10,6 +10,8 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
+from jobhunter_ai.url_safety import host_matches
+
 # Project root: src/jobhunter_ai/resume_parse.py -> ../..
 _PROJECT_ROOT = Path(__file__).resolve().parents[2]
 _OPEN_RESUME_CLI = _PROJECT_ROOT / "tools" / "open-resume-parser" / "parse.mjs"
@@ -1526,7 +1528,9 @@ def _heuristic_parse(text: str, line_metas: list[dict[str, Any]] | None = None) 
     portfolio_m = None
     for m in re.finditer(r"https?://(?:www\.)?([A-Za-z0-9.-]+\.[A-Za-z]{2,})(?:/[^\s]*)?", contact_src, re.I):
         host = (m.group(1) or "").lower()
-        if "linkedin.com" in host or "github.com" in host:
+        if any(
+            host == d or host.endswith("." + d) for d in ("linkedin.com", "github.com")
+        ):
             continue
         portfolio_m = m
         break
@@ -1809,10 +1813,9 @@ def _map_open_resume_url(url: str) -> dict[str, str]:
     u = (url or "").strip()
     if not u:
         return {"linkedin": "", "github": "", "portfolio": ""}
-    low = u.lower()
-    if "linkedin.com" in low:
+    if host_matches(u, "linkedin.com"):
         return {"linkedin": u[:200], "github": "", "portfolio": ""}
-    if "github.com" in low:
+    if host_matches(u, "github.com"):
         return {"linkedin": "", "github": u[:200], "portfolio": ""}
     return {"linkedin": "", "github": "", "portfolio": u[:200]}
 
@@ -2026,8 +2029,18 @@ def _finalize_parse_result(
     return enriched
 
 
+_ALLOWED_RESUME_SUFFIXES = (".pdf", ".doc", ".docx", ".tex")
+
+
 def parse_resume_bytes(filename: str, data: bytes) -> dict[str, Any]:
-    suffix = Path(filename or "resume.pdf").suffix.lower() or ".pdf"
+    # NamedTemporaryFile's suffix is appended to a securely-generated random
+    # name -- but it's still a raw string concatenation, so an unvalidated
+    # suffix (e.g. containing a path separator) could write outside the
+    # intended temp directory. Only the extensions Profile's upload actually
+    # accepts (PDF, DOC, DOCX) are allowed through.
+    suffix = Path(filename or "resume.pdf").suffix.lower()
+    if suffix not in _ALLOWED_RESUME_SUFFIXES:
+        suffix = ".pdf"
     with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
         tmp.write(data)
         tmp_path = Path(tmp.name)

@@ -23,6 +23,8 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
 
+from jobhunter_ai.url_safety import host_matches
+
 _ROOT = Path(__file__).resolve().parents[3]
 _AUTOFILL_PATH = _ROOT / "user" / "apply_autofill.json"
 _SIMPLIFY_WAIT_S = 14.0
@@ -293,7 +295,7 @@ def download_resume_pdf(resume_pdf_link: str) -> Path | None:
             return None
         # Prefer Drive direct download when share link.
         url = link
-        if "drive.google.com" in (parsed.netloc or "") and "/file/d/" in link:
+        if host_matches(link, "drive.google.com") and "/file/d/" in link:
             m = re.search(r"/file/d/([^/]+)", link)
             if m:
                 url = f"https://drive.google.com/uc?export=download&id={m.group(1)}"

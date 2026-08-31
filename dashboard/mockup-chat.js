@@ -121,7 +121,22 @@
     if (options.error) el.classList.add("error");
     if (options.action) el.classList.add("action");
     if (options.html) {
-      el.innerHTML = htmlOrText;
+      // Every current caller already escapes user-provided text before
+      // building this markup, but that's an unenforced convention scattered
+      // across call sites -- sanitize here too, at the one shared sink, so a
+      // future caller can't accidentally reintroduce an XSS. DOMPurify (not
+      // a hand-rolled check) is what CodeQL's XSS queries recognize as an
+      // actual sanitizer.
+      el.innerHTML = window.DOMPurify
+        ? DOMPurify.sanitize(htmlOrText, {
+            ALLOWED_TAGS: ["div", "span", "br", "img", "button"],
+            ALLOWED_ATTR: ["class", "src", "alt", "data-idx", "title", "aria-label", "aria-hidden", "type"],
+            // Attachment thumbnails are data: URLs from the user's own local
+            // FileReader.readAsDataURL() -- never remote/attacker-controlled
+            // -- so data: has to stay allowed here for <img src> to render.
+            ALLOWED_URI_REGEXP: /^(?:(?:https?|mailto|data):|[^a-z]|[a-z+.-]+(?:[^a-z+.\-:]|$))/i,
+          })
+        : escapeHtml(htmlOrText);
     } else {
       el.textContent = htmlOrText || "";
     }

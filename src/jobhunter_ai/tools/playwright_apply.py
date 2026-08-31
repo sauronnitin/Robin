@@ -12,6 +12,7 @@ from playwright.sync_api import sync_playwright
 from jobhunter_ai import browser_preview
 from jobhunter_ai.tools import ats_form_fill
 from jobhunter_ai.tools.google_sheets import GoogleSheetsSearchTool
+from jobhunter_ai.url_safety import host_matches
 
 DELAY_BETWEEN_FIELDS = (3, 8)    # seconds
 DELAY_AFTER_SUBMIT = (5, 10)     # seconds
@@ -89,7 +90,7 @@ class PlaywrightApplyTool(BaseTool):
             return f"DRY_RUN: would apply to {job_url}"
 
         # 2. Duplicate check / LinkedIn gate (LinkedIn is the separate LI loop).
-        if "linkedin.com" in (job_url or "").lower():
+        if host_matches(job_url or "", "linkedin.com"):
             return "SKIPPED - LinkedIn (use LI loop)"
 
         search_tool = GoogleSheetsSearchTool()

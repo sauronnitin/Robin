@@ -92,6 +92,20 @@ def _safe_filename(name: str, fallback: str) -> str:
     return base or fallback
 
 
+def _safe_path_segment(value: str, fallback: str) -> str:
+    """Sanitize a single path segment (not just a filename).
+
+    _safe_filename alone still lets "." or ".." through -- as a whole path
+    segment those mean "this/parent directory", which is exactly the
+    traversal py/path-injection warns about. message_id is always
+    server-generated today (see the one real call site), but
+    _normalize_attachments shouldn't rely on every future caller
+    remembering that.
+    """
+    base = _safe_filename(value, fallback)
+    return fallback if base in (".", "..") else base
+
+
 def _normalize_attachments(
     attachments: list[Any] | None,
     message_id: str,
@@ -100,6 +114,7 @@ def _normalize_attachments(
     warnings: list[str] = []
     if not attachments:
         return saved, warnings
+    message_id = _safe_path_segment(message_id, "unknown")
     dest_root = _ATTACH_DIR / message_id
     dest_root.mkdir(parents=True, exist_ok=True)
     for idx, item in enumerate(attachments[: _MAX_ATTACHMENTS]):

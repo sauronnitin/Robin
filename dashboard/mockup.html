@@ -14,6 +14,7 @@
 })();
 </script>
 <script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3.2.4/dist/purify.min.js"></script>
 <script>
 tailwind.config = {
   darkMode: 'class',
@@ -5161,12 +5162,25 @@ function postedAgeDays(j){
   return null;
 }
 
+// Some job-board APIs return descriptions escaped more than once (e.g.
+// "&amp;lt;p&amp;gt;"), so this decodes entities in a loop until stable.
+// Pure string decode -- never touches innerHTML/DOM parsing, so there is no
+// HTML-interpretation sink here even before sanitizeJdHtml runs.
+const _JD_NAMED_ENTITIES = { amp:'&', lt:'<', gt:'>', quot:'"', apos:"'", nbsp:' ' };
+function decodeHtmlEntities(str){
+  return String(str || '').replace(/&(#x?[0-9a-f]+|[a-z]+);/gi, (m, ent) => {
+    if(ent[0] === '#'){
+      const code = ent[1].toLowerCase() === 'x' ? parseInt(ent.slice(2), 16) : parseInt(ent.slice(1), 10);
+      return Number.isFinite(code) ? String.fromCodePoint(code) : m;
+    }
+    const key = ent.toLowerCase();
+    return Object.prototype.hasOwnProperty.call(_JD_NAMED_ENTITIES, key) ? _JD_NAMED_ENTITIES[key] : m;
+  });
+}
 function unescapeJd(html){
   let out = String(html || '');
-  const ta = document.createElement('textarea');
   for(let i = 0; i < 3; i++){
-    ta.innerHTML = out;
-    const next = ta.value;
+    const next = decodeHtmlEntities(out);
     if(next === out) break;
     out = next;
   }
@@ -5198,29 +5212,24 @@ function pickJobDesc(j){
   return bestPlain.split(/\n\s*\n/).filter(Boolean).map((block)=>`<p>${esc(block).replace(/\n/g, '<br>')}</p>`).join('');
 }
 
+// DOMPurify (not a hand-rolled regex pass) does the actual sanitization --
+// regex-based HTML sanitizers are a well-known anti-pattern (they can't
+// correctly handle nested/malformed markup, encoded payloads, or mutation
+// XSS the way a real HTML parser + allowlist can). CodeQL's XSS queries
+// specifically recognize DOMPurify.sanitize() as a sanitizer, so its output
+// is safe to assign to innerHTML.
 function sanitizeJdHtml(html){
-  let s = unescapeJd(html);
-  s = s.replace(/<(script|style|iframe|object|embed|link|meta|base)[^>]*>[\s\S]*?<\/\1>/gi, ' ');
-  s = s.replace(/<(script|style|iframe|object|embed|link|meta|base)[^>]*\/?>/gi, ' ');
-  s = s.replace(/\son\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '');
-  s = s.replace(/javascript:/gi, '');
-  s = s.replace(/vbscript:/gi, '');
+  const raw = unescapeJd(html);
+  const clean = DOMPurify.sanitize(raw, {
+    ALLOWED_TAGS: ['p','br','ul','ol','li','strong','b','em','i','u','a','h1','h2','h3','h4','blockquote','span','div'],
+    ALLOWED_ATTR: ['href'],
+    ALLOWED_URI_REGEXP: /^(?:https?:|mailto:|#)/i,
+  });
   const box = document.createElement('div');
-  box.innerHTML = s;
-  box.querySelectorAll('*').forEach((el)=>{
-    [...el.attributes].forEach((attr)=>{
-      const name = attr.name.toLowerCase();
-      if(el.tagName === 'A' && name === 'href'){
-        const href = el.getAttribute('href') || '';
-        if(!/^(https?:|mailto:|#)/i.test(href)) el.removeAttribute('href');
-        return;
-      }
-      el.removeAttribute(attr.name);
-    });
-    if(el.tagName === 'A'){
-      el.setAttribute('target', '_blank');
-      el.setAttribute('rel', 'noopener noreferrer');
-    }
+  box.innerHTML = clean;
+  box.querySelectorAll('a').forEach((el)=>{
+    el.setAttribute('target', '_blank');
+    el.setAttribute('rel', 'noopener noreferrer');
   });
   return box.innerHTML;
 }
@@ -5941,8 +5950,10 @@ function jobQueueKeyParts(j){
 }
 
 function isLinkedInJob(j){
-  const url = String(j.job_url || j.url || j.apply_url || j.link || '').toLowerCase();
-  return url.includes('linkedin.com');
+  const raw = String(j.job_url || j.url || j.apply_url || j.link || '');
+  let host = '';
+  try { host = new URL(raw, location.href).hostname.toLowerCase(); } catch(e) { return false; }
+  return host === 'linkedin.com' || host.endsWith('.linkedin.com');
 }
 
 function isQueuedJob(j){
