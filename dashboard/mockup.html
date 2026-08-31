@@ -3187,7 +3187,7 @@ html.dark #resumePreviewHint {
   let ambientTimer = null, idleTimer = null, quiet = false;
   function scheduleAmbient(){
     if(quiet) return;
-    const delay = 14000 + Math.random() * 26000; // 14-40s, quiet and irregular
+    const delay = 7000 + Math.random() * 13000; // 7-20s, quiet and irregular
     ambientTimer = setTimeout(() => { doSmallAmbientChirp(); scheduleAmbient(); }, delay);
   }
   // Core head-turn animation, reusable by both the standalone idle-tilt timer
