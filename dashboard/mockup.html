@@ -3077,16 +3077,6 @@ html.dark #resumePreviewHint {
     osc.start(now + startOffset);
     osc.stop(releaseEnd + 0.02);
   }
-  function playChirpTone(){
-    try{
-      const ctx = ensureAudio();
-      const now = ctx.currentTime;
-      tone(ctx, now, 0.00, 2400, 3400, 0.09, 0.16);
-      tone(ctx, now, 0.11, 2800, 4100, 0.07, 0.14);
-      tone(ctx, now, 0.24, 2200, 3000, 0.10, 0.15);
-      return 390; // ms — last note (0.24 + 0.10 dur + 0.05 release) rounded up
-    }catch(e){ return 0; }
-  }
   function playSmallChirp(){
     try{
       const ctx = ensureAudio();
@@ -3099,11 +3089,15 @@ html.dark #resumePreviewHint {
   // pitch contour and random gaps. A fixed motif on a loop reads as a UI
   // sound effect; a varying one reads as a bird. Returns its length in ms so
   // the caller can time the visual to it.
-  function playRandomChirp(peak){
+  // minNotes/maxNotes let a deliberate chirp (click, landing greeting) answer
+  // with a fuller phrase than an idle one without becoming predictable —
+  // still random, just drawn from a higher range.
+  function playRandomChirp(peak, minNotes, maxNotes){
     try{
       const ctx = ensureAudio();
       const now = ctx.currentTime;
-      const notes = 1 + Math.floor(Math.random() * 3);   // 1-3 notes
+      const lo = minNotes || 1, hi = maxNotes || 3;
+      const notes = lo + Math.floor(Math.random() * (hi - lo + 1));
       let t = 0;
       for(let i = 0; i < notes; i++){
         const dur = 0.06 + Math.random() * 0.10;
@@ -3159,8 +3153,15 @@ html.dark #resumePreviewHint {
     busy = true;
     await liftFromPainting();
     if(quiet){ setPerchedPose(poseNeutral); await settleIntoPainting(); busy = false; return; }
-    const len = playChirpTone();
-    pulseChirpMark(false);
+    // Answers the poke differently every time. It used to be one fixed
+    // three-note motif at a fixed length, which made repeat clicks read as a
+    // button sound rather than as a bird reacting — the exact failure the
+    // ambient chirp was already randomised to avoid. Drawn from a higher note
+    // range than the idle chirp so a click still feels answered, and it
+    // sometimes turns its head, so the reaction varies in gesture too.
+    if(Math.random() < 0.45) tiltHeadAnimation();
+    const len = playRandomChirp(0.15, 2, 4);
+    pulseChirpMark(len < 300);
     setPerchedPose(poseSinging);
     await waitOrQuiet(len + CHIRP_TAIL_MS);
     setPerchedPose(poseNeutral);
@@ -3300,8 +3301,8 @@ html.dark #resumePreviewHint {
     await waitOrQuiet(240);
     if(!quiet){
       lastChirpAt = Date.now();   // don't let the ambient timer stack onto this
-      const len = playChirpTone();
-      pulseChirpMark(false);
+      const len = playRandomChirp(0.15, 2, 4);
+      pulseChirpMark(len < 300);
       setPerchedPose(poseSinging);
       await waitOrQuiet(len + GREET_TAIL_MS);
       setPerchedPose(poseNeutral);
