@@ -1285,12 +1285,16 @@ class DashboardHandler(SimpleHTTPRequestHandler):
             try:
                 grouped = pipeline_store.list_pipeline()
                 home = _tag_locations(grouped)
+                by_stage = pipeline_store.group_by_stage(grouped)
                 return self._json(
                     {
                         "ok": True,
                         "order": list(pipeline_store.PIPELINE_ORDER),
+                        "stages": list(pipeline_store.BOARD_STAGES),
                         "pipeline": grouped,
+                        "by_stage": by_stage,
                         "counts": {k: len(v) for k, v in grouped.items()},
+                        "stage_counts": {k: len(v) for k, v in by_stage.items()},
                         "pending": pipeline_store.pending_confirmations(),
                         "home_country": home,
                     }
@@ -1639,11 +1643,15 @@ class DashboardHandler(SimpleHTTPRequestHandler):
                     return self._json({"ok": False, "error": "JSON object required"}, status=400)
                 application_id = int(body.get("application_id") or 0)
                 status_value = str(body.get("status") or "")
+                board_stage = str(body.get("board_stage") or "")
                 note = str(body.get("note") or "")
-                pipeline_store.set_status(application_id, status_value, "user", note)
-                return self._json(
-                    {"ok": True, "application": pipeline_store.get_application(application_id)}
+                item = pipeline_store.apply_board_move(
+                    application_id,
+                    board_stage=board_stage or None,
+                    status=status_value or None,
+                    note=note,
                 )
+                return self._json({"ok": True, "application": item})
             except ValueError as exc:
                 # Unknown status or unknown application - the caller's mistake.
                 return self._json({"ok": False, "error": str(exc)}, status=400)
