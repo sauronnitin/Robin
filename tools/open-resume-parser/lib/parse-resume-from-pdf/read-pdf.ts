@@ -1,35 +1,36 @@
 /**
  * Node-adapted PDF reader based on Open Resume read-pdf.ts.
- * Uses pdfjs-dist legacy build + file path / Uint8Array input.
- * Forces hasEOL on the last text item of each page (page-break fix).
+ * Uses pdfjs-dist legacy build (ESM, pdfjs-dist >=5) + file path / Uint8Array
+ * input. Forces hasEOL on the last text item of each page (page-break fix).
  */
 import fs from "node:fs";
 import path from "node:path";
-import { createRequire } from "node:module";
 import type { TextItem, TextItems } from "lib/parse-resume-from-pdf/types";
-
-const require = createRequire(import.meta.url);
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type PdfjsModule = any;
 
-function loadPdfjs(): PdfjsModule {
-  // Prefer legacy build for Node (CJS). Browser webpack entry is not used here.
+async function loadPdfjs(): Promise<PdfjsModule> {
+  // pdfjs-dist >=5 ships ESM-only builds (.mjs); the old CJS pdf.js/pdf.worker.js
+  // legacy files are gone. Legacy build is still the right choice for Node --
+  // it's the one built to run outside a browser DOM.
   try {
-    return require("pdfjs-dist/legacy/build/pdf.js");
+    return await import("pdfjs-dist/legacy/build/pdf.mjs");
   } catch {
-    return require("pdfjs-dist");
+    return await import("pdfjs-dist");
   }
 }
 
-const pdfjs = loadPdfjs();
+// Top-level await: this module only ever runs under tsx/ESM (see parse.mjs),
+// which supports it natively.
+const pdfjs: PdfjsModule = await loadPdfjs();
 
 const workerPath = (() => {
   try {
-    return require.resolve("pdfjs-dist/legacy/build/pdf.worker.js");
+    return import.meta.resolve("pdfjs-dist/legacy/build/pdf.worker.mjs");
   } catch {
     try {
-      return require.resolve("pdfjs-dist/build/pdf.worker.js");
+      return import.meta.resolve("pdfjs-dist/build/pdf.worker.mjs");
     } catch {
       return "";
     }
@@ -37,7 +38,6 @@ const workerPath = (() => {
 })();
 
 if (workerPath) {
-  // Node fake-worker uses require(workerSrc); must be a filesystem path, not file://
   pdfjs.GlobalWorkerOptions.workerSrc = workerPath;
 }
 
