@@ -5,6 +5,145 @@
 
 /* The page itself never scrolls. Everything is bounded to the viewport and the
    scrolling happens inside the region that owns the content. */
+/* Everyday Start lives here. Compact Steep bar; the kanban below is the result. */
+.jh-apply-runbar {
+  flex: 0 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 10px 20px;
+  border-bottom: 1px solid var(--st-border);
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(12px);
+}
+
+html.dark .jh-apply-runbar {
+  background: rgba(15, 13, 11, 0.90);
+}
+
+.jh-apply-runbar-lead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.jh-apply-runbar-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+  min-width: 0;
+}
+
+.jh-apply-runbar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.jh-apply-runbar-dots {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 6px 8px;
+  flex: 1 1 220px;
+  min-width: 0;
+}
+
+.jh-apply-dot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  min-width: 28px;
+}
+
+.jh-apply-dot-sq {
+  width: 14px;
+  height: 14px;
+  border-radius: 2px;
+  background: var(--st-ash);
+}
+
+.jh-apply-dot-name,
+.jh-apply-dot-n {
+  font-family: var(--st-sans);
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--st-ash);
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.jh-apply-dot-n {
+  font-variant-numeric: tabular-nums;
+  color: var(--st-slate);
+}
+
+.jh-apply-run-stat {
+  font-family: var(--st-sans);
+  font-size: 12px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: var(--st-slate);
+  min-width: 3.4em;
+  text-align: right;
+}
+
+.jh-apply-run-agent {
+  min-width: 5.5em;
+  text-align: left;
+  color: var(--st-ink);
+}
+
+.jh-apply-mode-badge {
+  flex-shrink: 0;
+  font-family: var(--st-sans);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--st-ink);
+  border: 1px solid var(--st-border);
+  border-radius: var(--radius-md);
+  padding: 2px 7px;
+}
+
+.jh-apply-mode-badge.is-dry {
+  border-color: #fab219;
+}
+
+.jh-apply-mode-badge.is-live {
+  color: var(--st-sienna);
+  border-color: var(--st-sienna);
+}
+
+.jh-apply-runbar-warn,
+.jh-apply-runbar-msg {
+  flex: 1 1 100%;
+  margin: 0;
+  font-family: var(--st-sans);
+  font-size: 12px;
+  color: var(--st-sienna);
+}
+
+.jh-apply-runbar-msg {
+  color: var(--st-slate);
+}
+
+.jh-apply-runbar-warn.hidden,
+.jh-apply-runbar-msg[hidden] {
+  display: none;
+}
+
+.jh-apply-runbar .jh-apply-btn[disabled] {
+  cursor: not-allowed;
+}
+
 .jh-apply-wrap {
   display: flex;
   flex: 1;
@@ -32,7 +171,117 @@
   padding-bottom: 20px;
 }
 
-/* Wide boards scroll inside their own container — never the page body. */
+/* Wide boards scroll inside their own container, never the page body. */
+.jh-apply-stagegrid {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.jh-apply-band-label {
+  font-family: var(--st-sans);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--st-ash);
+  margin-bottom: 8px;
+}
+
+.jh-apply-band-row {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  align-items: flex-start;
+  padding: 4px 2px 10px;
+}
+
+.jh-apply-band-row > .jh-bento-card {
+  flex: 0 0 132px;
+  min-width: 132px;
+  align-self: flex-start;
+  text-align: left;
+  cursor: pointer;
+  overflow: visible;
+}
+
+.jh-apply-band-row > .jh-apply-col {
+  flex: 0 0 248px;
+  min-width: 248px;
+  max-height: 420px;
+  align-self: flex-start;
+  position: relative;
+}
+
+#s-apply .jh-apply-stagegrid .jh-bento-card.is-running,
+.jh-apply-col.is-running {
+  z-index: 1;
+  border-color: var(--st-ink);
+  border-style: solid;
+}
+
+#s-apply .jh-apply-stagegrid .jh-bento-card {
+  overflow: visible;
+  align-self: flex-start;
+}
+
+@property --jh-run-angle {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+
+#s-apply .jh-apply-stagegrid .jh-bento-card.is-running::before,
+.jh-apply-col.is-running::before {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: 6px;
+  padding: 2px;
+  background: conic-gradient(
+    from var(--jh-run-angle),
+    var(--st-ink) 0 20%,
+    var(--st-sienna) 26%,
+    transparent 38% 100%
+  );
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: jh-apply-run-spin 1.15s linear infinite;
+  pointer-events: none;
+}
+
+#s-apply .jh-apply-stagegrid .jh-bento-locked.is-running {
+  border-style: solid;
+}
+
+.jh-apply-dot {
+  position: relative;
+}
+
+.jh-apply-dot.is-running .jh-apply-dot-sq {
+  outline: 2px solid var(--st-ink);
+  outline-offset: 2px;
+}
+
+.jh-apply-dot.is-running::before,
+.jh-apply-dot.is-running::after {
+  content: none;
+}
+
+@keyframes jh-apply-run-spin {
+  to { --jh-run-angle: 360deg; }
+}
+
+#s-apply .jh-apply-stagegrid .jh-bento-card.is-drop,
+.jh-apply-col.is-drop,
+.jh-apply-col-body.is-drop {
+  outline: 2px solid var(--st-ink);
+  outline-offset: 1px;
+}
+
 .jh-apply-cols {
   display: flex;
   gap: 12px;
@@ -47,7 +296,7 @@
   min-width: 232px;
   background: var(--st-card, var(--st-mist));
   border: 1px solid var(--st-border);
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -74,11 +323,13 @@
   color: var(--st-ink);
   cursor: pointer;
   text-align: left;
+  position: relative;
+  z-index: 2;
 }
 
 .jh-apply-col.is-collapsed .jh-apply-col-head { border-bottom: none; }
 .jh-apply-col-head:hover { background: var(--st-fog); }
-.jh-apply-col-caret { color: var(--st-ash); font-size: 10px; }
+.jh-apply-col-caret { color: var(--st-ash); font-size: 12px; }
 
 .jh-apply-col-icon {
   width: 18px;
@@ -89,7 +340,7 @@
   border-radius: 5px;
   background: var(--apply-color);
   color: #fff;
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1;
 }
 
@@ -101,7 +352,7 @@
   color: var(--st-slate);
   background: var(--st-fog);
   border: 1px solid var(--st-border);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   padding: 1px 8px;
 }
 
@@ -130,10 +381,10 @@
   align-items: center;
   gap: 7px;
   font-family: var(--st-sans);
-  font-size: 12px;
+  font-size: 14px;
   color: var(--st-slate);
   border: 1px solid var(--st-border);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   padding: 4px 12px 4px 5px;
   background: var(--st-card, var(--st-mist));
 }
@@ -154,7 +405,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--st-peach);
   color: var(--st-sienna);
   font-size: 10.5px;
@@ -179,7 +430,7 @@
 .jh-apply-sample-copy {
   flex: 1;
   font-family: var(--st-sans);
-  font-size: 12px;
+  font-size: 14px;
   color: var(--st-slate);
 }
 
@@ -187,7 +438,7 @@
 .jh-apply-dry-tag {
   flex-shrink: 0;
   font-family: var(--st-sans);
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.05em;
   text-transform: uppercase;
@@ -201,7 +452,7 @@
 .jh-apply-sample-tag {
   flex-shrink: 0;
   font-family: var(--st-sans);
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -219,8 +470,12 @@
   border-radius: 9px;
   background: var(--st-canvas);
   padding: 10px 11px;
-  cursor: pointer;
+  cursor: grab;
   transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.jh-apply-card:active {
+  cursor: grabbing;
 }
 
 .jh-apply-card:hover,
@@ -252,7 +507,7 @@
   font-variant-numeric: tabular-nums;
   color: var(--st-sienna);
   background: var(--st-peach);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   padding: 1px 6px;
   flex-shrink: 0;
 }
@@ -274,12 +529,12 @@
   gap: 5px;
   margin-top: 6px;
   font-family: var(--st-sans);
-  font-size: 11px;
+  font-size: 14px;
   color: var(--st-slate);
   min-width: 0;
 }
 
-.jh-apply-loc-icon { flex-shrink: 0; font-size: 10px; }
+.jh-apply-loc-icon { flex-shrink: 0; font-size: 12px; }
 
 .jh-apply-loc-text {
   overflow: hidden;
@@ -327,7 +582,7 @@
 
 .jh-apply-metric-value {
   font-family: var(--st-sans);
-  font-size: 13px;
+  font-size: 14px;
   font-variant-numeric: tabular-nums;
   color: var(--st-ink);
 }
@@ -358,7 +613,7 @@
   flex: 1;
   height: 3px;
   min-width: 32px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--st-border);
   overflow: hidden;
 }
@@ -366,7 +621,7 @@
 .jh-apply-ats-track > span {
   display: block;
   height: 100%;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--st-ash);
 }
 
@@ -382,7 +637,7 @@
 }
 
 .jh-apply-when {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--st-ash);
 }
 
@@ -396,11 +651,11 @@
   align-items: center;
   gap: 4px;
   font-family: var(--st-sans);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 500;
   color: var(--st-ink);
   border: 1px solid var(--apply-color);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   padding: 1px 7px;
   white-space: nowrap;
 }
@@ -409,7 +664,7 @@
 
 .jh-apply-empty {
   font-family: var(--st-sans);
-  font-size: 12px;
+  font-size: 14px;
   color: var(--st-ash);
   padding: 10px 2px;
 }
@@ -418,7 +673,7 @@
 
 .jh-apply-group {
   border: 1px solid var(--st-border);
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   background: var(--st-card, var(--st-mist));
   margin-bottom: 14px;
 }
@@ -437,7 +692,7 @@
 }
 
 .jh-apply-group-head::-webkit-details-marker { display: none; }
-.jh-apply-group-head::before { content: '▸'; color: var(--st-ash); font-size: 10px; }
+.jh-apply-group-head::before { content: '▸'; color: var(--st-ash); font-size: 12px; }
 .jh-apply-group[open] .jh-apply-group-head::before { content: '▾'; }
 .jh-apply-group-head .jh-apply-col-count { margin-left: auto; }
 
@@ -452,7 +707,7 @@
 
 .jh-apply-pending-wrap {
   border: 1px solid var(--st-border);
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   background: var(--st-card, var(--st-mist));
   padding: 14px;
   margin-bottom: 14px;
@@ -466,7 +721,7 @@
 
 .jh-apply-pending-note {
   font-family: var(--st-sans);
-  font-size: 12px;
+  font-size: 14px;
   color: var(--st-slate);
   margin: 2px 0 10px;
 }
@@ -483,7 +738,7 @@
 
 .jh-apply-pending-subject {
   font-family: var(--st-sans);
-  font-size: 13px;
+  font-size: 14px;
   color: var(--st-ink);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -503,15 +758,22 @@
 
 .jh-apply-pending-actions { display: flex; gap: 6px; flex-shrink: 0; }
 
+.jh-apply-unqueue-hint {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: var(--st-slate);
+  line-height: 1.4;
+}
+
 /* ── Controls ────────────────────────────────────────────────────────── */
 
 .jh-apply-btn {
   font-family: var(--st-sans);
-  font-size: 12px;
+  font-size: 14px;
   color: var(--st-ink);
   background: var(--st-canvas);
   border: 1px solid var(--st-border);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   padding: 5px 10px;
   cursor: pointer;
 }
@@ -534,7 +796,7 @@ html.dark .jh-apply-btn.is-primary { color: var(--st-page); }
   color: var(--st-ink);
   background: var(--st-canvas);
   border: 1px solid var(--st-border);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   padding: 6px 8px;
   margin-bottom: 14px;
 }
@@ -547,7 +809,7 @@ html.dark .jh-apply-btn.is-primary { color: var(--st-page); }
   font-family: var(--st-sans);
   font-size: 11.5px;
   font-weight: 500;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   padding: 2px 10px;
   border: 1px solid var(--st-border);
   color: var(--st-slate);
@@ -568,7 +830,7 @@ html.dark .jh-apply-btn.is-primary { color: var(--st-page); }
 
 .jh-gmail-facts li {
   font-family: var(--st-sans);
-  font-size: 12px;
+  font-size: 14px;
   color: var(--st-slate);
   padding-left: 14px;
   position: relative;
@@ -600,7 +862,7 @@ html.dark .jh-apply-btn.is-primary { color: var(--st-page); }
 .jh-gmail-facts code {
   font-size: 11.5px;
   background: var(--st-fog);
-  border-radius: 4px;
+  border-radius: var(--radius-chip);
   padding: 0 4px;
 }
 
@@ -661,21 +923,21 @@ html.dark .jh-apply-btn.is-primary { color: var(--st-page); }
 .jh-apply-detail-label {
   display: block;
   font-family: var(--st-sans);
-  font-size: 11px;
+  font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--st-ash);
   margin: 0 0 6px;
 }
 
-/* Run phases — what the crew actually covered for this job. A pending row is
+/* Run phases — what Robin actually covered for this job. A pending row is
    dimmed rather than hidden: the shape of the whole pipeline stays visible. */
 .jh-apply-phase-count {
-  font-size: 10px;
+  font-size: 12px;
   font-variant-numeric: tabular-nums;
   color: var(--st-slate);
   border: 1px solid var(--st-border);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   padding: 0 6px;
   margin-left: 6px;
   letter-spacing: 0;
@@ -683,7 +945,7 @@ html.dark .jh-apply-btn.is-primary { color: var(--st-page); }
 
 .jh-apply-phase-run {
   font-family: var(--st-sans);
-  font-size: 11px;
+  font-size: 12px;
   color: var(--st-ash);
   margin: -2px 0 8px;
 }
@@ -702,7 +964,7 @@ html.dark .jh-apply-btn.is-primary { color: var(--st-page); }
   align-items: baseline;
   gap: 7px;
   font-family: var(--st-sans);
-  font-size: 12px;
+  font-size: 14px;
   padding: 4px 0;
   border-bottom: 1px solid var(--st-border);
 }
@@ -713,7 +975,7 @@ html.dark .jh-apply-btn.is-primary { color: var(--st-page); }
   width: 14px;
   flex-shrink: 0;
   text-align: center;
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .jh-apply-phases li.is-done .jh-apply-phase-dot { color: #0ca30c; }
@@ -725,14 +987,14 @@ html.dark .jh-apply-btn.is-primary { color: var(--st-page); }
 
 .jh-apply-phase-note {
   color: var(--st-ash);
-  font-size: 11px;
+  font-size: 14px;
   flex: 1;
   min-width: 0;
 }
 
 .jh-apply-phase-when {
   color: var(--st-ash);
-  font-size: 11px;
+  font-size: 12px;
   flex-shrink: 0;
 }
 
@@ -763,7 +1025,7 @@ html.dark .jh-apply-btn.is-primary { color: var(--st-page); }
 
 .jh-apply-blank {
   border: 1px dashed var(--st-border);
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   padding: 40px 24px;
   text-align: center;
 }
@@ -776,7 +1038,7 @@ html.dark .jh-apply-btn.is-primary { color: var(--st-page); }
 
 .jh-apply-blank-copy {
   font-family: var(--st-sans);
-  font-size: 13px;
+  font-size: 14px;
   color: var(--st-slate);
   max-width: 420px;
   margin: 6px auto 0;
@@ -788,6 +1050,21 @@ html.dark .jh-apply-btn.is-primary { color: var(--st-page); }
   justify-content: center;
   gap: 8px;
   margin-top: 16px;
+}
+
+.jh-apply-blank.is-compact {
+  padding: 18px 16px;
+  margin-bottom: 16px;
+  text-align: left;
+}
+
+.jh-apply-blank.is-compact .jh-apply-blank-copy {
+  margin-left: 0;
+  max-width: 560px;
+}
+
+.jh-apply-blank.is-compact .jh-apply-blank-actions {
+  justify-content: flex-start;
 }
 
 @media (max-width: 900px) {

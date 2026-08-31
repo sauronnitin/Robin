@@ -31,6 +31,59 @@ STATUSES: tuple[str, ...] = (
 # Order the UI renders columns in; also the order list_pipeline() returns keys.
 PIPELINE_ORDER: tuple[str, ...] = STATUSES
 
+# Apply board columns. Finer than funnel statuses so Cover/Humanize/Compile/Log
+# can have a column without inventing a funnel event.
+BOARD_STAGES: tuple[str, ...] = (
+    "scouted",
+    "screened",
+    "scored",
+    "tailored",
+    "cover",
+    "humanized",
+    "compiled",
+    "applied",
+    "logged",
+    "replied",
+    "interview",
+    "offer",
+    "skipped",
+    "rejected",
+    "failed",
+)
+
+# Drag / crew: board column -> funnel status. Several columns share a status.
+STAGE_TO_STATUS: dict[str, str] = {
+    "scouted": "discovered",
+    "screened": "discovered",
+    "scored": "scored",
+    "tailored": "tailored",
+    "cover": "tailored",
+    "humanized": "tailored",
+    "compiled": "tailored",
+    "applied": "applied",
+    "logged": "applied",
+    "replied": "replied",
+    "interview": "interview",
+    "offer": "offer",
+    "skipped": "skipped",
+    "rejected": "rejected",
+    "failed": "failed",
+}
+
+# Status dropdown (and a drag that only sends status) lands on this column.
+STATUS_TO_STAGE: dict[str, str] = {
+    "discovered": "scouted",
+    "scored": "scored",
+    "tailored": "tailored",
+    "applied": "applied",
+    "replied": "replied",
+    "interview": "interview",
+    "offer": "offer",
+    "skipped": "skipped",
+    "rejected": "rejected",
+    "failed": "failed",
+}
+
 EVENT_SOURCES: frozenset[str] = frozenset({"crew", "gmail", "user"})
 
 # Columns record_application() may set directly. `status` is deliberately absent:
@@ -48,6 +101,7 @@ _APPLICATION_FIELDS: frozenset[str] = frozenset(
         "dry_run",
         "ats_before",
         "ats_after",
+        "board_stage",
     }
 )
 
@@ -60,6 +114,37 @@ def validate_status(status: str) -> str:
             f"invalid application status {status!r}; allowed: {', '.join(STATUSES)}"
         )
     return value
+
+
+def validate_board_stage(stage: str) -> str:
+    """Return the board stage if allowed, else raise ValueError."""
+    value = (stage or "").strip()
+    if value not in BOARD_STAGES:
+        raise ValueError(
+            f"invalid board stage {stage!r}; allowed: {', '.join(BOARD_STAGES)}"
+        )
+    return value
+
+
+def infer_board_stage(row: dict[str, Any]) -> str:
+    """Map a stored row onto a board column when board_stage is empty."""
+    existing = str(row.get("board_stage") or "").strip()
+    if existing in BOARD_STAGES:
+        return existing
+    status = str(row.get("status") or "discovered")
+    if status in ("replied", "interview", "offer", "skipped", "rejected", "failed"):
+        return status
+    if status == "applied":
+        return "applied"
+    if status == "scored":
+        return "scored"
+    if status == "tailored":
+        if row.get("resume_pdf_url"):
+            return "compiled"
+        if row.get("cover_letter") or row.get("cover_doc_url"):
+            return "cover"
+        return "tailored"
+    return "scouted"
 
 
 def _validate_source(source: str) -> str:
@@ -233,6 +318,9 @@ def record_application(
     if status is not None:
         validate_status(status)
     _validate_source(source)
+    board_stage = fields.pop("board_stage", None)
+    if board_stage:
+        board_stage = validate_board_stage(str(board_stage))
 
     own = conn is None
     conn = conn or connect()
@@ -243,12 +331,14 @@ def record_application(
                 "SELECT id FROM application WHERE job_id = ?", (job_id,)
             ).fetchone()
             if row is None:
+                opening_stage = board_stage or "scouted"
                 cur = conn.execute(
                     """
-                    INSERT INTO application (job_id, run_id, status, created_at, updated_at)
-                    VALUES (?, ?, 'discovered', ?, ?)
+                    INSERT INTO application
+                        (job_id, run_id, status, board_stage, created_at, updated_at)
+                    VALUES (?, ?, 'discovered', ?, ?, ?)
                     """,
-                    (job_id, run_id, now, now),
+                    (job_id, run_id, opening_stage, now, now),
                 )
                 application_id = int(cur.lastrowid)
                 _write_event(conn, application_id, None, "discovered", source, detail)
@@ -270,6 +360,10 @@ def record_application(
         if status is not None:
             # Automated writers only ever move a job forward (see advance_status).
             advance_status(application_id, status, source, detail, conn=conn)
+        if board_stage:
+            # After set_status, which writes the default column for that
+            # funnel status, restore the finer board column (cover, compiled).
+            set_board_stage(application_id, board_stage, conn=conn)
         return application_id
     finally:
         if own:
@@ -319,10 +413,68 @@ def set_status(
             if current == status:
                 return
             conn.execute(
-                "UPDATE application SET status = ?, updated_at = ? WHERE id = ?",
-                (status, utc_now(), application_id),
+                """
+                UPDATE application
+                SET status = ?, board_stage = ?, updated_at = ?
+                WHERE id = ?
+                """,
+                (status, STATUS_TO_STAGE[status], utc_now(), application_id),
             )
             _write_event(conn, application_id, current, status, source, detail)
+    finally:
+        if own:
+            conn.close()
+
+
+def set_board_stage(
+    application_id: int,
+    stage: str,
+    *,
+    conn=None,
+) -> None:
+    """Move the Apply-board column. Does not write a funnel event."""
+    stage = validate_board_stage(stage)
+    own = conn is None
+    conn = conn or connect()
+    try:
+        with conn:
+            row = conn.execute(
+                "SELECT id FROM application WHERE id = ?", (application_id,)
+            ).fetchone()
+            if row is None:
+                raise ValueError(f"no application with id {application_id}")
+            conn.execute(
+                "UPDATE application SET board_stage = ?, updated_at = ? WHERE id = ?",
+                (stage, utc_now(), application_id),
+            )
+    finally:
+        if own:
+            conn.close()
+
+
+def apply_board_move(
+    application_id: int,
+    *,
+    board_stage: str | None = None,
+    status: str | None = None,
+    note: str = "",
+    conn=None,
+) -> dict[str, Any] | None:
+    """User drag or status dropdown. May move backwards. Returns the row."""
+    own = conn is None
+    conn = conn or connect()
+    try:
+        if board_stage:
+            stage = validate_board_stage(board_stage)
+            status_value = STAGE_TO_STATUS[stage]
+        elif status:
+            status_value = validate_status(status)
+            stage = STATUS_TO_STAGE[status_value]
+        else:
+            raise ValueError("board_stage or status is required")
+        set_status(application_id, status_value, "user", note, conn=conn)
+        set_board_stage(application_id, stage, conn=conn)
+        return get_application(application_id, conn=conn)
     finally:
         if own:
             conn.close()
@@ -331,7 +483,7 @@ def set_status(
 _APP_SELECT = """
     a.id, a.job_id, a.run_id, a.status, a.fit_score, a.tailored, a.cover_letter,
     a.resume_pdf_url, a.cover_doc_url, a.applied_at, a.created_at, a.updated_at,
-    a.notes, a.dry_run, a.ats_before, a.ats_after,
+    a.notes, a.dry_run, a.ats_before, a.ats_after, a.board_stage,
     j.title, j.company, j.location, j.work_mode, j.url, j.posted_at
     FROM application a JOIN job j ON j.id = a.job_id
 """
@@ -408,6 +560,7 @@ def get_application(application_id: int, *, conn=None) -> dict[str, Any] | None:
         if row is None:
             return None
         item = dict(row)
+        _ensure_board_stage(conn, item)
         item["events"] = [
             dict(r)
             for r in conn.execute(
@@ -447,16 +600,46 @@ def list_pipeline(*, conn=None) -> dict[str, list[dict[str, Any]]]:
     conn = conn or connect()
     try:
         grouped: dict[str, list[dict[str, Any]]] = {s: [] for s in PIPELINE_ORDER}
-        rows = conn.execute(
-            f"SELECT {_APP_SELECT} ORDER BY a.updated_at DESC, a.id DESC"
-        )
-        for row in rows:
-            item = dict(row)
+        rows = [
+            dict(row)
+            for row in conn.execute(
+                f"SELECT {_APP_SELECT} ORDER BY a.updated_at DESC, a.id DESC"
+            )
+        ]
+        for item in rows:
+            _ensure_board_stage(conn, item)
             grouped.setdefault(item["status"], []).append(item)
         return grouped
     finally:
         if own:
             conn.close()
+
+
+def group_by_stage(
+    grouped: dict[str, list[dict[str, Any]]],
+) -> dict[str, list[dict[str, Any]]]:
+    """Regroup list_pipeline() rows by board_stage for the Apply board."""
+    by_stage: dict[str, list[dict[str, Any]]] = {s: [] for s in BOARD_STAGES}
+    for rows in grouped.values():
+        for item in rows:
+            stage = infer_board_stage(item)
+            item["board_stage"] = stage
+            by_stage.setdefault(stage, []).append(item)
+    return by_stage
+
+
+def _ensure_board_stage(conn, item: dict[str, Any]) -> None:
+    """Persist a backfilled board_stage so later reads stay stable."""
+    stored = str(item.get("board_stage") or "").strip()
+    stage = infer_board_stage(item)
+    item["board_stage"] = stage
+    if stored in BOARD_STAGES:
+        return
+    with conn:
+        conn.execute(
+            "UPDATE application SET board_stage = ? WHERE id = ?",
+            (stage, item["id"]),
+        )
 
 
 # Work still owed: queued by the user but not yet scored, or scored but not yet

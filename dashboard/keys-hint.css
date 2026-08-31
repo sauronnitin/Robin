@@ -1,0 +1,185 @@
+/* Credential hints: solid ? next to features that need keys or OAuth.
+   Steep tokens only. Missing required keys use amber, never GitHub-green. */
+
+.jh-need-cluster {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.jh-need-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.jh-need {
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--st-ash);
+  cursor: pointer;
+  line-height: 0;
+}
+
+.jh-need:hover,
+.jh-need:focus-visible {
+  color: var(--st-ink);
+  background: var(--st-amber-dim, rgba(196, 128, 80, 0.14));
+  outline: none;
+}
+
+.jh-need.is-missing {
+  color: var(--st-amber);
+}
+
+.jh-need.is-open {
+  color: var(--st-ink);
+  background: var(--st-amber-dim, rgba(196, 128, 80, 0.14));
+}
+
+.jh-need svg {
+  width: 16px;
+  height: 16px;
+  display: block;
+}
+
+.jh-need-pop {
+  position: fixed;
+  z-index: 80;
+  width: min(320px, calc(100vw - 24px));
+  padding: 12px 12px 10px;
+  border-radius: 12px;
+  border: 1px solid var(--st-border-hi, var(--st-border));
+  background: var(--st-card, #fff);
+  color: var(--st-ink);
+  box-shadow: var(--shadow-md);
+}
+
+.jh-need-pop-kicker {
+  font-family: var(--st-sans, inherit);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--st-ash);
+  margin: 0 0 4px;
+}
+
+.jh-need-pop-title {
+  font-family: var(--st-sans, inherit);
+  font-size: 13.5px;
+  font-weight: 600;
+  margin: 0 0 6px;
+  color: var(--st-ink);
+}
+
+.jh-need-pop-blurb {
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--st-slate, var(--st-ash));
+  margin: 0 0 10px;
+}
+
+.jh-need-pop-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.jh-need-pop-item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--st-border);
+  background: var(--st-raised, var(--st-mist));
+  color: inherit;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.jh-need-pop-item:hover,
+.jh-need-pop-item:focus-visible {
+  border-color: var(--st-amber);
+  outline: none;
+}
+
+.jh-need-pop-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--st-ink);
+}
+
+.jh-need-pop-meta {
+  font-size: 11px;
+  color: var(--st-ash);
+  margin-top: 2px;
+}
+
+.jh-need-pop-state {
+  flex: 0 0 auto;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--st-ash);
+  padding-top: 1px;
+}
+
+.jh-need-pop-item.is-missing .jh-need-pop-state {
+  color: var(--st-amber);
+}
+
+.jh-need-pop-foot {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 10px;
+}
+
+.jh-need-open-settings {
+  font-family: var(--st-sans, inherit);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 0;
+  cursor: pointer;
+  color: var(--st-btn-ink, #f6f4ef);
+  background: var(--st-ink, #17191c);
+}
+
+.jh-need-usedby {
+  display: block;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--st-ash);
+  margin-top: 4px;
+}
+
+.jh-need-flash {
+  outline: 2px solid var(--st-amber);
+  outline-offset: 4px;
+  border-radius: 12px;
+}
+
+.kg-insights-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}

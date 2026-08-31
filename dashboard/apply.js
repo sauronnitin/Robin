@@ -1,18 +1,18 @@
-/* Apply — the queue board: every job the user sent to Robin, from queued
+/* Apply: the queue board, every job the user sent to Robin, from queued
  * through offer (SPEC.md §3, §5).
  *
  * The page is "Apply"; the data underneath is the application pipeline, which
- * is what the DB and the API call it. That split is deliberate — one word for
+ * is what the DB and the API call it. That split is deliberate: one word for
  * the user, one for the schema.
  *
  * Colors come from SPEC.md §5 only. The four progressive stages use the §5.2
  * ordinal funnel ramp (a stage is a position in a sequence, which is what an
  * ordinal ramp is for); terminal states use the §5.3 reserved status colors.
- * Every one ships an icon and a text label — never color alone.
+ * Every one ships an icon and a text label, never color alone.
  *
  * SAMPLE MODE: with nothing queued, the board can render a walkthrough of fake
  * applications so the flow is legible before a first run. It lives only in this
- * file's memory — no sample row is ever written to the database, because the
+ * file's memory. No sample row is ever written to the database, because the
  * Phase 3 funnel reads those tables and would count them as real.
  */
 (function () {
@@ -20,54 +20,54 @@
 
   var API_BASE = (location.port === '5959') ? '' : 'http://localhost:5959';
 
-  // §5.2 funnel ramp for the ordinal stages, §5.3 status colors for terminals.
-  // Queued holds all three pre-submission stages: the user queued the job, and
-  // whether Robin has scored or tailored it yet is detail the card's own
-  // pill carries. Burying a just-queued job in a collapsed group would break
-  // the one flow this page exists for.
-  var COLUMNS = [
-    { key: 'queued',    label: 'Queued',    color: '#86b6ef', icon: '+',
-      statuses: ['discovered', 'scored', 'tailored'] },
-    { key: 'applied',   label: 'Applied',   color: '#5598e7', icon: '↗' },
-    { key: 'replied',   label: 'Replied',   color: '#2a78d6', icon: '✉' },
-    { key: 'interview', label: 'Interview', color: '#1c5cab', icon: '☎' },
-    { key: 'offer',     label: 'Offer',     color: '#0ca30c', icon: '★' }
+  // 15 board columns in three bands. Funnel `status` stays SPEC.md §3.1;
+  // `board_stage` is what the board groups on (Cover/Humanize/Compile/Log).
+  var CREW = [
+    { key: 'scouted',   label: 'Scouted',   color: '#86b6ef', icon: '+', next: 'waiting on Screen' },
+    { key: 'screened',  label: 'Screened',  color: '#7aaeec', icon: '⊘', next: 'waiting on Score' },
+    { key: 'scored',    label: 'Scored',    color: '#6ba4ea', icon: '#', next: 'waiting on Tailor' },
+    { key: 'tailored',  label: 'Tailored',  color: '#5c9ae8', icon: '✎', next: 'waiting on Cover' },
+    { key: 'cover',     label: 'Cover',     color: '#5598e7', icon: '✉', next: 'waiting on Humanize' },
+    { key: 'humanized', label: 'Humanized', color: '#4a8ce0', icon: '♩', next: 'waiting on Compile' },
+    { key: 'compiled',  label: 'Compiled',  color: '#2a78d6', icon: '▣', next: 'waiting on Apply' },
+    { key: 'applied',   label: 'Applied',   color: '#1c5cab', icon: '↗', next: 'waiting on Log' },
+    { key: 'logged',    label: 'Logged',    color: '#164a8c', icon: '≡', next: 'in the log' }
   ];
-
-  // Stage vocabulary for the pills — finer grained than the columns.
-  var PRE_APPLY = [
-    { key: 'discovered', label: 'Queued',   color: '#86b6ef', icon: '+' },
-    { key: 'scored',     label: 'Scored',   color: '#86b6ef', icon: '#' },
-    { key: 'tailored',   label: 'Tailored', color: '#5598e7', icon: '✎' }
+  var AFTER = [
+    { key: 'replied',   label: 'Replied',   color: '#2a78d6', icon: '✉', next: 'waiting on you' },
+    { key: 'interview', label: 'Interview', color: '#1c5cab', icon: '☎', next: 'waiting on you' },
+    { key: 'offer',     label: 'Offer',     color: '#3c352c', icon: '★', next: 'waiting on you' }
   ];
-
   var CLOSED = [
-    { key: 'rejected', label: 'Rejected', color: '#d03b3b', icon: '✕' },
-    { key: 'skipped',  label: 'Skipped',  color: '#ec835a', icon: '⤳' },
-    { key: 'failed',   label: 'Failed',   color: '#ec835a', icon: '!' }
+    { key: 'skipped',  label: 'Skipped',  color: '#ec835a', icon: '⤳', next: 'closed' },
+    { key: 'rejected', label: 'Rejected', color: '#d03b3b', icon: '✕', next: 'closed' },
+    { key: 'failed',   label: 'Failed',   color: '#ec835a', icon: '!', next: 'closed' }
   ];
+  var BANDS = [
+    { key: 'crew', label: 'Crew', columns: CREW },
+    { key: 'after', label: 'After', columns: AFTER },
+    { key: 'closed', label: 'Closed', columns: CLOSED }
+  ];
+  var ALL = CREW.concat(AFTER, CLOSED);
+  var STAGE_ORDER = ALL.map(function (s) { return s.key; });
+  var STATUS_ORDER = [
+    'discovered', 'scored', 'tailored', 'applied', 'replied',
+    'interview', 'offer', 'rejected', 'skipped', 'failed'
+  ];
+  var STATUS_LABELS = {
+    discovered: { key: 'discovered', label: 'Queued', color: '#86b6ef', icon: '+' },
+    scored: CREW[2], tailored: CREW[3], applied: CREW[7],
+    replied: AFTER[0], interview: AFTER[1], offer: AFTER[2],
+    skipped: CLOSED[0], rejected: CLOSED[1], failed: CLOSED[2]
+  };
 
-  // 'queued' is a column, not a status — the status vocabulary stays exactly
-  // the one SPEC.md §3.1 allows, so the dropdown can never post a made-up value.
-  var ALL = PRE_APPLY.concat(
-    COLUMNS.filter(function (c) { return !c.statuses; }),
-    CLOSED
-  );
-  var STATUS_ORDER = ALL.map(function (s) { return s.key; });
-
-  function columnStatuses(col) {
-    return col.statuses || [col.key];
-  }
-
-  function columnItems(col) {
-    return columnStatuses(col).reduce(function (rows, status) {
-      return rows.concat(state.pipeline[status] || []);
-    }, []);
+  function stageItems(key) {
+    return state.byStage[key] || [];
   }
 
   var state = {
-    pipeline: {}, counts: {}, pending: [],
-    selected: null, loading: false, sample: false, home: ''
+    pipeline: {}, byStage: {}, counts: {}, pending: [],
+    selected: null, loading: false, sample: false, home: '', dragging: false
   };
 
   // ── Sample walkthrough ───────────────────────────────────────────────────
@@ -76,40 +76,56 @@
   function sampleData() {
     var hoursAgo = function (h) { return new Date(Date.now() - h * 3600000).toISOString(); };
     var rows = [
-      // Both pending replies sit one step BEHIND their column, so confirming
-      // one visibly moves the card — that mechanic is the thing worth teaching.
       { id: -1, company: 'Northwind Labs', title: 'Senior Product Designer', fit_score: 91,
-        status: 'interview', updated_at: hoursAgo(2), applied_at: hoursAgo(220),
+        status: 'interview', board_stage: 'interview', updated_at: hoursAgo(2), applied_at: hoursAgo(220),
         url: 'https://example.com/northwind/senior-product-designer',
         resume_pdf_url: 'https://example.com/sample-resume.pdf' },
       { id: -2, company: 'Meridian', title: 'Product Designer, Growth', fit_score: 84,
-        status: 'replied', updated_at: hoursAgo(9), applied_at: hoursAgo(150),
+        status: 'replied', board_stage: 'replied', updated_at: hoursAgo(9), applied_at: hoursAgo(150),
         url: 'https://example.com/meridian/product-designer-growth' },
       { id: -3, company: 'Fathom Studio', title: 'Staff Designer', fit_score: 78,
-        status: 'replied', updated_at: hoursAgo(20), applied_at: hoursAgo(96),
+        status: 'applied', board_stage: 'logged', updated_at: hoursAgo(20), applied_at: hoursAgo(96),
         url: 'https://example.com/fathom/staff-designer' },
       { id: -4, company: 'Kestrel', title: 'Design Lead', fit_score: 72,
-        status: 'applied', updated_at: hoursAgo(30), applied_at: hoursAgo(30),
+        status: 'applied', board_stage: 'applied', updated_at: hoursAgo(30), applied_at: hoursAgo(30),
         url: 'https://example.com/kestrel/design-lead' },
       { id: -5, company: 'Halcyon', title: 'Product Designer', fit_score: 69,
-        status: 'tailored', updated_at: hoursAgo(1),
-        url: 'https://example.com/halcyon/product-designer' },
+        status: 'tailored', board_stage: 'cover', updated_at: hoursAgo(1),
+        url: 'https://example.com/halcyon/product-designer', cover_letter: 1 },
+      { id: -7, company: 'Atlas Paper', title: 'Product Designer', fit_score: 81,
+        status: 'scored', board_stage: 'scored', updated_at: hoursAgo(3),
+        url: 'https://example.com/atlas/product-designer' },
+      { id: -8, company: 'Willow & Co', title: 'UX Designer', fit_score: null,
+        status: 'discovered', board_stage: 'scouted', updated_at: hoursAgo(4),
+        url: 'https://example.com/willow/ux-designer' },
+      { id: -9, company: 'Harbor', title: 'Product Designer', fit_score: null,
+        status: 'discovered', board_stage: 'screened', updated_at: hoursAgo(5),
+        url: 'https://example.com/harbor/product-designer' },
       { id: -6, company: 'Bellwether', title: 'Senior UX Designer', fit_score: 55,
-        status: 'skipped', updated_at: hoursAgo(48),
+        status: 'skipped', board_stage: 'skipped', updated_at: hoursAgo(48),
         url: 'https://example.com/bellwether/senior-ux-designer' }
     ];
     var grouped = {};
+    var byStage = {};
     STATUS_ORDER.forEach(function (key) { grouped[key] = []; });
-    rows.forEach(function (row) { grouped[row.status].push(row); });
+    STAGE_ORDER.forEach(function (key) { byStage[key] = []; });
+    rows.forEach(function (row) {
+      grouped[row.status].push(row);
+      byStage[row.board_stage].push(row);
+    });
     return {
       pipeline: grouped,
+      byStage: byStage,
       counts: Object.keys(grouped).reduce(function (acc, key) {
         acc[key] = grouped[key].length; return acc;
+      }, {}),
+      stageCounts: Object.keys(byStage).reduce(function (acc, key) {
+        acc[key] = byStage[key].length; return acc;
       }, {}),
       pending: [
         { id: -101, application_id: -2, company: 'Meridian', classification: 'interview',
           confidence: 0.75, received_at: hoursAgo(9),
-          subject: 'Next steps — Product Designer, Growth' },
+          subject: 'Next steps: Product Designer, Growth' },
         { id: -102, application_id: -1, company: 'Northwind Labs', classification: 'offer',
           confidence: 0.9, received_at: hoursAgo(2),
           subject: 'Your offer from Northwind Labs' }
@@ -132,6 +148,7 @@
     for (var i = 0; i < ALL.length; i++) {
       if (ALL[i].key === status) return ALL[i];
     }
+    if (STATUS_LABELS[status]) return STATUS_LABELS[status];
     return { key: status, label: status, color: 'var(--st-slate)', icon: '·' };
   }
 
@@ -204,7 +221,7 @@
   function metricsHtml(app) {
     function cell(label, value, title) {
       var text = (value === null || value === undefined || value === '')
-        ? '<span class="jh-apply-metric-none">—</span>'
+        ? '<span class="jh-apply-metric-none">-</span>'
         : esc(String(value));
       return '<div class="jh-apply-metric" title="' + esc(title) + '">'
         + '<span class="jh-apply-metric-label">' + esc(label) + '</span>'
@@ -242,13 +259,15 @@
   }
 
   function cardHtml(app) {
-    var m = meta(app.status);
+    var stage = app.board_stage || app.status;
+    var m = meta(stage);
     var score = (app.fit_score === null || app.fit_score === undefined)
       ? '' : '<span class="jh-apply-score" title="Fit: is this job worth applying to">'
              + Math.round(app.fit_score) + '</span>';
     var when = app.applied_at || app.updated_at;
     return ''
-      + '<article class="jh-apply-card" data-app="' + app.id + '" style="--apply-color:' + m.color + '" tabindex="0">'
+      + '<article class="jh-apply-card" draggable="true" data-app="' + app.id
+      + '" style="--apply-color:' + m.color + '" tabindex="0">'
       + '  <div class="jh-apply-card-top">'
       + '    <span class="jh-apply-company">' + esc(app.company || 'Unknown') + '</span>'
       + score
@@ -256,7 +275,7 @@
       + '  <div class="jh-apply-title">' + esc(app.title || '') + '</div>'
       + locationHtml(app)
       + metricsHtml(app)
-      + '  <div class="jh-apply-meta">' + statusPill(app.status)
+      + '  <div class="jh-apply-meta">' + statusPill(stage)
       + (state.sample ? '<span class="jh-apply-sample-tag">Sample</span>' : '')
       // A rehearsal must never read as a sent application.
       + (app.dry_run ? '<span class="jh-apply-dry-tag" title="DRY_RUN: nothing was submitted">Dry run</span>' : '')
@@ -265,61 +284,81 @@
       + '</article>';
   }
 
-  // Which columns the user collapsed. Kept across reloads: a board you have to
-  // re-tidy every visit is not tidy.
-  var COLLAPSE_KEY = 'jh-apply-collapsed';
+  // Which columns the user opened. Empty key = all closed (the default).
+  var EXPAND_KEY = 'jh-apply-expanded';
 
-  function collapsedColumns() {
+  function expandedColumns() {
     try {
-      return JSON.parse(localStorage.getItem(COLLAPSE_KEY) || '[]') || [];
+      return JSON.parse(localStorage.getItem(EXPAND_KEY) || '[]') || [];
     } catch (err) { return []; }
   }
 
   function toggleColumn(key) {
-    var collapsed = collapsedColumns();
-    var next = collapsed.indexOf(key) === -1
-      ? collapsed.concat([key])
-      : collapsed.filter(function (k) { return k !== key; });
-    try { localStorage.setItem(COLLAPSE_KEY, JSON.stringify(next)); } catch (err) {}
+    var expanded = expandedColumns();
+    var next = expanded.indexOf(key) === -1
+      ? expanded.concat([key])
+      : expanded.filter(function (k) { return k !== key; });
+    try { localStorage.setItem(EXPAND_KEY, JSON.stringify(next)); } catch (err) {}
     render();
   }
 
-  function columnHtml(col) {
-    var items = columnItems(col);
-    var isCollapsed = collapsedColumns().indexOf(col.key) !== -1;
+  function runningStageKey() {
+    return (window.__jhApplyRun && typeof window.__jhApplyRun.runningStage === 'function')
+      ? (window.__jhApplyRun.runningStage() || '')
+      : '';
+  }
+
+  function runClass(colKey) {
+    return runningStageKey() === colKey ? ' is-running' : '';
+  }
+
+  function tileHtml(col) {
+    var items = stageItems(col.key);
+    var empty = !items.length;
+    var sub = empty ? 'nothing yet' : col.next;
+    var live = runClass(col.key);
     return ''
-      + '<section class="jh-apply-col' + (isCollapsed ? ' is-collapsed' : '') + '" data-col="' + col.key + '">'
+      + '<button type="button" class="jh-bento-card jh-bento-small'
+      + (empty ? ' jh-bento-locked' : '') + live + '"'
+      + ' data-expand-col="' + col.key + '" data-stage="' + col.key + '"'
+      + ' aria-expanded="false"'
+      + (live ? ' aria-busy="true"' : '') + '>'
+      + '  <div class="jh-bento-label">' + esc(col.label) + '</div>'
+      + '  <div class="jh-bento-figure"><span class="jh-bento-num">' + items.length + '</span></div>'
+      + '  <div class="jh-bento-subline">' + esc(sub) + '</div>'
+      + '</button>';
+  }
+
+  function columnHtml(col) {
+    var items = stageItems(col.key);
+    var live = runClass(col.key);
+    return ''
+      + '<section class="jh-apply-col' + live + '" data-col="' + col.key
+      + '" data-stage="' + col.key + '"' + (live ? ' aria-busy="true"' : '') + '>'
       + '  <button class="jh-apply-col-head" type="button" data-toggle-col="' + col.key + '"'
-      + '    style="--apply-color:' + col.color + '" aria-expanded="' + (!isCollapsed) + '">'
+      + '    style="--apply-color:' + col.color + '" aria-expanded="true" title="Collapse to tile">'
       + '    <span class="jh-apply-col-icon" aria-hidden="true">' + col.icon + '</span>'
       + '    <span class="jh-apply-col-label">' + esc(col.label) + '</span>'
       + '    <span class="jh-apply-col-count">' + items.length + '</span>'
-      + '    <span class="jh-apply-col-caret" aria-hidden="true">' + (isCollapsed ? '▸' : '▾') + '</span>'
+      + '    <span class="jh-apply-col-caret" aria-hidden="true">▴</span>'
       + '  </button>'
-      + (isCollapsed ? '' : ''
-          + '  <div class="jh-apply-col-body">'
-          + (items.length ? items.map(cardHtml).join('')
-              : '<div class="jh-apply-empty">Nothing here yet</div>')
-          + '  </div>')
+      + '  <div class="jh-apply-col-body" data-stage="' + col.key + '">'
+      + (items.length ? items.map(cardHtml).join('')
+          : '<div class="jh-apply-empty">Nothing here yet</div>')
+      + '  </div>'
       + '</section>';
   }
 
-  function groupHtml(id, title, statuses) {
-    var total = statuses.reduce(function (sum, s) {
-      return sum + ((state.pipeline[s.key] || []).length);
-    }, 0);
-    var cards = [];
-    statuses.forEach(function (s) {
-      (state.pipeline[s.key] || []).forEach(function (app) { cards.push(cardHtml(app)); });
-    });
+  function bandHtml(band) {
+    var expanded = expandedColumns();
+    var cells = band.columns.map(function (col) {
+      return expanded.indexOf(col.key) === -1 ? tileHtml(col) : columnHtml(col);
+    }).join('');
     return ''
-      + '<details class="jh-apply-group" id="' + id + '"' + (total ? '' : ' data-empty="1"') + '>'
-      + '  <summary class="jh-apply-group-head">' + esc(title)
-      + '    <span class="jh-apply-col-count">' + total + '</span></summary>'
-      + '  <div class="jh-apply-group-body">'
-      + (cards.length ? cards.join('') : '<div class="jh-apply-empty">Nothing here yet</div>')
-      + '  </div>'
-      + '</details>';
+      + '<section class="jh-apply-band" data-band="' + band.key + '">'
+      + '  <div class="jh-apply-band-label">' + esc(band.label) + '</div>'
+      + '  <div class="jh-apply-band-row">' + cells + '</div>'
+      + '</section>';
   }
 
   function pendingHtml() {
@@ -356,24 +395,22 @@
       return sum + state.counts[k];
     }, 0);
 
-    if (!total) {
-      board.innerHTML = ''
-        + '<div class="jh-apply-blank">'
-        + '  <div class="jh-apply-blank-title">Nothing queued yet</div>'
-        + '  <div class="jh-apply-blank-copy">Open Browse, find a job worth your time, and add it to the '
-        + 'queue. Robin only works on what you choose — it never queues jobs for you.</div>'
+    board.innerHTML = pendingHtml()
+      + (total ? '' : ''
+        + '<div class="jh-apply-blank is-compact">'
+        + '  <div class="jh-apply-blank-title">Nothing on the board yet</div>'
+        + '  <div class="jh-apply-blank-copy">Start finds jobs and works the queue. Queue extras from Browse if you want those first. Closed tiles are stages. Click one to open it.</div>'
         + '  <div class="jh-apply-blank-actions">'
-        + '    <button class="jh-apply-btn is-primary" id="applyGoBrowse" type="button">Browse jobs</button>'
+        + '    <button class="jh-apply-btn" id="applyGoBrowse" type="button">Browse jobs</button>'
         + '    <button class="jh-apply-btn" id="applySampleStart" type="button">See a sample queue</button>'
         + '  </div>'
-        + '</div>';
-      return;
+        + '</div>')
+      + '<div class="jh-apply-stagegrid">'
+      + BANDS.map(bandHtml).join('')
+      + '</div>';
+    if (window.__jhApplyRun && typeof window.__jhApplyRun.highlight === 'function') {
+      window.__jhApplyRun.highlight();
     }
-
-    board.innerHTML = ''
-      + pendingHtml()
-      + '<div class="jh-apply-cols">' + COLUMNS.map(columnHtml).join('') + '</div>'
-      + groupHtml('applyGroupClosed', 'Closed', CLOSED);
   }
 
   // Which Robin phases this job actually went through. Derived only from what
@@ -428,7 +465,7 @@
         label: 'Applied',
         done: !!app.applied_at || !!eventFor('applied'),
         at: app.applied_at || (eventFor('applied') || {}).created_at,
-        note: app.dry_run ? 'dry run — not submitted' : (app.applied_at ? 'submitted' : '')
+        note: app.dry_run ? 'dry run, not submitted' : (app.applied_at ? 'submitted' : '')
       },
       {
         label: 'Reply',
@@ -457,7 +494,7 @@
       + '</div>'
       + (app.run_id
           ? '<div class="jh-apply-phase-run">run ' + esc(String(app.run_id).slice(0, 12)) + '</div>'
-          : '<div class="jh-apply-phase-run">no Robin run yet — queued only</div>')
+          : '<div class="jh-apply-phase-run">no Robin run yet, queued only</div>')
       + '<ol class="jh-apply-phases">' + rows + '</ol>';
   }
 
@@ -497,7 +534,7 @@
       + '<div class="jh-apply-detail-row">' + statusPill(app.status)
       + locationHtml(app)
       + atsBar(app)
-      + (app.dry_run ? '<span class="jh-apply-dry-tag">Dry run — not submitted</span>' : '')
+      + (app.dry_run ? '<span class="jh-apply-dry-tag">Dry run, not submitted</span>' : '')
       + (app.fit_score != null ? '<span class="jh-apply-score">' + Math.round(app.fit_score) + '</span>' : '')
       + '</div>'
       + (links.length ? '<div class="jh-apply-detail-links">' + links.join('') + '</div>' : '')
@@ -549,8 +586,13 @@
   function updateBadge() {
     var badge = document.getElementById('applyCountBadge');
     if (!badge) return;
-    var live = ['discovered', 'scored', 'tailored', 'applied', 'replied', 'interview']
-      .reduce(function (sum, key) { return sum + (state.counts[key] || 0); }, 0);
+    var live = CREW.concat(AFTER).reduce(function (sum, col) {
+      return sum + ((state.byStage[col.key] || []).length);
+    }, 0);
+    if (!live) {
+      live = ['discovered', 'scored', 'tailored', 'applied', 'replied', 'interview']
+        .reduce(function (sum, key) { return sum + (state.counts[key] || 0); }, 0);
+    }
     badge.textContent = live;
     badge.hidden = !live;
   }
@@ -559,6 +601,7 @@
     var data = sampleData();
     state.sample = true;
     state.pipeline = data.pipeline;
+    state.byStage = data.byStage;
     state.counts = data.counts;
     state.pending = data.pending;
     setSampleBanner(true);
@@ -576,6 +619,16 @@
       state.sample = false;
       setSampleBanner(false);
       state.pipeline = data.pipeline || {};
+      state.byStage = data.by_stage || {};
+      if (!Object.keys(state.byStage).length) {
+        STAGE_ORDER.forEach(function (key) { state.byStage[key] = []; });
+        Object.keys(state.pipeline).forEach(function (status) {
+          (state.pipeline[status] || []).forEach(function (row) {
+            var stage = row.board_stage || (status === 'discovered' ? 'scouted' : status);
+            state.byStage[stage] = (state.byStage[stage] || []).concat([row]);
+          });
+        });
+      }
       state.counts = data.counts || {};
       state.pending = data.pending || [];
       state.home = data.home_country || '';
@@ -610,41 +663,74 @@
     return copy;
   }
 
-  function moveSampleCard(applicationId, status) {
+  function moveSampleCard(applicationId, stage) {
     var id = Number(applicationId);
     var moved = null;
-    Object.keys(state.pipeline).forEach(function (key) {
-      state.pipeline[key] = (state.pipeline[key] || []).filter(function (row) {
+    Object.keys(state.byStage).forEach(function (key) {
+      state.byStage[key] = (state.byStage[key] || []).filter(function (row) {
         if (row.id !== id) return true;
         moved = row;
         return false;
       });
     });
+    Object.keys(state.pipeline).forEach(function (key) {
+      state.pipeline[key] = (state.pipeline[key] || []).filter(function (row) {
+        return row.id !== id;
+      });
+    });
     if (!moved) return;
-    moved.status = status;
+    var toStage = {
+      discovered: 'scouted', scored: 'scored', tailored: 'tailored',
+      applied: 'applied', replied: 'replied', interview: 'interview',
+      offer: 'offer', skipped: 'skipped', rejected: 'rejected', failed: 'failed'
+    };
+    var toStatus = {
+      scouted: 'discovered', screened: 'discovered', scored: 'scored',
+      tailored: 'tailored', cover: 'tailored', humanized: 'tailored',
+      compiled: 'tailored', applied: 'applied', logged: 'applied',
+      replied: 'replied', interview: 'interview', offer: 'offer',
+      skipped: 'skipped', rejected: 'rejected', failed: 'failed'
+    };
+    if (toStage[stage]) {
+      moved.status = stage;
+      moved.board_stage = toStage[stage];
+      stage = moved.board_stage;
+    } else {
+      moved.board_stage = stage;
+      moved.status = toStatus[stage] || stage;
+    }
     moved.updated_at = new Date().toISOString();
-    state.pipeline[status] = [moved].concat(state.pipeline[status] || []);
-    state.counts = Object.keys(state.pipeline).reduce(function (acc, key) {
-      acc[key] = state.pipeline[key].length; return acc;
+    state.byStage[stage] = [moved].concat(state.byStage[stage] || []);
+    state.pipeline[moved.status] = [moved].concat(state.pipeline[moved.status] || []);
+    state.counts = Object.keys(state.byStage).reduce(function (acc, key) {
+      acc[key] = (state.byStage[key] || []).length; return acc;
     }, {});
     render();
     updateBadge();
   }
 
   async function setStatus(applicationId, status) {
+    return moveToStage(applicationId, null, status);
+  }
+
+  async function moveToStage(applicationId, boardStage, status) {
+    var label = meta(boardStage || status).label;
     if (state.sample) {
-      moveSampleCard(applicationId, status);
-      toast('Sample moved to ' + meta(status).label);
+      moveSampleCard(applicationId, boardStage || status);
+      toast('Sample moved to ' + label);
       openDetail(applicationId);
       return;
     }
+    var body = { application_id: Number(applicationId), note: 'changed from the board' };
+    if (boardStage) body.board_stage = boardStage;
+    if (status) body.status = status;
     var data = await api('/api/pipeline/status', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ application_id: Number(applicationId), status: status, note: 'changed from the board' })
+      body: JSON.stringify(body)
     });
     if (!data.ok) { toast(data.error || 'Status change failed'); return; }
-    toast('Moved to ' + meta(status).label);
+    toast('Moved to ' + label);
     await load();
     if (state.selected && state.selected.id === Number(applicationId)) openDetail(applicationId);
   }
@@ -719,8 +805,16 @@
     var refresh = event.target.closest('#applyRefreshBtn');
     if (refresh) { load(); return; }
 
-    var colToggle = event.target.closest('[data-toggle-col]');
-    if (colToggle) { toggleColumn(colToggle.getAttribute('data-toggle-col')); return; }
+    var colToggle = event.target.closest('.jh-apply-col-head, [data-toggle-col], [data-expand-col]');
+    if (colToggle) {
+      state.dragging = false;
+      event.preventDefault();
+      var key = colToggle.getAttribute('data-toggle-col')
+        || colToggle.getAttribute('data-expand-col')
+        || (colToggle.closest('[data-col]') && colToggle.closest('[data-col]').getAttribute('data-col'));
+      if (key) toggleColumn(key);
+      return;
+    }
 
     if (event.target.closest('#applySampleStart')) { applySample(); return; }
     if (event.target.closest('#applySampleExit')) { load(); return; }
@@ -745,7 +839,48 @@
     if (unqueueBtn) { unqueue(unqueueBtn.getAttribute('data-unqueue')); return; }
 
     var card = event.target.closest('.jh-apply-card');
-    if (card) { openDetail(card.getAttribute('data-app')); }
+    if (card) {
+      if (state.dragging) return;
+      openDetail(card.getAttribute('data-app'));
+    }
+  });
+
+  document.addEventListener('dragstart', function (event) {
+    var card = event.target.closest && event.target.closest('.jh-apply-card');
+    if (!card) return;
+    state.dragging = true;
+    event.dataTransfer.setData('text/plain', card.getAttribute('data-app'));
+    event.dataTransfer.effectAllowed = 'move';
+  });
+
+  document.addEventListener('dragend', function () {
+    document.querySelectorAll('#s-apply .is-drop').forEach(function (el) {
+      el.classList.remove('is-drop');
+    });
+    setTimeout(function () { state.dragging = false; }, 0);
+  });
+
+  document.addEventListener('dragover', function (event) {
+    var target = event.target.closest && event.target.closest('#s-apply [data-stage]');
+    if (!target) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+    target.classList.add('is-drop');
+  });
+
+  document.addEventListener('dragleave', function (event) {
+    var target = event.target.closest && event.target.closest('#s-apply [data-stage]');
+    if (target) target.classList.remove('is-drop');
+  });
+
+  document.addEventListener('drop', function (event) {
+    var target = event.target.closest && event.target.closest('#s-apply [data-stage]');
+    if (!target) return;
+    event.preventDefault();
+    target.classList.remove('is-drop');
+    var id = event.dataTransfer.getData('text/plain');
+    var stage = target.getAttribute('data-stage');
+    if (id && stage) moveToStage(id, stage);
   });
 
   document.addEventListener('keydown', function (event) {

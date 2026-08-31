@@ -25,10 +25,14 @@ from jobhunter_ai.job_sources.normalize import normalize_work_mode
 # Task keys this module reacts to. Anything else is ignored.
 HANDLED_TASKS: tuple[str, ...] = (
     "scrape_and_filter_job_listings",
+    "screen_listings_for_prompt_injection",
     "score_and_prioritise_jobs",
     "tailor_resume_per_job",
+    "write_cover_letters",
+    "humanize_content",
     "compile_and_upload_resume_pdfs",
     "submit_job_applications",
+    "log_applications_to_google_sheets",
 )
 
 # Agents emit labeled fields in whatever markdown they feel like on the day:
@@ -81,6 +85,8 @@ _KEY_ALIASES: dict[str, str] = {
     "pdf_link": "resume_pdf_url",
     "cover_letter_doc_link": "cover_doc_url",
     "cover_letter_link": "cover_doc_url",
+    "cover_letter_required": "cover_letter",
+    "injection_flagged": "injection_flagged",
     "application_status": "application_status",
     "status": "application_status",
     "notes": "note",
@@ -261,13 +267,54 @@ def _parse_labeled_records(text: str) -> list[dict[str, Any]]:
 
 
 def parse_records(text: str) -> list[dict[str, Any]]:
-    """Records from either shape a task emits: JSON array or labeled blocks."""
+    """Records from JSON, a markdown table, or labeled blocks."""
     if not text or not text.strip():
         return []
     records = _parse_json_records(text)
     if records:
         return records
+    table = _parse_markdown_table_records(text)
+    if table:
+        return table
     return _parse_labeled_records(text)
+
+
+def _split_table_row(line: str) -> list[str]:
+    cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
+    return [cell.strip("<>").strip() for cell in cells]
+
+
+def _is_table_separator(cells: list[str]) -> bool:
+    if not cells:
+        return False
+    return all(re.fullmatch(r":?-{3,}:?", cell.replace(" ", "")) for cell in cells)
+
+
+def _parse_markdown_table_records(text: str) -> list[dict[str, Any]]:
+    """Scout sometimes emits a pipe table instead of the JSON list the task asks for."""
+    rows = [line.strip() for line in (text or "").splitlines() if line.strip().startswith("|")]
+    if len(rows) < 2:
+        return []
+    headers = _split_table_row(rows[0])
+    if not any(_canonical_key(h) in {"title", "company", "url"} for h in headers):
+        return []
+    start = 1
+    if start < len(rows) and _is_table_separator(_split_table_row(rows[start])):
+        start += 1
+    records: list[dict[str, Any]] = []
+    for row in rows[start:]:
+        cells = _split_table_row(row)
+        if _is_table_separator(cells):
+            continue
+        raw = {
+            headers[i]: cells[i]
+            for i in range(min(len(headers), len(cells)))
+            if headers[i]
+        }
+        record = _coerce_record(raw)
+        if record.get("url") or (record.get("company") and record.get("title")):
+            records.append(record)
+    return records
 
 
 def _as_float(value: Any) -> float | None:
@@ -451,21 +498,27 @@ def sync_task_output(
         if job is None:
             continue
         job_id = pipeline_store.upsert_job(job, conn=conn)
-        if task_key == "scrape_and_filter_job_listings":
-            # Scout has not scored or qualified anything yet. Persist the
-            # listing (including description) so later Score/Tailor syncs
-            # land on a row that already has posting text. Score creates
-            # the application row the same way it does today.
-            continue
-
         fields: dict[str, Any] = {}
         status: str | None = None
 
-        if task_key == "score_and_prioritise_jobs":
+        if task_key == "scrape_and_filter_job_listings":
+            # Scout opens the Apply card. INSERT defaults board_stage to
+            # scouted; a job already queued from Browse keeps its column.
+            status = "discovered"
+
+        elif task_key == "screen_listings_for_prompt_injection":
+            if _as_bool(record.get("injection_flagged")):
+                status = "skipped"
+                fields["board_stage"] = "skipped"
+            else:
+                fields["board_stage"] = "screened"
+
+        elif task_key == "score_and_prioritise_jobs":
             score = _as_float(record.get("fit_score"))
             if score is not None:
                 fields["fit_score"] = score
             status = "scored"
+            fields["board_stage"] = "scored"
 
         elif task_key == "tailor_resume_per_job":
             fields["tailored"] = 1 if _as_bool(record.get("tailored")) else 0
@@ -473,11 +526,25 @@ def sync_task_output(
             if score is not None:
                 fields["fit_score"] = score
             status = "tailored"
+            fields["board_stage"] = "tailored"
+
+        elif task_key == "write_cover_letters":
+            cover = _usable_link(record.get("cover_doc_url"))
+            if cover:
+                fields["cover_doc_url"] = cover
+                fields["cover_letter"] = 1
+            elif _as_bool(record.get("cover_letter")):
+                fields["cover_letter"] = 1
+            fields["board_stage"] = "cover"
+
+        elif task_key == "humanize_content":
+            fields["board_stage"] = "humanized"
 
         elif task_key == "compile_and_upload_resume_pdfs":
             link = _usable_link(record.get("resume_pdf_url"))
             if link:
                 fields["resume_pdf_url"] = link
+            fields["board_stage"] = "compiled"
 
         elif task_key == "submit_job_applications":
             status = classify_submission(str(record.get("application_status") or ""))
@@ -490,6 +557,10 @@ def sync_task_output(
                 # A DRY_RUN rehearsal reports "Applied" for a form it never
                 # submitted. Flag it, or the funnel counts it as a real one.
                 fields["dry_run"] = 1 if dry_run else 0
+            fields["board_stage"] = status or "failed"
+
+        elif task_key == "log_applications_to_google_sheets":
+            fields["board_stage"] = "logged"
 
         application_id = pipeline_store.record_application(
             job_id,

@@ -204,6 +204,12 @@ ALTER TABLE application ADD COLUMN dry_run INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE application ADD COLUMN ats_before REAL;
 ALTER TABLE application ADD COLUMN ats_after REAL;
 """,
+    # Board columns (Cover, Humanize, Compile, Log, Screen) are finer than
+    # funnel statuses. Funnel metrics still read application.status /
+    # application_event; the Apply board reads board_stage.
+    """
+ALTER TABLE application ADD COLUMN board_stage TEXT NOT NULL DEFAULT '';
+""",
 ]
 
 
