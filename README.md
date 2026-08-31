@@ -4,6 +4,18 @@ Local-first AI **job application swarm**. Answer a few questions about the roles
 
 Dry-run is the default. Real applications are opt-in.
 
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/YOUR_GITHUB_USER/Robin?quickstart=1)
+
+Click the badge for a live instance with zero local install — Python, Node,
+Playwright, and the dashboard server are all set up automatically and the
+onboarding screen opens in a preview tab (~30-90s to spin up, then it's a
+real running copy of the app). Dry-run stays on and the shipped fictional
+profile loads by default, so onboarding and the dashboard are usable
+immediately. To go past onboarding into live Scout/Fit/Tailor/Cover runs,
+open the `.env` file it creates for you and paste in your own
+`GROQ_API_KEY` / `GEMINI_API_KEY` (see step 3 below for where to get them),
+then restart the server from the terminal: `python dashboard/server.py`.
+
 > **Site (GitHub Pages):** after you publish, open  
 > `https://YOUR_GITHUB_USER.github.io/Robin/`  
 > Start with **[Onboarding](docs/onboarding.html)** → download `profile.json` → follow **[Install](docs/install.html)**.
@@ -125,6 +137,10 @@ Onboarding choices map to `swarm.modules` and `swarm.optional` (LinkedIn loop, c
 3. Settings → Pages → Deploy from branch → `/docs`.
 4. Replace `YOUR_GITHUB_USER` in `README.md` and `docs/*.html`.
 5. Confirm Pages URL opens onboarding.
+6. Click the Codespaces badge on a fresh clone; confirm the preview tab opens
+   on the onboarding screen without manual setup, `.env` exists with
+   `DRY_RUN=True`, and the API-key paste + restart step in the badge's
+   description actually unlocks a live agent run.
 
 ---
 

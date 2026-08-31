@@ -1,0 +1,37 @@
+{
+  "name": "Robin",
+  "image": "mcr.microsoft.com/devcontainers/python:1-3.11-bookworm",
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "18"
+    }
+  },
+  "containerEnv": {
+    // main() calls webbrowser.open() on boot; there is no GUI browser inside
+    // a Codespace, so this skips straight to the printed URL instead of
+    // failing silently against a display that doesn't exist.
+    "JH_NO_BROWSER": "1"
+  },
+  "forwardPorts": [5959],
+  "portsAttributes": {
+    "5959": {
+      "label": "Robin dashboard",
+      "onAutoForward": "openPreview"
+    }
+  },
+  // One-time setup: Python deps, the headless Chromium ATS-apply flow needs,
+  // and the Node-based resume parser sidecar (tools/open-resume-parser) --
+  // mirrors README's "Easiest path" install exactly, so there's one
+  // documented install flow, not two that can drift apart.
+  "postCreateCommand": "pip install -e . && python -m playwright install --with-deps chromium && npm install --prefix tools/open-resume-parser && [ -f .env ] || cp .env.example .env",
+  // Runs on every start (not just first create), so reopening/resuming a
+  // Codespace brings the dashboard back up without a manual step. DRY_RUN
+  // defaults to True in .env.example -- nothing here can submit a real
+  // application before a visitor has read anything.
+  "postStartCommand": "nohup python dashboard/server.py > /tmp/robin-server.log 2>&1 &",
+  "customizations": {
+    "vscode": {
+      "extensions": ["ms-python.python"]
+    }
+  }
+}
