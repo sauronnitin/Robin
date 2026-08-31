@@ -2041,16 +2041,18 @@ def parse_resume_bytes(filename: str, data: bytes) -> dict[str, Any]:
     # look like a plain ".ext" token, then enforce the allow-list of
     # extensions Profile's upload actually accepts (PDF, DOC, DOCX, TEX).
     raw_name = os.path.basename(filename or "resume.pdf")
-    suffix = Path(raw_name).suffix.lower()
-    if not re.fullmatch(r"\.[a-z0-9]+", suffix or ""):
-        suffix = ".pdf"
-    if suffix not in _ALLOWED_RESUME_SUFFIXES:
-        suffix = ".pdf"
-    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+    candidate_suffix = Path(raw_name).suffix.lower()
+    # safe_suffix is only ever assigned from the hardcoded default or a value
+    # already proven to be in _ALLOWED_RESUME_SUFFIXES -- candidate_suffix
+    # (derived from the untrusted filename) never itself reaches the sink.
+    safe_suffix = ".pdf"
+    if re.fullmatch(r"\.[a-z0-9]+", candidate_suffix or "") and candidate_suffix in _ALLOWED_RESUME_SUFFIXES:
+        safe_suffix = candidate_suffix
+    with tempfile.NamedTemporaryFile(delete=False, suffix=safe_suffix) as tmp:
         tmp.write(data)
         tmp_path = Path(tmp.name)
     try:
-        if suffix == ".pdf":
+        if safe_suffix == ".pdf":
             or_resume = _parse_pdf_via_open_resume(tmp_path)
             if or_resume is not None:
                 mapped = _map_open_resume(or_resume)
@@ -2081,7 +2083,7 @@ def parse_resume_bytes(filename: str, data: bytes) -> dict[str, Any]:
 
         text, line_metas = _extract_text_for_parse(tmp_path)
         chars = len((text or "").strip())
-        if suffix == ".pdf" and chars < _MIN_TEXT_CHARS:
+        if safe_suffix == ".pdf" and chars < _MIN_TEXT_CHARS:
             return {
                 "ok": False,
                 "error": (
@@ -2097,7 +2099,7 @@ def parse_resume_bytes(filename: str, data: bytes) -> dict[str, Any]:
                 "parser": "fallback",
             }
         base = _heuristic_parse(text, line_metas)
-        parser = "fallback" if suffix == ".pdf" else "local"
+        parser = "fallback" if safe_suffix == ".pdf" else "local"
         return _finalize_parse_result(base, text, chars=chars, parser=parser)
     finally:
         try:

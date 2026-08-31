@@ -121,20 +121,32 @@ _PROBE_ALLOWED_HOSTS = tuple(h for h, _source in _HOST_SOURCE)
 
 def _probe_url(url: str, timeout: float = 5.0) -> tuple[bool, str]:
     """Return (ok, detail). Used by scan-fix retries."""
-    if not url or not url.startswith("http"):
+    if not url:
         return False, "missing url"
+    parsed = urllib.parse.urlsplit(url)
+    if parsed.scheme not in ("http", "https"):
+        return False, "blocked host"
+    if parsed.username or parsed.password:
+        return False, "blocked host"
+    host = parsed.hostname
+    if not host:
+        return False, "blocked host"
     # Belt and braces: this only ever needs to re-probe the known job-board
     # hosts already registered in _HOST_SOURCE, so an explicit allowlist
     # check comes first (in addition to _is_public_host's private-IP check
     # below) -- a request for any other host, reachable or not, is refused
     # outright rather than merely IP-validated.
-    if not host_matches(url, *_PROBE_ALLOWED_HOSTS):
+    if not host_matches(f"{parsed.scheme}://{host}", *_PROBE_ALLOWED_HOSTS):
         return False, "blocked host"
-    host = urllib.parse.urlparse(url).hostname
-    if not host or not _is_public_host(host):
+    if not _is_public_host(host):
         return False, "blocked host"
+    # Rebuild the request URL from the validated components rather than
+    # reusing the original string -- a request built from parts that have
+    # each individually been checked is what actually breaks the taint here.
+    netloc = host if parsed.port is None else f"{host}:{parsed.port}"
+    safe_url = urllib.parse.urlunsplit((parsed.scheme, netloc, parsed.path or "/", parsed.query, ""))
     try:
-        req = urllib.request.Request(url, headers=_UA)
+        req = urllib.request.Request(safe_url, headers=_UA)
         with urllib.request.urlopen(req, timeout=timeout) as resp:
             code = getattr(resp, "status", None) or resp.getcode()
             raw = resp.read(256)
