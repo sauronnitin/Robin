@@ -9,8 +9,10 @@ from __future__ import annotations
 
 import hashlib
 import html as html_lib
+import ipaddress
 import json
 import re
+import socket
 import threading
 import time
 import urllib.error
@@ -94,10 +96,32 @@ _AUTH_RE = re.compile(r"\b401\b|\b403\b|forbidden|unauthorized|blocked", re.I)
 _NOTFOUND_RE = re.compile(r"\b404\b|not found", re.I)
 
 
+def _is_public_host(hostname: str) -> bool:
+    """Reject hosts that resolve to a private/internal/reserved address.
+
+    _probe_url's url comes from the raw POST body of /api/jobs/scan-fix
+    (dashboard/server.py), so without this check a caller could point it at
+    localhost, an internal network, or a cloud metadata endpoint (CWE-918:
+    server-side request forgery) and have this server fetch it for them.
+    """
+    try:
+        addrs = socket.getaddrinfo(hostname, None)
+    except OSError:
+        return False
+    for addr in addrs:
+        ip = ipaddress.ip_address(addr[4][0])
+        if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved or ip.is_multicast or ip.is_unspecified:
+            return False
+    return True
+
+
 def _probe_url(url: str, timeout: float = 5.0) -> tuple[bool, str]:
     """Return (ok, detail). Used by scan-fix retries."""
     if not url or not url.startswith("http"):
         return False, "missing url"
+    host = urllib.parse.urlparse(url).hostname
+    if not host or not _is_public_host(host):
+        return False, "blocked host"
     try:
         req = urllib.request.Request(url, headers=_UA)
         with urllib.request.urlopen(req, timeout=timeout) as resp:
