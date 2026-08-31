@@ -116,15 +116,15 @@ def _resolve_llm(model: str | None, *, default: str | None = None):
     raw = (model or default or _GROQ_8B).strip()
     remapped = RETIRED_MODEL_REMAP.get(raw) or RETIRED_MODEL_REMAP.get(raw.lower())
     if remapped:
-        print(f"[jobhunter] remapping retired model {raw!r} -> {remapped!r}")
+        print(f"[robin] remapping retired model {raw!r} -> {remapped!r}")
         raw = remapped
     lower = raw.lower()
     if lower.startswith("gemini/") or lower.startswith("google/"):
         if "pro" in lower:
-            print(f"[jobhunter] rejecting Gemini Pro route {raw!r}; using {_GEMINI_FLASH}")
+            print(f"[robin] rejecting Gemini Pro route {raw!r}; using {_GEMINI_FLASH}")
             raw = _GEMINI_FLASH
         elif "2.0-flash" in lower:
-            print(f"[jobhunter] remapping retired {raw!r} -> {_GEMINI_FLASH}")
+            print(f"[robin] remapping retired {raw!r} -> {_GEMINI_FLASH}")
             raw = _GEMINI_FLASH
         elif not lower.startswith("gemini/"):
             # normalize google/ -> gemini/
@@ -160,10 +160,10 @@ def _apply_llm_override(agent: Agent, node: dict[str, Any]) -> None:
     if current and str(current).strip() == override:
         return
     agent.llm = _resolve_llm(override, default=str(current or _GROQ_8B))
-    print(f"[jobhunter] llm override {node.get('id')}: {current} -> {agent.llm.model}")
+    print(f"[robin] llm override {node.get('id')}: {current} -> {agent.llm.model}")
     fallback = str(node.get("fallback_llm") or "").strip()
     if fallback and fallback != override:
-        print(f"[jobhunter] fallback_llm recorded for {node.get('id')}: {fallback}")
+        print(f"[robin] fallback_llm recorded for {node.get('id')}: {fallback}")
 
 
 def _build_custom_agent(node: dict[str, Any]) -> Agent:
@@ -272,5 +272,5 @@ def crew_from_env_or_default() -> Crew | None:
     plan = load_run_plan()
     if not plan:
         return None
-    print(f"[jobhunter] using canvas run plan ({len(plan.get('order') or [])} steps)")
+    print(f"[robin] using canvas run plan ({len(plan.get('order') or [])} steps)")
     return build_crew_from_plan(plan)

@@ -1,7 +1,7 @@
 [project]
 name = "robin"
 version = "0.2.0"
-description = "Robin: a local, AI agent-driven job application swarm (bring your own keys + profile)"
+description = "Local-first AI job application swarm — scout, fit, tailor, cover, apply. Bring your own keys and profile. Dry-run by default."
 authors = [{ name = "Robin contributors" }]
 requires-python = ">=3.10,<3.14"
 dependencies = [

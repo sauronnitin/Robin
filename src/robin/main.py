@@ -25,7 +25,7 @@ def run():
     run_id = events_bus.begin_run()
     events_bus.register_crewai_listeners()
     events_bus.write_state(pid=os.getpid(), status="running")
-    print(f"[jobhunter] run_id={run_id} starting kickoff (DRY_RUN={os.environ.get('DRY_RUN', 'True')})")
+    print(f"[robin] run_id={run_id} starting kickoff (DRY_RUN={os.environ.get('DRY_RUN', 'True')})")
 
     # The search describes the candidate, not a list in a config file. These
     # come from the roles on their own resume (see role_profile).
@@ -38,7 +38,7 @@ def run():
     titles = robin_profile.search_titles()
     niche = str((user_profile.get("search") or {}).get("niche") or "").strip()
     print(
-        f"[jobhunter] searching as {role.get('primary_title') or 'unknown role'}"
+        f"[robin] searching as {role.get('primary_title') or 'unknown role'}"
         f" ({role.get('seniority')}) based in {home}:"
         f" {', '.join(titles) or 'no titles derived'}"
     )
@@ -58,7 +58,7 @@ def run():
         crew = graph_crew if graph_crew is not None else RobinCrew().crew()
         crew.kickoff(inputs=inputs)
         events_bus.end_run("done", detail={"message": "crew.kickoff() finished"})
-        print("[jobhunter] run complete")
+        print("[robin] run complete")
         return 0
     except Exception as exc:
         events_bus.emit(
@@ -74,7 +74,7 @@ def run():
                 suggestion="Review the failure, fix config/quota if needed, then confirm retry or abort.",
             )
             if decision == "retry":
-                print("[jobhunter] user confirmed retry; re-raising for outer supervisor to restart")
+                print("[robin] user confirmed retry; re-raising for outer supervisor to restart")
                 events_bus.end_run("failed", detail={"error": str(exc)[:800], "retry_requested": True})
                 return 75  # special: server may restart
             events_bus.end_run("aborted", detail={"error": str(exc)[:800]})

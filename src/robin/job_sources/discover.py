@@ -10,7 +10,7 @@ from typing import Any
 from robin.db import connect, utc_now
 from robin.job_sources.registry import REGISTRY
 
-log = logging.getLogger("jobhunter.discover")
+log = logging.getLogger("robin.discover")
 
 _GH_BOARD_RE = re.compile(
     r"boards-api\.greenhouse\.io/v1/boards/([a-zA-Z0-9_-]+)",

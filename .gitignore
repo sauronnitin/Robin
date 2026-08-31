@@ -54,6 +54,9 @@ dashboard/errors/*.log
 dashboard/errors/*.pid
 dashboard/errors/autofix_state.json
 dashboard/run_history.jsonl
+dashboard/robin.db
+dashboard/robin.db-*
+# Pre-rename name, still matched because db.py migrates from it on first run
 dashboard/jobhunter.db
 dashboard/jobhunter.db-*
 dashboard/_srv_*.log
