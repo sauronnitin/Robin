@@ -62,6 +62,30 @@ tailwind.config = {
   --st-peach:   #fbe1d1;
   --st-sienna:  #5d2a1a;
   --st-border:  rgba(4, 23, 43, 0.06);
+  /* These eight were defined on html.dark but never here, so in LIGHT mode —
+     the default theme — every var() referencing them was invalid at
+     computed-value time and the whole declaration dropped. CSS reports none of
+     this: no console error, no failed rule, just a property silently reverting
+     to its initial value. It cost .rb-need.is-missing its colour (a missing
+     API key rendered identical to a present one), .rb-need-pop-item:focus-visible
+     its border (invisible keyboard focus), .rb-need-flash its outline, and
+     .rb-bento-rail-btn:hover its background.
+     Values are not invented: the first six are lifted from the html.dark #ob
+     block below, which is this same light palette scoped to the onboarding
+     screen. Amber had no light value anywhere — the dark #c48050 measures only
+     2.92:1 on this canvas, below even the 3:1 non-text minimum, so it is
+     darkened to 5.17:1, matching the 5.22:1 the dark amber achieves against
+     its own surface.
+     --st-sidebar is deliberately absent: it is a dark-only surface with no
+     light-mode consumer, and a value here would be a guess. */
+  --st-page:      #f6f4ef;
+  --st-card:      #ffffff;
+  --st-raised:    #ffffff;
+  --st-border-hi: rgba(4, 23, 43, 0.12);
+  --st-btn-ink:   #17191c;
+  --st-btn-on:    #f6f4ef;
+  --st-amber:     #9a5520;
+  --st-amber-dim: rgba(154, 85, 32, 0.12);
   --st-serif:   "Source Serif 4", Georgia, ui-serif, serif;
   --st-sans:    "DM Sans", ui-sans-serif, system-ui, sans-serif;
 
