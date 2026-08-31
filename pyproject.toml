@@ -1,5 +1,5 @@
 [project]
-name = "jobhunter_ai"
+name = "robin"
 version = "0.2.0"
 description = "Robin: a local, AI agent-driven job application swarm (bring your own keys + profile)"
 authors = [{ name = "Robin contributors" }]

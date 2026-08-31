@@ -116,28 +116,28 @@ _SRC = str(PROJECT_ROOT / "src")
 if _SRC not in sys.path:
     sys.path.insert(0, _SRC)
 
-from jobhunter_ai import app_settings  # noqa: E402
-from jobhunter_ai import ats_jobs  # noqa: E402
-from jobhunter_ai import auto_fix  # noqa: E402
-from jobhunter_ai import canvas_chat  # noqa: E402
-from jobhunter_ai import error_bus  # noqa: E402
-from jobhunter_ai import gmail_verify  # noqa: E402
-from jobhunter_ai import job_sources_config  # noqa: E402
-from jobhunter_ai import job_sources_scan  # noqa: E402
-from jobhunter_ai.job_sources import discover as job_sources_discover  # noqa: E402
-from jobhunter_ai.job_sources import health as job_sources_health  # noqa: E402
-from jobhunter_ai.job_sources import seed as job_sources_seed  # noqa: E402
-from jobhunter_ai.job_sources.registry import REGISTRY as JOB_SOURCE_REGISTRY  # noqa: E402
-from jobhunter_ai import kg_store  # noqa: E402
-from jobhunter_ai import model_catalog  # noqa: E402
-from jobhunter_ai import linkedin_review  # noqa: E402
-from jobhunter_ai import location_fit  # noqa: E402
-from jobhunter_ai import metrics as metrics_mod  # noqa: E402
-from jobhunter_ai import outcomes  # noqa: E402
-from jobhunter_ai import pipeline_store  # noqa: E402
-from jobhunter_ai import pipeline_sync  # noqa: E402
-from jobhunter_ai import profile as robin_profile  # noqa: E402
-from jobhunter_ai import resume_parse  # noqa: E402
+from robin import app_settings  # noqa: E402
+from robin import ats_jobs  # noqa: E402
+from robin import auto_fix  # noqa: E402
+from robin import canvas_chat  # noqa: E402
+from robin import error_bus  # noqa: E402
+from robin import gmail_verify  # noqa: E402
+from robin import job_sources_config  # noqa: E402
+from robin import job_sources_scan  # noqa: E402
+from robin.job_sources import discover as job_sources_discover  # noqa: E402
+from robin.job_sources import health as job_sources_health  # noqa: E402
+from robin.job_sources import seed as job_sources_seed  # noqa: E402
+from robin.job_sources.registry import REGISTRY as JOB_SOURCE_REGISTRY  # noqa: E402
+from robin import kg_store  # noqa: E402
+from robin import model_catalog  # noqa: E402
+from robin import linkedin_review  # noqa: E402
+from robin import location_fit  # noqa: E402
+from robin import metrics as metrics_mod  # noqa: E402
+from robin import outcomes  # noqa: E402
+from robin import pipeline_store  # noqa: E402
+from robin import pipeline_sync  # noqa: E402
+from robin import profile as robin_profile  # noqa: E402
+from robin import resume_parse  # noqa: E402
 
 HOME = Path.home()
 SKILL_ROOTS = [
@@ -467,11 +467,11 @@ def _resolve_runner() -> list[str]:
         "python.exe" if os.name == "nt" else "python"
     )
     if venv_py.exists():
-        return [str(venv_py), "-m", "jobhunter_ai.main"]
+        return [str(venv_py), "-m", "robin.main"]
     uv = shutil.which("uv")
     if uv:
-        return [uv, "run", "python", "-m", "jobhunter_ai.main"]
-    return [sys.executable, "-m", "jobhunter_ai.main"]
+        return [uv, "run", "python", "-m", "robin.main"]
+    return [sys.executable, "-m", "robin.main"]
 
 
 def _pid_alive(pid: int | None) -> bool:
@@ -773,7 +773,7 @@ def signal_abort() -> dict:
 def signal_pause() -> dict:
     """Pause live execution between LLM calls. Does not kill the process."""
     try:
-        from jobhunter_ai import events_bus
+        from robin import events_bus
 
         events_bus.set_user_paused(True, reason="User paused from dashboard")
     except Exception as exc:
@@ -796,7 +796,7 @@ def signal_resume() -> dict:
     if status == "awaiting_retry":
         return signal_retry()
     try:
-        from jobhunter_ai import events_bus
+        from robin import events_bus
 
         events_bus.set_user_paused(False, reason="User resumed from dashboard")
         events_bus.write_control("resume", user_paused=False)

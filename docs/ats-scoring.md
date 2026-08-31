@@ -1,6 +1,6 @@
 # ATS match scoring — what it is and where the model came from
 
-`src/jobhunter_ai/ats_score.py` scores a resume against one job posting, 0–100.
+`src/robin/ats_score.py` scores a resume against one job posting, 0–100.
 
 ## Two scores, two questions
 

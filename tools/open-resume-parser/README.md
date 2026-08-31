@@ -4,7 +4,7 @@ Isolated Node CLI that runs the [Open Resume](https://github.com/xitanggg/open-r
 
 ## License
 
-**AGPL-3.0.** See `LICENSE` and `NOTICE`. Do not copy these sources into `src/jobhunter_ai/`.
+**AGPL-3.0.** See `LICENSE` and `NOTICE`. Do not copy these sources into `src/robin/`.
 
 ## Setup
 

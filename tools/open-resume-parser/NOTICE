@@ -18,7 +18,7 @@ Local adaptations (still under AGPL-3.0 as derivative work of the above):
   - lib/redux/featured-skills.ts           (minimal extract from resumeSlice)
   - parse.mjs / cli.ts                     (CLI wrapper)
 
-JobHunter's main application code under src/jobhunter_ai/ does NOT include
+JobHunter's main application code under src/robin/ does NOT include
 these AGPL sources. It invokes this package only as a separate subprocess.
 
 See LICENSE in this directory for the full AGPL-3.0 text.

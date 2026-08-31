@@ -690,7 +690,7 @@
     return {
       summary,
       code: resolved,
-      files: ["dashboard/errors/latest.json", "src/jobhunter_ai/crew.py"],
+      files: ["dashboard/errors/latest.json", "src/robin/crew.py"],
       suggestion: suggestion || undefined,
       error: err || undefined,
     };

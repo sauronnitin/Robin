@@ -128,8 +128,8 @@ should read.
 
 - Robin is a local job-application pipeline. Public template
   branded Robin. Role packs live under `profiles/`; active profile in
-  gitignored `user/profile.json` or `ROBIN_PROFILE`. `src/jobhunter_ai/profile.py`
-  with `GET/POST /api/profile`. Resume parse via `src/jobhunter_ai/resume_parse.py`
+  gitignored `user/profile.json` or `ROBIN_PROFILE`. `src/robin/profile.py`
+  with `GET/POST /api/profile`. Resume parse via `src/robin/resume_parse.py`
   (PDF sidecar at `tools/open-resume-parser/`, pdfplumber fallback; DOCX/TEX
   stay Python). Static onboarding in `docs/`.
 - Google auth is OAuth2 with a Desktop app client (`google-oauth-client.json`
@@ -147,7 +147,7 @@ should read.
   serves `dashboard/mockup.html`. LinkedIn Lab starts the LI section plan via
   `POST /api/run`. Individual Knowledge Graph uses a structured store
   (`dashboard/kg` defaults, `user/kg` after clone) with `stated`|`inferred`
-  provenance. Browse and Scout share `jobhunter_ai.job_feed.fetch_job_feed`.
+  provenance. Browse and Scout share `robin.job_feed.fetch_job_feed`.
   Query comes from `role_profile.search_terms` when omitted. LinkedIn is
   excluded from Browse/Apply. `pipeline_sync` upserts Scout listings into
   `job` (description included; no application row until Score).
@@ -163,8 +163,8 @@ should read.
   agents.yaml/tasks.yaml). Main loop uses `AGENTS`/`EDGES`; LinkedIn loop uses
   `LI_AGENTS`/`LI_EDGES`/`LI_SECTION`. New agents must be added to
   `dashboard/pipeline-data.js` ORDER.
-- Live run telemetry: `src/jobhunter_ai/events_bus.py`. Playwright UI actions
-  can surface via `src/jobhunter_ai/browser_preview.py`.
+- Live run telemetry: `src/robin/events_bus.py`. Playwright UI actions
+  can surface via `src/robin/browser_preview.py`.
 - Canvas `#chatDock` is Gemini Flash via `POST /api/chat`.
 
 ## Learned User Preferences
@@ -187,7 +187,7 @@ should read.
 - `job.work_mode` is only `remote`, `hybrid`, `onsite`, or empty. All writes,
   including `pipeline_sync._identity()`, go through `normalize_work_mode`.
   Employment-type strings such as Full-Time become empty, not a location mode.
-- `goal:` and `backstory:` in `src/jobhunter_ai/config/agents.yaml` and
+- `goal:` and `backstory:` in `src/robin/config/agents.yaml` and
   `tasks.yaml` are unquoted plain multi-line scalars. A bare colon inside a
   line is invalid YAML and blocks every live run. Use parenthetical
   interpolations such as `({niche})`.
