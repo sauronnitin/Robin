@@ -750,17 +750,17 @@ html.dark #ob {
   flex-direction: column;
   align-items: center;
   transform: translateY(var(--ob-intro-shift, 0px));
-  transition: transform 900ms cubic-bezier(.22, 1, .36, 1);
+  transition: transform 600ms cubic-bezier(.22, 1, .36, 1);
 }
 #obTitle {
-  transition: transform 900ms ease, opacity 900ms ease;
+  transition: transform 600ms ease, opacity 600ms ease;
 }
 #obTitle.ob-pending {
   opacity: 0;
   transform: scale(0.82);
 }
 #obTagline {
-  transition: opacity 900ms ease;
+  transition: opacity 500ms ease;
 }
 #obTagline.ob-pending {
   opacity: 0;
@@ -771,7 +771,7 @@ html.dark #ob {
 }
 .ob-hero, #obSubtitle {
   opacity: 1;
-  transition: opacity 1000ms ease;
+  transition: opacity 700ms ease;
 }
 .ob-tagline {
   margin: 4px 0 0;
@@ -2867,10 +2867,13 @@ html.dark #resumePreviewHint {
     // title grows in -> tagline grows in right after -> both HOLD together,
     // stationary and readable -> block moves up to its original position ->
     // only once that's done does the rest of the UI slowly fade in.
-    const TITLE_TRANSITION = 900;
-    const TAGLINE_TRANSITION = 900;
-    const HOLD = 1200;             // both visible together, stationary
-    const MOVE_TRANSITION = 900;
+    // These four MUST match the CSS transition durations on #obTitle,
+    // #obTagline and #obIntroBlock above — the sequence below waits them out
+    // by the clock, so changing one side alone desyncs the stages.
+    const TITLE_TRANSITION = 600;
+    const TAGLINE_TRANSITION = 500;
+    const HOLD = 450;              // both visible together, stationary
+    const MOVE_TRANSITION = 600;
     (async function sequence(){
       await wait(50);                              // let the pending state paint first
       title.classList.remove('ob-pending');         // title grows in, centered
@@ -3050,6 +3053,15 @@ html.dark #resumePreviewHint {
     if(actx.state === 'suspended') actx.resume();
     return actx;
   }
+  // Browsers refuse to start an AudioContext without a user gesture, and the
+  // bird's entrance runs on page load — so on a cold first visit its flight
+  // song and landing greeting are muted by policy, not by a bug, and there is
+  // nothing this code can do about that one. What it can do is unlock on the
+  // first interaction of ANY kind, so every chirp after that has sound instead
+  // of staying silent until the user happens to click the bird itself.
+  ['pointerdown', 'keydown'].forEach(evt =>
+    window.addEventListener(evt, () => { try{ ensureAudio(); }catch(e){} }, { once: true, passive: true })
+  );
   function tone(ctx, now, startOffset, freqStart, freqEnd, dur, peak){
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
@@ -3271,11 +3283,30 @@ html.dark #resumePreviewHint {
     await land();
   }
 
-  // The greeting is now the flight song, not a post-landing one — the bird
-  // arrives singing and falls quiet as it settles, so all that's left here is
-  // the handoff into the artwork, which is where it lives when idle.
+  // Landing greeting. The flight song covers the approach, but the arrival
+  // itself was silent and still — the bird touched down and dissolved into
+  // the paper without ever acknowledging it had got there. This is also the
+  // ONLY window in which both gestures are possible: once it settles it is
+  // part of the painting, and a painted bird can neither turn its head nor
+  // open its beak (see doIdleTilt's painted guard). So: look around, then
+  // announce, then settle. Shorter tail than CHIRP_TAIL_MS — this one sits
+  // in the entrance's critical path, where dwell reads as lag, not as a
+  // bird finishing a phrase.
+  const GREET_TAIL_MS = 520;
   async function settleAfterLanding(){
-    await wait(220);
+    await waitOrQuiet(160);
+    if(quiet){ await settleIntoPainting(); return; }
+    tiltHeadAnimation();
+    await waitOrQuiet(240);
+    if(!quiet){
+      lastChirpAt = Date.now();   // don't let the ambient timer stack onto this
+      const len = playChirpTone();
+      pulseChirpMark(false);
+      setPerchedPose(poseSinging);
+      await waitOrQuiet(len + GREET_TAIL_MS);
+      setPerchedPose(poseNeutral);
+      await waitOrQuiet(140);
+    }
     await settleIntoPainting();
   }
 
