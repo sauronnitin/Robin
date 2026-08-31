@@ -2030,6 +2030,12 @@ def _finalize_parse_result(
 
 
 _ALLOWED_RESUME_SUFFIXES = (".pdf", ".doc", ".docx", ".tex")
+# A dict.get() lookup returns one of these hardcoded literal values, or the
+# hardcoded default -- never the untrusted key itself -- which is a taint
+# break a conditional reassignment of the same variable apparently isn't
+# (that shape kept getting re-flagged even with the allow-list check in
+# place, CodeQL alert #10 / re-opened as #23).
+_SUFFIX_LOOKUP = {ext: ext for ext in _ALLOWED_RESUME_SUFFIXES}
 
 
 def parse_resume_bytes(filename: str, data: bytes) -> dict[str, Any]:
@@ -2037,17 +2043,12 @@ def parse_resume_bytes(filename: str, data: bytes) -> dict[str, Any]:
     # name -- but it's still a raw string concatenation, so an unvalidated
     # suffix (e.g. containing a path separator) could write outside the
     # intended temp directory. Treat filename as untrusted end to end: drop
-    # any path components via basename, require the extension to already
-    # look like a plain ".ext" token, then enforce the allow-list of
-    # extensions Profile's upload actually accepts (PDF, DOC, DOCX, TEX).
+    # any path components via basename, then look the extension up in a
+    # fixed table of the extensions Profile's upload actually accepts (PDF,
+    # DOC, DOCX, TEX) -- anything else falls back to the hardcoded default.
     raw_name = os.path.basename(filename or "resume.pdf")
     candidate_suffix = Path(raw_name).suffix.lower()
-    # safe_suffix is only ever assigned from the hardcoded default or a value
-    # already proven to be in _ALLOWED_RESUME_SUFFIXES -- candidate_suffix
-    # (derived from the untrusted filename) never itself reaches the sink.
-    safe_suffix = ".pdf"
-    if re.fullmatch(r"\.[a-z0-9]+", candidate_suffix or "") and candidate_suffix in _ALLOWED_RESUME_SUFFIXES:
-        safe_suffix = candidate_suffix
+    safe_suffix = _SUFFIX_LOOKUP.get(candidate_suffix, ".pdf")
     with tempfile.NamedTemporaryFile(delete=False, suffix=safe_suffix) as tmp:
         tmp.write(data)
         tmp_path = Path(tmp.name)
