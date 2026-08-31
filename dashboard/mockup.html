@@ -734,6 +734,55 @@ html.dark #ob {
 }
 .ob-hero-bg-bird.on { opacity: 1; }
 
+/* Entrance choreography, staged (slow, deliberate — fully sequential, not
+   a single beat):
+   1. Title grows in at screen-center (scale + fade) — #obIntroBlock (title +
+      tagline together) is held there via a JS-measured --ob-intro-shift,
+      since the hero's height makes the block's natural resting position
+      viewport-dependent.
+   2. Right after, the tagline grows in below it — block still centered.
+   3. Both hold, visible and stationary, for a full readable beat.
+   4. THEN the block eases up to its normal flowed position.
+   5. ONLY once that finishes does the hero/subtitle slowly fade in from
+      nothing — sequential, not concurrent with the move. The bird's own
+      glide-in animation is untouched — see window.__obIntroReveal below,
+      which only gates WHEN it starts. */
+#obIntroBlock {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transform: translateY(var(--ob-intro-shift, 0px));
+  transition: transform 900ms cubic-bezier(.22, 1, .36, 1);
+}
+#obTitle {
+  transition: transform 900ms ease, opacity 900ms ease;
+}
+#obTitle.ob-pending {
+  opacity: 0;
+  transform: scale(0.82);
+}
+#obTagline {
+  transition: opacity 900ms ease;
+}
+#obTagline.ob-pending {
+  opacity: 0;
+}
+#ob.ob-intro .ob-hero,
+#ob.ob-intro #obSubtitle {
+  opacity: 0;
+}
+.ob-hero, #obSubtitle {
+  opacity: 1;
+  transition: opacity 1000ms ease;
+}
+.ob-tagline {
+  margin: 4px 0 0;
+  font-family: var(--st-sans);
+  font-size: 14px;
+  color: var(--st-smoke);
+  text-align: center;
+}
+
 /* The bird's own layer: same box as the artwork (see the shared rule above)
    plus the plate's aspect ratio, so its height always equals the rendered
    image height. Every bird coordinate is therefore a percentage OF THE
@@ -2998,7 +3047,10 @@ html.dark .jh-asst-send { background: var(--st-peach); color: var(--st-sienna); 
     </div>
 
   </div>
-  <h1 class="st-h1" id="obTitle" style="margin-top:-28px">Welcome to Robin</h1>
+  <div id="obIntroBlock">
+    <h1 class="st-h1" id="obTitle" style="margin-top:-28px">Welcome to Robin</h1>
+    <p class="ob-tagline" id="obTagline">An AI swarm that finds, tailors, and applies to jobs for you.</p>
+  </div>
   <p class="text-smoke text-sm mb-3" id="obSubtitle">How would you like to get started?</p>
 
   <!-- One question at a time. The branch overhead grows as these are answered. -->
@@ -3037,6 +3089,60 @@ html.dark .jh-asst-send { background: var(--st-peach); color: var(--st-sienna); 
   <!-- kept in the DOM (hidden): applyResumeUpload() uses it as a status target -->
   <button id="obContBtn" class="st-btn-primary hidden mt-3">Get started</button>
 </div>
+
+<script>
+// Entrance choreography, staged: the title grows in at screen-center, then
+// the tagline fades in below it (still centered), then the block eases up to
+// its normal position while the hero/subtitle fade in from nothing at the
+// same pace. window.__obIntroReveal is a promise the bird's own entrance
+// script (below) awaits before starting its existing glide-in — this only
+// shifts WHEN that animation starts, it never touches how it runs.
+(function(){
+  const ob = document.getElementById('ob');
+  const title = document.getElementById('obTitle');
+  const tagline = document.getElementById('obTagline');
+  const block = document.getElementById('obIntroBlock');
+  if(!ob || !title || !block){ window.__obIntroReveal = Promise.resolve(); }
+  else{
+    let resolveReveal;
+    window.__obIntroReveal = new Promise(res => { resolveReveal = res; });
+    const wait = ms => new Promise(r => setTimeout(r, ms));
+
+    ob.classList.add('ob-intro');
+    title.classList.add('ob-pending');
+    if(tagline) tagline.classList.add('ob-pending');
+
+    // Measured, not guessed: the hero's height makes the block's natural
+    // (flowed) position viewport-dependent, so the shift back to 0 has to be
+    // computed from where it actually sits, same convention as the bird's
+    // own percentage-of-the-painting coordinates above.
+    const rect = block.getBoundingClientRect();
+    const naturalCenterY = rect.top + rect.height / 2;
+    block.style.setProperty('--ob-intro-shift', `${(window.innerHeight / 2) - naturalCenterY}px`);
+
+    // Fully sequential, each stage waiting for the last to actually finish:
+    // title grows in -> tagline grows in right after -> both HOLD together,
+    // stationary and readable -> block moves up to its original position ->
+    // only once that's done does the rest of the UI slowly fade in.
+    const TITLE_TRANSITION = 900;
+    const TAGLINE_TRANSITION = 900;
+    const HOLD = 1200;             // both visible together, stationary
+    const MOVE_TRANSITION = 900;
+    (async function sequence(){
+      await wait(50);                              // let the pending state paint first
+      title.classList.remove('ob-pending');         // title grows in, centered
+      await wait(TITLE_TRANSITION);
+      if(tagline) tagline.classList.remove('ob-pending'); // tagline grows in, right after
+      await wait(TAGLINE_TRANSITION);
+      await wait(HOLD);                             // both held, readable
+      block.style.setProperty('--ob-intro-shift', '0px'); // move up to original position
+      await wait(MOVE_TRANSITION);
+      ob.classList.remove('ob-intro');              // THEN the rest of the UI slowly appears
+      resolveReveal();
+    })();
+  }
+})();
+</script>
 
 <script>
 // Robin hero bird — reactive character over the onboarding branch painting.
@@ -3504,7 +3610,11 @@ html.dark .jh-asst-send { background: var(--st-peach); color: var(--st-sienna); 
   const heroBg = document.querySelector('#obHero .ob-hero-bg');
   const decodeAll = [heroBg, poseNeutral, poseGlide]
     .map(img => img.decode ? img.decode().catch(() => {}) : Promise.resolve());
-  Promise.all(decodeAll).then(enter);
+  // window.__obIntroReveal resolves the moment the hero starts fading in
+  // (see the entrance-choreography script above) — the glide-in itself is
+  // unchanged, only its start is synced to that beat instead of firing as
+  // soon as images decode.
+  Promise.all([...decodeAll, window.__obIntroReveal]).then(enter);
 })();
 </script>
 
@@ -6569,6 +6679,7 @@ function saveLiUrlNote(){
   const fileInput  = document.getElementById('rfInput');
   const title   = document.getElementById('obTitle');
   const subtitle= document.getElementById('obSubtitle');
+  const tagline = document.getElementById('obTagline');
   if(!flow) return;
 
   const KG = () => window.__jhKnowledgeGraph;
@@ -6852,6 +6963,11 @@ function saveLiUrlNote(){
     steps = buildSteps();
     title.textContent = 'Welcome to Robin';
     subtitle.textContent = 'A few quick questions — the branch fills in as you go.';
+    // Don't show the question flow (or drop the tagline) until the title/
+    // tagline intro sequence has actually moved up — otherwise this resolves
+    // near-instantly and the questions race ahead of that animation.
+    await window.__obIntroReveal;
+    if(tagline) tagline.style.opacity = '0'; // welcome-beat only, fades once questions start
     flow.hidden = false;
     render();
   })();
