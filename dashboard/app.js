@@ -405,13 +405,6 @@
   const chatSendBtn = document.getElementById("chatSendBtn");
   const chatClearBtn = document.getElementById("chatClearBtn");
   const chatStatus = document.getElementById("chatStatus");
-  const assistantDelegated = (() => {
-    try {
-      return window.parent !== window && window.parent.__jhAssistant;
-    } catch (_) {
-      return false;
-    }
-  })();
   const expandLogBtn = document.getElementById("expandLogBtn");
   const zoomLabel = document.getElementById("zoomLabel");
   const addElementBtn = document.getElementById("addElementBtn");
@@ -8056,79 +8049,7 @@
     setChatStatus("Robin assistant · ready");
   }
 
-  function initAssistantBridge() {
-    if (!assistantDelegated) return;
-    const footer = document.querySelector(".stage-footer");
-    if (footer) footer.classList.add("assistant-delegated");
-    if (chatDock) {
-      chatDock.classList.add("chat-dock-delegated");
-      const head = chatDock.querySelector(".chat-head");
-      if (head) {
-        const title = head.querySelector(".chat-title");
-        if (title) title.textContent = "Ask Cursor";
-        const sub = head.querySelector(".chat-sub");
-        if (sub) sub.textContent = "Opens left panel (Cursor bridge)";
-        const clearBtn = head.querySelector(".chat-clear");
-        if (clearBtn) clearBtn.hidden = true;
-        let openBtn = head.querySelector(".chat-open-assistant");
-        if (!openBtn) {
-          openBtn = document.createElement("button");
-          openBtn.type = "button";
-          openBtn.className = "chat-open-assistant";
-          openBtn.textContent = "Open Ask Cursor panel";
-          openBtn.addEventListener("click", (e) => {
-            e.preventDefault();
-            try {
-              window.parent.postMessage({ type: "jh-assistant-open" }, "*");
-            } catch (_) { /* ignore */ }
-          });
-          head.appendChild(openBtn);
-        }
-      }
-    }
-    window.addEventListener("message", async (ev) => {
-      const data = ev.data;
-      if (!data || typeof data !== "object") return;
-      if (data.type === "jh-chat-get-context") {
-        await refreshChatErrorsCache();
-        try {
-          ev.source.postMessage(
-            {
-              type: "jh-chat-context",
-              requestId: data.requestId,
-              context: chatCanvasContext(),
-            },
-            "*"
-          );
-        } catch (_) { /* ignore */ }
-        return;
-      }
-      if (data.type === "jh-chat-apply-actions") {
-        let notes = [];
-        try {
-          notes = await applyChatActions(data.actions || [], data.executed || []);
-        } catch (err) {
-          notes = [String(err && err.message ? err.message : err)];
-        }
-        try {
-          ev.source.postMessage(
-            {
-              type: "jh-chat-actions-done",
-              requestId: data.requestId,
-              notes,
-            },
-            "*"
-          );
-        } catch (_) { /* ignore */ }
-      }
-    });
-  }
-
   function initCanvasChat() {
-    if (assistantDelegated) {
-      initAssistantBridge();
-      return;
-    }
     const stored = loadJSON(CHAT_KEY, []);
     chatHistory = Array.isArray(stored)
       ? stored.filter((m) => m && (m.role === "user" || m.role === "assistant" || m.role === "action") && m.content).slice(-40)

@@ -35,11 +35,8 @@ Prior Bugatti UI: `python dashboard-archive/serve.py v18-bugatti-error-bus`
 
 ## Data
 
-`pipeline-data.js` is mined from `agents.yaml`, `tasks.yaml`, and `crew.py`. Regenerate with:
-
-```
-python dashboard/_gen_pipeline_data.py
-```
+`pipeline-data.js` mirrors the agent/task definitions in `agents.yaml`,
+`tasks.yaml`, and `crew.py`. Update it when those change.
 
 ## Mode
 

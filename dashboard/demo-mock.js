@@ -974,7 +974,7 @@
     { test: eq('/api/profiles'), json: function () { return { ok: true, profiles: [] }; } },
     { test: eq('/api/resume'), json: function () { return { ok: false, error: 'demo mode' }; } },
     // Everything else under /api/ -- settings, sources, models, gmail,
-    // cursor-chat, errors, autofix, schedule, chat, preview, linkedin
+    // errors, autofix, schedule, chat, preview, linkedin
     // review, outcomes, abort/pause/retry/run -- a visitor exploring the
     // demo can click these; a safe no-op beats a console error.
     { test: startsWith('/api/'), json: function () { return { ok: true }; } },

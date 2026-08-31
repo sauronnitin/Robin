@@ -39,11 +39,7 @@ _ALLOW_PREFIXES = (
     "src/jobhunter_ai/",
     "resume/",
 )
-_ALLOW_FILES = frozenset(
-    {
-        "dashboard/_gen_pipeline_data.py",
-    }
-)
+_ALLOW_FILES: frozenset[str] = frozenset()
 _DENY_NAME_PARTS = (
     ".env",
     "google-oauth",
@@ -880,9 +876,6 @@ def _apply_llm_plan(issue: dict[str, Any], plan: dict[str, Any]) -> dict[str, An
                 "resolve": False,
             }
         applied.append(rel)
-        # Regenerate pipeline-data if YAML config changed.
-        if rel.startswith("src/jobhunter_ai/config/") and rel.endswith(".yaml"):
-            _maybe_regen_pipeline_data()
 
     action = "autofix_llm_patch" if applied else "autofix_llm_retry"
     if applied:
@@ -902,25 +895,6 @@ def _apply_llm_plan(issue: dict[str, Any], plan: dict[str, Any]) -> dict[str, An
         "task_key": issue.get("task_key"),
         "files": applied,
     }
-
-
-def _maybe_regen_pipeline_data() -> None:
-    gen = _DASHBOARD / "_gen_pipeline_data.py"
-    if not gen.exists():
-        return
-    try:
-        import subprocess
-        import sys
-
-        subprocess.run(
-            [sys.executable, str(gen)],
-            cwd=str(_PROJECT_ROOT),
-            check=False,
-            timeout=60,
-            capture_output=True,
-        )
-    except Exception as exc:
-        print(f"[autofix] pipeline regen failed: {exc}")
 
 
 def _pick_issue(opens: list[dict[str, Any]], st: dict[str, Any]) -> dict[str, Any] | None:

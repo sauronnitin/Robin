@@ -69,11 +69,6 @@ Serves dashboard/ static files and run-control APIs:
   POST /api/errors/resolve
   POST /api/models/connect
   POST /api/chat
-  GET  /api/cursor-chat/status
-  GET  /api/cursor-chat/poll
-  POST /api/cursor-chat
-  POST /api/cursor-chat/reply
-  POST /api/cursor-chat/ping
   POST /api/preview/narrate
   POST /api/linkedin/review/approve
   POST /api/linkedin/review/reject
@@ -125,8 +120,6 @@ from jobhunter_ai import app_settings  # noqa: E402
 from jobhunter_ai import ats_jobs  # noqa: E402
 from jobhunter_ai import auto_fix  # noqa: E402
 from jobhunter_ai import canvas_chat  # noqa: E402
-from jobhunter_ai import cursor_chat_bridge  # noqa: E402
-from jobhunter_ai import cursor_chat_watch  # noqa: E402
 from jobhunter_ai import error_bus  # noqa: E402
 from jobhunter_ai import gmail_verify  # noqa: E402
 from jobhunter_ai import job_sources_config  # noqa: E402
@@ -170,7 +163,6 @@ _schedule_state: dict = {
 }
 _schedule_started = False
 _autofix_started = False
-_cursor_watch_started = False
 
 
 def _interval_minutes_from_trigger(trigger: dict | None) -> float | None:
@@ -402,26 +394,6 @@ def ensure_autofix_ticker() -> None:
     except Exception as exc:
         print(f"[dashboard] autofix state init failed: {exc!r}")
     threading.Thread(target=_autofix_ticker, daemon=True, name="jh-autofix").start()
-
-
-def _cursor_watch_ticker() -> None:
-    """Idle poll Ask Cursor inbox and refresh nudge.json while dashboard is up."""
-    interval = cursor_chat_bridge.poll_interval_sec()
-    time.sleep(min(15.0, interval / 2.0))
-    while True:
-        try:
-            cursor_chat_watch.poll_once(source="dashboard")
-        except Exception as exc:
-            print(f"[dashboard] cursor-watch ticker error: {exc!r}")
-        time.sleep(float(cursor_chat_bridge.poll_interval_sec()))
-
-
-def ensure_cursor_watch_ticker() -> None:
-    global _cursor_watch_started
-    if _cursor_watch_started:
-        return
-    _cursor_watch_started = True
-    threading.Thread(target=_cursor_watch_ticker, daemon=True, name="jh-cursor-watch").start()
 
 
 def _write_json(path: Path, payload: dict) -> None:
@@ -1390,23 +1362,6 @@ class DashboardHandler(SimpleHTTPRequestHandler):
             return self._json(error_bus.read_latest())
         if path.startswith("/api/autofix"):
             return self._json(auto_fix.status())
-        if path == "/api/cursor-chat/status":
-            try:
-                return self._json(cursor_chat_bridge.get_status())
-            except Exception as exc:
-                print(f"[dashboard] cursor-chat/status failed: {exc!r}")
-                return self._json({"ok": False, "error": str(exc)}, status=500)
-        if path == "/api/cursor-chat/poll":
-            try:
-                return self._json(
-                    cursor_chat_bridge.poll_reply(
-                        message_id=params.get("id") or params.get("message_id") or "",
-                        since=params.get("since") or "",
-                    )
-                )
-            except Exception as exc:
-                print(f"[dashboard] cursor-chat/poll failed: {exc!r}")
-                return self._json({"ok": False, "error": str(exc)}, status=500)
         if path.startswith("/api/settings"):
             try:
                 return self._json(app_settings.get_settings())
@@ -1809,33 +1764,6 @@ class DashboardHandler(SimpleHTTPRequestHandler):
             except Exception as exc:
                 print(f"[dashboard] models/connect failed: {exc!r}")
                 return self._json({"ok": False, "error": str(exc)}, status=500)
-        if path == "/api/cursor-chat/reply":
-            try:
-                result = cursor_chat_bridge.post_reply(body if isinstance(body, dict) else {})
-                status = 200 if result.get("ok") else 400
-                return self._json(result, status=status)
-            except Exception as exc:
-                print(f"[dashboard] cursor-chat/reply failed: {exc!r}")
-                return self._json({"ok": False, "error": str(exc)}, status=500)
-        if path == "/api/cursor-chat/ping":
-            try:
-                reason = "dashboard_ping"
-                if isinstance(body, dict) and body.get("reason"):
-                    reason = str(body.get("reason"))
-                result = cursor_chat_bridge.write_nudge(reason=reason)
-                status = 200 if result.get("ok") else 400
-                return self._json(result, status=status)
-            except Exception as exc:
-                print(f"[dashboard] cursor-chat/ping failed: {exc!r}")
-                return self._json({"ok": False, "error": str(exc)}, status=500)
-        if path == "/api/cursor-chat":
-            try:
-                result = cursor_chat_bridge.send_message(body if isinstance(body, dict) else {})
-                status = 200 if result.get("ok") else 400
-                return self._json(result, status=status)
-            except Exception as exc:
-                print(f"[dashboard] cursor-chat failed: {exc!r}")
-                return self._json({"ok": False, "error": str(exc)}, status=500)
         if path == "/api/chat":
             try:
                 result = canvas_chat.chat(body if isinstance(body, dict) else {})
@@ -1961,7 +1889,6 @@ def main():
     _prepare_dashboard_session()
     ensure_schedule_ticker()
     ensure_autofix_ticker()
-    ensure_cursor_watch_ticker()
     try:
         gmail_verify.ensure_gmail_watcher()
     except Exception as exc:
@@ -1978,7 +1905,6 @@ def main():
     print(f"  Runner: {' '.join(_resolve_runner())}")
     print("  Schedule ticker: on (Trigger while server is up)")
     print("  AutoFix ticker: on (error bus watch + patch/retry)")
-    print(f"  Ask Cursor idle poll: every {cursor_chat_bridge.poll_interval_sec()}s (nudge.json while queued)")
     print("  Gmail verify watcher: on (when gmail_token.json + pending)")
     print("  Press Ctrl+C to stop.")
     print("=" * 60)

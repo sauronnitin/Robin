@@ -38,7 +38,7 @@ should read.
 
 - Whenever a feature or backend capability is added (new agent, task, tool,
   route, setting), also ship the matching dashboard GUI in the same change:
-  regenerate `dashboard/pipeline-data.js` via `python dashboard/_gen_pipeline_data.py`,
+  update `dashboard/pipeline-data.js`,
   wire canvas edges/cards, expose controls or status in the UI, and verify the
   card/control is visible after refresh. Backend-only drops without a GUI
   surface are incomplete.
@@ -81,8 +81,7 @@ should read.
   inside sections, drag-out keeps card data but drops edges, multi-select
   moves together, cards fully in or out of sections on refresh never clipped
   mid-frame). Bottom-left `#chatDock` stays project-aware and action-capable
-  (Gemini Flash via `POST /api/chat`). Mockup Ask Cursor is a collapsible
-  right rail that talks to the Cursor IDE agent (not Gemini). LinkedIn section
+  (Gemini Flash via `POST /api/chat`). LinkedIn section
   ends with a minimal live browser preview (pan/zoom, no Explain AI chrome);
   confirm token cost before LLM-backed preview narrate.
 
@@ -163,12 +162,10 @@ should read.
   Pipeline cards come from `dashboard/pipeline-data.js` (generated from
   agents.yaml/tasks.yaml). Main loop uses `AGENTS`/`EDGES`; LinkedIn loop uses
   `LI_AGENTS`/`LI_EDGES`/`LI_SECTION`. New agents must be added to
-  `_gen_pipeline_data.py` ORDER and regenerated.
+  `dashboard/pipeline-data.js` ORDER.
 - Live run telemetry: `src/jobhunter_ai/events_bus.py`. Playwright UI actions
   can surface via `src/jobhunter_ai/browser_preview.py`.
-- Mockup Ask Cursor (`#jhAssistantPanel`) uses `/api/cursor-chat` and
-  `user/cursor_chat/` to reach the Cursor IDE agent. Canvas `#chatDock`
-  remains Gemini Flash via `POST /api/chat`.
+- Canvas `#chatDock` is Gemini Flash via `POST /api/chat`.
 
 ## Learned User Preferences
 

@@ -20,9 +20,7 @@ dependencies = [
 ]
 
 [project.scripts]
-jobhunter = "jobhunter_ai.main:run"
-jh-cursor-reply = "jobhunter_ai.cursor_chat_reply:main"
-jh-cursor-watch = "jobhunter_ai.cursor_chat_watch:main"
+robin = "robin.main:run"
 
 [dependency-groups]
 dev = ["pytest>=8.0.0"]
