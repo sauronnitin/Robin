@@ -1,0 +1,729 @@
+/**
+ * Antimetal transplant — PILOT, scoped to the Dashboard screen only.
+ *
+ * Everything here is namespaced under `#s-dashboard` on purpose. The rest of
+ * the app keeps the current Steep look, so the two can be compared by clicking
+ * between nav items in one session. Nothing in this file leaks outward.
+ *
+ * Reference: styles.refero.design "Antimetal" — editorial observatory on cream
+ * paper. Achromatic warm-gray stack, one desaturated chartreuse accent used as
+ * punctuation, serif at weight 400 doing the work of bold, flat components,
+ * dashed hairlines, depth from surface layering rather than drop shadows.
+ *
+ * Deliberate deviations from the reference, and why:
+ *   - Eyebrow/label type is 12px, not the reference's 10–11px. The project's
+ *     own floor is 12px for chips/labels, 14px for everything else.
+ *   - A dark counterpart exists. The reference ships light-only; this dashboard
+ *     has a working theme toggle, so the parchment stack is mirrored into warm
+ *     near-blacks rather than dropped.
+ *   - Status colors are desaturated toward the warm-gray world instead of being
+ *     removed. The reference has no semantic-state vocabulary; an operational
+ *     dashboard needs one. They are pulled to muted olive/ochre/terracotta/brick
+ *     so they read as part of the palette rather than as alerts from another app.
+ *   - Charts go fully monochrome. The reference's only multi-color moment is the
+ *     hero constellation, explicitly called "a singular signature, not a
+ *     reusable pattern" — so a blue data ramp has no home here.
+ */
+
+/* ── Token layer ─────────────────────────────────────────────── */
+
+#s-dashboard {
+  /* Surfaces — reference values, unmodified */
+  --am-parchment: #d7d7d0;   /* page canvas, recedes behind content */
+  --am-cream:     #f7f6f3;   /* primary surface: cards, bands */
+  --am-bone:      #fdfcfa;   /* elevated surface, faint warm cast */
+  --am-quill:     #e3e3de;   /* hairlines, ghost borders, resting chrome */
+
+  /* Ink — reference values, unmodified. No pure #000 anywhere. */
+  --am-bistre:    #1a1614;   /* primary text, dark fills, active strokes */
+  --am-ash:       #2a2724;   /* hover/pressed on dark fills */
+  --am-slate:     #53504c;   /* tertiary text, sub-labels */
+  --am-graphite:  #66635f;   /* secondary body text, the workhorse mid-tone */
+  --am-flint:     #a8a7a1;   /* muted helper text, disabled, dashed rules */
+
+  /* The single chromatic accent. Punctuation only — badge fill or wash. */
+  --am-chartreuse: #e2e67d;
+
+  /* Ink for anything sitting ON chartreuse. Deliberately does NOT flip with
+     the theme: chartreuse is a light colour in both modes, so its foreground
+     must stay dark in both. Measured — light ink on chartreuse is 1.24:1
+     (unreadable); this dark ink is 13.6:1 on the light chip, 11.7:1 on dark. */
+  --am-on-accent: #1a1614;
+
+  /* Dashed hairline: 1px, bistre at 10%, the sole separator style */
+  --am-rule: rgba(26, 22, 20, 0.10);
+  --am-rule-solid: var(--am-quill);
+
+  /* Status — desaturated into the warm-gray world, meaning preserved */
+  --am-good:     #6f7f56;
+  --am-warn:     #a2894e;
+  --am-serious:  #a2734f;
+  --am-critical: #9a5347;
+
+  /* Ordinal data ramp — one hue stepped by lightness, in the palette's own
+     warm neutrals. Validated (`--ordinal`, surface #f7f6f3): monotone L PASS,
+     adjacent dL >= 0.06 PASS, single hue PASS, light-end 2.00:1 PASS.
+     An interim build swapped this for a cool blue/orange/green data palette;
+     it was CVD-correct but read as a different product bolted onto the page.
+     Legibility was never the reason to leave the warm ramp — a contrast bug
+     was, and that is fixed here rather than escaped by adding hue. */
+  --am-ramp-1: #b4b0a6;
+  --am-ramp-2: #918d85;
+  --am-ramp-3: #6e6a63;
+  --am-ramp-4: #4b4842;
+  --am-ramp-5: #2a2724;
+
+  /* Emphasis = maximum contrast against the surface. On the light ground that
+     is the darkest ink: chartreuse fill measures 1.23:1 on cream and cannot
+     carry an unlabelled mark there. */
+  --am-data-emphasis: #2a2724;
+
+  --am-on-dark: #f4f4e7;     /* text on bistre fills */
+
+  /* Antimetal's own cards are 4px — flat is one of its defining choices. This
+     board deliberately departs: the KPI reference you picked builds its whole
+     card language on generous rounding plus a recessed inner panel, and at 4px
+     that reads as a different product. Second deliberate break from the
+     reference, after serif-600 on the figures. */
+  --am-radius-card: 14px;
+  --am-radius-pill: 9999px;
+  --am-radius-sharp: 0;      /* secondary actions stay rectangular */
+
+  background: var(--am-parchment);
+  color: var(--am-bistre);
+}
+
+html.dark #s-dashboard {
+  /* Mirrored stack: the same relationships, rotated into warm near-black.
+     Not a naive inversion — each step keeps its role and its warm cast. */
+  --am-parchment: #14120f;
+  --am-cream:     #1c1917;
+  --am-bone:      #232019;
+  --am-quill:     #322e29;
+
+  --am-bistre:    #ece7dd;
+  --am-ash:       #d8d2c6;
+  --am-slate:     #b0a99e;
+  --am-graphite:  #968f85;
+  --am-flint:     #6b645c;
+
+  --am-chartreuse: #d2d774;  /* nudged down; full chartreuse glares on dark */
+
+  --am-rule: rgba(236, 231, 221, 0.12);
+  --am-rule-solid: var(--am-quill);
+
+  --am-good:     #8a9a6f;
+  --am-warn:     #bda468;
+  --am-serious:  #bd8b64;
+  --am-critical: #b86e5f;
+
+  /* Re-anchored for the dark card, not flipped. Validated: monotone PASS,
+     adjacent dL PASS, single hue PASS, near-surface 2.29:1 PASS — the fix for
+     the ramp that was invisible in dark mode. */
+  --am-ramp-1: #585349;
+  --am-ramp-2: #7a746a;
+  --am-ramp-3: #9c968c;
+  --am-ramp-4: #beb7ad;
+  --am-ramp-5: #ded7cc;
+
+  /* On the dark ground chartreuse measures 11.4:1 — the highest-contrast
+     option available AND the system's accent, so emphasis and punctuation
+     coincide here. */
+  --am-data-emphasis: var(--am-chartreuse);
+
+  --am-on-dark: #14120f;
+}
+
+/* ── Ground: flat parchment, no gradient wash ────────────────── */
+
+/* The peach + lilac radial mesh wash is the single largest departure from the
+   reference, which uses a flat field throughout. Killed here, not softened.
+   `.screen::before` is where it actually lives; `#s-dashboard.screen` is used
+   so this outranks the base rule without relying on !important alone. */
+#s-dashboard.screen::before,
+#s-dashboard .st-wash::before,
+#s-dashboard .jh-wash::before {
+  display: none !important;
+  content: none !important;
+  background: none !important;
+}
+
+/* `.screen` sets `background: transparent !important`, so the ground has to
+   be reclaimed at equal weight or it falls through to the app shell. */
+#s-dashboard.screen {
+  background: var(--am-parchment) !important;
+}
+
+/* Scroll container only — deliberately NOT `> div`, which would also repaint
+   the DRY_RUN status bar and the header. */
+#s-dashboard #metricsRoot {
+  background: var(--am-parchment);
+}
+
+#s-dashboard .h-11 {
+  background: var(--am-parchment) !important;
+  border-bottom: 1px dashed var(--am-rule) !important;
+  color: var(--am-graphite);
+}
+
+/* DRY_RUN banner: a dark bistre band on the light ground. In the reference the
+   only filled dark surfaces are the CTA pill and the nav; a persistent state
+   banner earns the same treatment because it is a standing condition. */
+#s-dashboard .st-ink-bar {
+  background: var(--am-bistre) !important;
+  color: var(--am-on-dark) !important;
+  border-bottom: none !important;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* Dark mode deliberately does NOT invert this to a cream slab. A full-width
+   near-white band is the loudest object on the screen — the opposite of
+   "everything whispers," and it collides with the dark header directly below
+   it. Instead the banner sits one surface step up from the ground and carries
+   the accent as text. A standing warning is exactly the punctuation moment
+   the chartreuse exists for. */
+html.dark #s-dashboard .st-ink-bar {
+  background: var(--am-bone) !important;
+  color: var(--am-chartreuse) !important;
+  border-bottom: 1px solid var(--am-quill) !important;
+}
+
+/* Section eyebrow ("DASHBOARD") — tracked monospace, the reference's
+   section-marker convention. Sequential numbering is deliberately NOT
+   borrowed: these screens are not an ordered narrative. */
+#s-dashboard .h-11 > span:first-child,
+#s-dashboard .jh-kicker,
+#s-dashboard .st-kicker {
+  font-family: var(--font-mono) !important;
+  font-size: 12px !important;
+  font-weight: 400 !important;
+  letter-spacing: 0.1em !important;
+  text-transform: uppercase !important;
+  color: var(--am-graphite) !important;
+}
+
+/* ── Cards ───────────────────────────────────────────────────── */
+
+#s-dashboard .jh-bento-card {
+  background: var(--am-cream);
+  border: 1px solid var(--am-rule-solid);
+  border-radius: var(--am-radius-card);
+  color: var(--am-bistre);
+  box-shadow: none;              /* depth comes from surface layering */
+}
+
+html.dark #s-dashboard .jh-bento-card {
+  background: var(--am-cream);
+  box-shadow: none;
+}
+
+/* Hero: flat bone, no gradient, no colored top stripe. In the reference the
+   hero earns attention through type size and whitespace, not decoration. */
+#s-dashboard .jh-bento-hero.jh-bento-card,
+html.dark #s-dashboard .jh-bento-hero.jh-bento-card {
+  background: var(--am-bone);
+  border-color: var(--am-rule-solid);
+}
+
+#s-dashboard .jh-bento-hero.jh-bento-card::before {
+  display: none;
+  content: none;
+}
+
+/* Locked tiles: recede into the canvas, dashed edge marks them as pending */
+#s-dashboard .jh-bento-locked,
+html.dark #s-dashboard .jh-bento-locked {
+  background: transparent;
+  border: 1px dashed var(--am-rule);
+}
+
+#s-dashboard .jh-bento-lock {
+  color: var(--am-flint);
+  font-weight: 400;
+}
+
+/* ── Typography ──────────────────────────────────────────────── */
+
+/* Tile eyebrows — tracked monospace uppercase, held at the project's 12px
+   label floor (the reference runs 10–11px here). */
+#s-dashboard .jh-bento-label {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--am-graphite);
+}
+
+/* THE defining move: the serif does display work at weight 400, never bold.
+   Was 700 with -0.03em tracking. */
+#s-dashboard .jh-bento-num,
+html.dark #s-dashboard .jh-bento-num {
+  font-family: var(--font-display);
+  font-weight: 400;
+  letter-spacing: -0.021em;
+  line-height: 1.1;
+  color: var(--am-bistre);
+}
+
+#s-dashboard .jh-bento-sub,
+#s-dashboard .jh-bento-empty,
+#s-dashboard .jh-bento-sources-line {
+  color: var(--am-graphite);
+  font-weight: 400;
+}
+
+#s-dashboard .jh-bento-sources-line b,
+#s-dashboard .jh-bento-silence-row strong,
+#s-dashboard .jh-bento-silence-label {
+  color: var(--am-bistre);
+  font-weight: 500;
+}
+
+/* Benchmark citation row — dashed rule, the sole separator style */
+#s-dashboard .jh-bento-bench {
+  color: var(--am-flint);
+  font-weight: 400;
+  border-top: 1px dashed var(--am-rule);
+}
+
+#s-dashboard .jh-bento-bench cite,
+html.dark #s-dashboard .jh-bento-bench cite {
+  color: var(--am-flint);
+  opacity: 0.75;
+}
+
+/* ── Badges: the accent's one licensed appearance ────────────── */
+
+/* "appears as a small punctuation mark, badge fill, or highlight wash" —
+   this is that. Chartreuse fill, bistre text, nothing else in the view
+   carries the accent. */
+#s-dashboard .jh-bento-badge,
+html.dark #s-dashboard .jh-bento-badge {
+  background: var(--am-chartreuse);
+  color: var(--am-on-accent);   /* never --am-bistre: that flips light in dark */
+  border: none;
+  border-radius: var(--am-radius-pill);
+  font-weight: 500;
+  font-size: 12px;
+}
+
+/* Sample marker — quill, not chartreuse. The accent means "this is the
+   thing to look at"; a placeholder is the opposite of that, so it stays
+   neutral and lets the real badges keep the accent to themselves. */
+#s-dashboard .jh-bento-sample-chip,
+html.dark #s-dashboard .jh-bento-sample-chip {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0.1em;
+  background: var(--am-quill);
+  color: var(--am-graphite);
+  border-radius: var(--am-radius-pill);
+  padding: 1px 8px;
+}
+
+#s-dashboard .jh-bento-delta,
+html.dark #s-dashboard .jh-bento-delta { color: var(--am-good); }
+
+/* ── Next-action rail ────────────────────────────────────────── */
+
+#s-dashboard .jh-bento-rail,
+html.dark #s-dashboard .jh-bento-rail {
+  background: var(--am-cream);
+  border: 1px solid var(--am-rule-solid);
+  border-radius: var(--am-radius-card);
+  color: var(--am-bistre);
+}
+
+#s-dashboard .jh-bento-rail-row,
+html.dark #s-dashboard .jh-bento-rail-row {
+  background: var(--am-bone);
+  border: 1px solid var(--am-rule-solid);
+  border-radius: var(--am-radius-card);
+}
+
+/* Was sienna at weight 700. Now the serif at 400, like every other figure. */
+#s-dashboard .jh-bento-rail-row-count {
+  font-family: var(--font-display);
+  font-weight: 400;
+  color: var(--am-bistre);
+}
+
+#s-dashboard .jh-bento-rail-row-why {
+  color: var(--am-bistre);
+  font-weight: 400;
+}
+
+#s-dashboard .jh-bento-rail-row-meta {
+  color: var(--am-graphite);
+}
+
+/* Rail action buttons carry the reference's corner-bracket ghost treatment —
+   four crop marks instead of a continuous border. This is the detail the
+   token dump missed and the source image made obvious.
+
+   Repeated row actions get this rather than the dark pill, because the
+   reference caps filled buttons at one per viewport and there are several
+   rows here. */
+#s-dashboard .jh-bento-rail-btn,
+html.dark #s-dashboard .jh-bento-rail-btn {
+  --bw: 1px;    /* bracket stroke weight */
+  --bl: 7px;    /* bracket leg length */
+  --bc: var(--am-bistre);
+
+  background-color: transparent;
+  border: none;
+  border-radius: var(--am-radius-sharp);
+  color: var(--am-bistre);
+  font-weight: 500;
+  padding: 8px 12px;
+
+  background-image:
+    linear-gradient(var(--bc), var(--bc)), linear-gradient(var(--bc), var(--bc)),
+    linear-gradient(var(--bc), var(--bc)), linear-gradient(var(--bc), var(--bc)),
+    linear-gradient(var(--bc), var(--bc)), linear-gradient(var(--bc), var(--bc)),
+    linear-gradient(var(--bc), var(--bc)), linear-gradient(var(--bc), var(--bc));
+  background-repeat: no-repeat;
+  background-size:
+    var(--bl) var(--bw), var(--bw) var(--bl),
+    var(--bl) var(--bw), var(--bw) var(--bl),
+    var(--bl) var(--bw), var(--bw) var(--bl),
+    var(--bl) var(--bw), var(--bw) var(--bl);
+  background-position:
+    left top,     left top,
+    right top,    right top,
+    left bottom,  left bottom,
+    right bottom, right bottom;
+
+  transition: background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+              color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+#s-dashboard .jh-bento-rail-btn:hover,
+html.dark #s-dashboard .jh-bento-rail-btn:hover {
+  background-color: var(--am-chartreuse);
+  color: var(--am-on-accent);   /* never --am-bistre: that flips light in dark */
+  --bc: var(--am-on-accent);    /* brackets follow the ink onto the accent */
+}
+
+/* ── Range selector: the one filled button in the viewport ───── */
+
+#s-dashboard .jh-metrics-range-btn {
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: var(--am-radius-pill);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--am-graphite);
+  padding: 6px 14px;
+  transition: color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+              background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+#s-dashboard .jh-metrics-range-btn:hover {
+  color: var(--am-bistre);
+}
+
+#s-dashboard .jh-metrics-range-btn.is-active,
+#s-dashboard .jh-metrics-range-btn[aria-pressed="true"],
+#s-dashboard .jh-metrics-range-btn.border-indigo-500 {
+  background: var(--am-bistre) !important;
+  border-color: var(--am-bistre) !important;
+  color: var(--am-on-dark) !important;
+}
+
+/* ── Data layer ───────────────────────────────────────────────
+   metrics.css ships a cool blue/orange/aqua data palette as the untransplanted
+   default. It is CVD-correct, and on this warm parchment ground it reads as a
+   different product bolted onto the page — the charts stopped belonging to the
+   system around them.
+
+   So the pilot rebinds every --dv-* role onto the palette's own warm neutrals.
+   Scoped to #s-dashboard, so any screen not yet transplanted keeps the default.
+
+   What this is NOT: a retreat from legibility. The warm ramp is validated in
+   both modes (monotone lightness, adjacent dL >= 0.06, single hue, near-surface
+   contrast 2.00:1 light / 2.29:1 dark), and status keeps a measured scale.
+   ───────────────────────────────────────────────────────────── */
+
+#s-dashboard {
+  /* Ordinal roles take the warm ramp directly. */
+  --dv-o1: var(--am-ramp-1);
+  --dv-o2: var(--am-ramp-2);
+  --dv-o3: var(--am-ramp-3);
+  --dv-o4: var(--am-ramp-4);
+  --dv-o5: var(--am-ramp-5);
+
+  /* "Categorical" here is really ordinal — core / adjacent / dropped runs
+     on-target to off-target — so it takes ramp steps rather than three
+     competing hues. Keys and direct labels carry identity either way. */
+  --dv-s1: var(--am-ramp-5);
+  --dv-s2: var(--am-ramp-3);
+  --dv-s3: var(--am-ramp-1);
+
+  /* Status keeps its meaning but joins the palette: muted olive, ochre,
+     terracotta, brick. Measured against the card — 3.1:1 to 7.2:1. */
+  --dv-good: var(--am-good);
+  --dv-warn: var(--am-warn);
+  --dv-serious: var(--am-serious);
+  --dv-critical: var(--am-critical);
+
+  --dv-track: var(--am-quill);
+  --dv-grid: var(--am-rule);
+
+  /* Recessed panel a chart sits on — one step back from the card, so the mark
+     has an edge to sit against instead of floating. */
+  --dv-panel: rgba(26, 22, 20, 0.05);
+}
+
+html.dark #s-dashboard {
+  --dv-panel: rgba(236, 231, 221, 0.05);
+}
+
+/* Unfilled track picks up the warm neutral, so empty chrome belongs to the
+   transplant while the fill stays data-coloured. */
+#s-dashboard .jh-viz-meter,
+#s-dashboard .jh-viz-row-track,
+#s-dashboard .jh-viz-slope-track {
+  background: var(--am-quill);
+}
+
+#s-dashboard .jh-viz-meter-mark {
+  background: var(--am-bistre);
+  opacity: 0.5;
+}
+
+#s-dashboard .jh-viz-meter-legend,
+#s-dashboard .jh-viz-row-label,
+#s-dashboard .jh-viz-key,
+#s-dashboard .jh-viz-slope-scale {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  color: var(--am-graphite);
+}
+
+#s-dashboard .jh-viz-row-val {
+  color: var(--am-bistre);
+  font-weight: 500;
+}
+
+/* Ring / dots / columns — chrome only. Fills come from the --dv-* rebinding
+   at the top of this section, so they are already warm. */
+#s-dashboard .jh-viz-ring-track { stroke: var(--am-quill); }
+#s-dashboard .jh-viz-dots i { background: var(--am-quill); }
+
+#s-dashboard .jh-viz-col-val {
+  color: var(--am-bistre);
+  font-weight: 500;
+}
+
+#s-dashboard .jh-viz-col-label {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  color: var(--am-graphite);
+}
+
+/* The key figure. This is the one place the transplant's serif-at-400 rule is
+   deliberately broken: at tile scale, 400 read as merely large rather than as
+   the summary of the box. Weight 600 is the only exception in the system —
+   every other serif on the page stays at 400. */
+#s-dashboard .jh-bento-figure,
+html.dark #s-dashboard .jh-bento-figure {
+  font-family: var(--font-display);
+  font-weight: 600;
+  color: var(--am-bistre);
+}
+
+#s-dashboard .jh-bento-figure-unit {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--am-graphite);
+}
+
+#s-dashboard .jh-bento-subline { color: var(--am-graphite); }
+
+/* The surface ring that keeps dots legible where they overlap has to match the
+   card they sit on, not the old theme token. */
+#s-dashboard .jh-viz-slope-dot,
+html.dark #s-dashboard .jh-viz-slope-dot { box-shadow: 0 0 0 2px var(--am-cream); }
+#s-dashboard .jh-viz-slope-dot.is-before { background: var(--am-flint); }
+
+/* Funnel: gap and shape are chrome; the ordinal ramp is data and stays put. */
+#s-dashboard .jh-bento-funnel-row {
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  gap: 2px;
+  overflow: visible;
+}
+
+#s-dashboard .jh-bento-funnel-seg {
+  font-weight: 500;
+  border-radius: 2px;
+}
+
+#s-dashboard .jh-bento-funnel-key { color: var(--am-graphite); font-size: 12px; }
+#s-dashboard .jh-bento-funnel-dot { border-radius: 2px; }
+
+/* The final stage is the win, and it is the one place in the data layer where
+   the accent is licensed. It always carries a direct label, which is the
+   contrast relief the pale fill needs on the light ground. */
+#s-dashboard .jh-bento-funnel-seg:nth-child(5),
+html.dark #s-dashboard .jh-bento-funnel-seg:nth-child(5) {
+  background: var(--am-chartreuse);
+  color: var(--am-on-accent);
+}
+#s-dashboard .jh-bento-funnel-dot[data-step="5"] { background: var(--am-chartreuse); }
+
+/* Above-threshold bars carry the emphasis token: darkest ink on the light
+   ground, chartreuse on the dark one, because that is what actually wins on
+   contrast in each mode. */
+#s-dashboard .jh-bento-hist-bar.is-above,
+html.dark #s-dashboard .jh-bento-hist-bar.is-above {
+  background: var(--am-data-emphasis);
+}
+
+/* Histogram chrome: surface gaps, a dashed baseline, mono tick labels. */
+#s-dashboard .jh-bento-hist {
+  gap: 2px;
+  border-bottom: 1px dashed var(--am-rule);
+}
+html.dark #s-dashboard .jh-bento-hist { border-bottom-color: var(--am-rule); }
+
+#s-dashboard .jh-bento-hist-bar { border-radius: 2px 2px 0 0; }
+
+#s-dashboard .jh-bento-hist-labels span {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  color: var(--am-flint);
+}
+
+/* ── Figures and captions: three tiers, never a flat field ──── */
+
+#s-dashboard .jh-bento-figure,
+html.dark #s-dashboard .jh-bento-figure {
+  font-family: var(--font-display);
+  font-weight: 400;
+  color: var(--am-bistre);
+}
+
+#s-dashboard .jh-bento-ratio {
+  font-family: var(--font-display);
+  font-weight: 400;
+  color: var(--am-bistre);
+}
+#s-dashboard .jh-bento-ratio-slash { color: var(--am-flint); }
+#s-dashboard .jh-bento-ratio-d { color: var(--am-graphite); }
+
+#s-dashboard .jh-bento-caption { color: var(--am-graphite); }
+#s-dashboard .jh-bento-caption b,
+#s-dashboard .jh-bento-caption strong {
+  color: var(--am-bistre);
+  font-weight: 600;
+}
+
+#s-dashboard .jh-bento-pair-div { background: var(--am-rule-solid); }
+#s-dashboard .jh-bento-pair-label {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  color: var(--am-graphite);
+}
+
+/* Legacy silence-clock chrome, kept for anything still rendering that shape. */
+#s-dashboard .jh-bento-silence-track,
+html.dark #s-dashboard .jh-bento-silence-track {
+  background: var(--am-quill);
+  border-radius: var(--am-radius-pill);
+}
+#s-dashboard .jh-bento-silence-row { color: var(--am-graphite); }
+#s-dashboard .jh-bento-silence-count { color: var(--am-flint); font-weight: 500; }
+#s-dashboard .jh-bento-silence-row.is-fresh   .jh-bento-silence-fill { background: var(--am-good); }
+#s-dashboard .jh-bento-silence-row.is-waiting .jh-bento-silence-fill { background: var(--am-warn); }
+#s-dashboard .jh-bento-silence-row.is-fading  .jh-bento-silence-fill { background: var(--am-serious); }
+#s-dashboard .jh-bento-silence-row.is-dead    .jh-bento-silence-fill { background: var(--am-critical); }
+
+/* Legend dots still carry the untransplanted chromatic palette in metrics.css.
+   Nothing on the board renders them today, but if a tile starts to they would
+   drop six saturated hues onto the parchment. Bound to the ramp pre-emptively. */
+#s-dashboard .jh-bento-dot.cat-0, html.dark #s-dashboard .jh-bento-dot.cat-0 { background: var(--am-ramp-5); }
+#s-dashboard .jh-bento-dot.cat-1, html.dark #s-dashboard .jh-bento-dot.cat-1 { background: var(--am-ramp-4); }
+#s-dashboard .jh-bento-dot.cat-2, html.dark #s-dashboard .jh-bento-dot.cat-2 { background: var(--am-ramp-3); }
+#s-dashboard .jh-bento-dot.cat-3, html.dark #s-dashboard .jh-bento-dot.cat-3 { background: var(--am-ramp-2); }
+#s-dashboard .jh-bento-dot.cat-4, html.dark #s-dashboard .jh-bento-dot.cat-4 { background: var(--am-chartreuse); }
+#s-dashboard .jh-bento-dot.cat-5, html.dark #s-dashboard .jh-bento-dot.cat-5 { background: var(--am-ramp-1); }
+
+/* Status text keeps its meaning and its documented scale. */
+#s-dashboard .jh-bento-sources-line .is-good { color: var(--am-good); }
+#s-dashboard .jh-bento-sources-line .is-warn { color: var(--am-warn); }
+#s-dashboard .jh-bento-sources-line .is-bad  { color: var(--am-critical); }
+
+
+/* ── Chrome ──────────────────────────────────────────────────── */
+
+#s-dashboard .jh-metrics-tooltip,
+html.dark #s-dashboard .jh-metrics-tooltip {
+  background: var(--am-bistre);
+  color: var(--am-on-dark);
+  border: none;
+  border-radius: var(--am-radius-card);
+  box-shadow: none;
+  font-weight: 400;
+}
+
+#s-dashboard .jh-bento-input {
+  background: var(--am-bone);
+  border: 1px solid var(--am-rule-solid);
+  border-radius: var(--am-radius-card);
+  color: var(--am-bistre);
+}
+
+#s-dashboard .jh-bento-input:focus {
+  outline: none;
+  border-color: var(--am-bistre);
+}
+
+#s-dashboard .jh-sources-table th,
+#s-dashboard .jh-sources-table td {
+  border-bottom: 1px dashed var(--am-rule);
+  color: var(--am-bistre);
+}
+
+#s-dashboard .jh-sources-table th {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0.1em;
+  color: var(--am-graphite);
+}
+
+#s-dashboard .jh-job-reach { color: var(--am-flint); }
+
+/* Peach callout panels have no equivalent in an achromatic system — they
+   become a plain cream band with a dashed edge. */
+#s-dashboard .st-peach-panel,
+#s-dashboard .jh-peri {
+  background: var(--am-cream) !important;
+  border: 1px dashed var(--am-rule) !important;
+  border-radius: var(--am-radius-card) !important;
+  box-shadow: none !important;
+  color: var(--am-bistre) !important;
+}
+
+/* Motion: the reference's transition spec. Never animate layout. */
+@media (prefers-reduced-motion: reduce) {
+  #s-dashboard * {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}

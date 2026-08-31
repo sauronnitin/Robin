@@ -1,22 +1,30 @@
 /**
- * JobHunter applicant bento dashboard (SPEC §5 palette + Steep tokens).
+ * Robin applicant bento dashboard (SPEC §5 palette + Steep tokens).
  * Literal hex values must stay inside the SPEC §5 allowlist.
  */
 
 /* ── Grid shell ─────────────────────────────────────────────── */
 
+/* Five tracks, five columns named. The previous grid declared five tracks
+   (4 x 1fr + 260px) but only named FOUR columns in grid-template-areas, so the
+   rail landed in content column 4 and the 260px track sat empty — roughly
+   260px of dead space down the right of every screen.
+
+   Five content columns, not four, so all fourteen tiles land in THREE rows and
+   the whole board fits a viewport without scrolling. Only the pace hero and the
+   funnel take extra span — the funnel's five segments plus legend genuinely
+   need the run. Everything else is one column: at two columns a tile was ~670px
+   wide holding a ~280px chart, so two-thirds of each card sat empty. */
 .jh-bento {
   display: grid;
   width: 100%;
-  gap: 6px;
-  grid-template-columns: repeat(4, minmax(0, 1fr)) 260px;
+  gap: 8px;
+  grid-template-columns: repeat(5, minmax(0, 1fr)) 264px;
   grid-template-areas:
-    "pace pace pace rail"
-    "silence silence ats rail"
-    "targeting rehearsal cadence rail"
-    "pipeline proof funnel rail"
-    "fit response timesaved rail"
-    "coverage aim reply rail";
+    "pace      pace      pace      pace      pace      rail"
+    "silence   ats       proof     cadence   targeting rail"
+    "response  timesaved pipeline  rehearsal coverage  rail"
+    "aim       reply     funnel    funnel    fit       rail";
   align-items: stretch;
 }
 
@@ -64,19 +72,19 @@
 /* ── Size variants ──────────────────────────────────────────── */
 
 .jh-bento-hero {
-  min-height: 152px;
+  min-height: 104px;
 }
 
 .jh-bento-large {
-  min-height: 116px;
+  min-height: 84px;
 }
 
 .jh-bento-medium {
-  min-height: 100px;
+  min-height: 76px;
 }
 
 .jh-bento-small {
-  min-height: 84px;
+  min-height: 66px;
 }
 
 .jh-bento-tall {
@@ -89,7 +97,7 @@
 .jh-bento-locked.jh-bento-small { min-height: 68px; }
 .jh-bento-locked.jh-bento-medium { min-height: 80px; }
 .jh-bento-locked.jh-bento-large { min-height: 92px; }
-.jh-bento-locked { gap: 4px; padding: 16px 18px; }
+.jh-bento-locked { gap: 4px; padding: 12px 14px; }
 
 @media (max-width: 900px) {
   .jh-bento-hero,
@@ -105,10 +113,10 @@
 
 .jh-bento-card {
   border-radius: 18px;
-  padding: 20px 22px;
+  padding: 10px 12px;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  justify-content: flex-start;
   align-self: stretch;
   position: relative;
   overflow: hidden;
@@ -158,7 +166,7 @@ html.dark .jh-bento-locked {
 
 .jh-bento-lock {
   font-family: var(--st-sans);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
   line-height: 1.45;
   color: #898781;
@@ -168,12 +176,12 @@ html.dark .jh-bento-locked {
 
 .jh-bento-label {
   font-family: var(--st-sans);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: #898781;
-  margin-bottom: 8px;
+  margin-bottom: 4px;
 }
 
 .jh-bento-num {
@@ -206,17 +214,24 @@ html.dark .jh-bento-locked {
   line-height: 1.35;
 }
 
+/* An in-tile action sits top-right, out of the reading path of the figure and
+   its caption, rather than sinking to the bottom and pushing the card taller. */
 .jh-bento-badge {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  z-index: 2;
   display: inline-block;
   font-family: var(--st-sans);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
-  padding: 4px 10px;
-  border-radius: 100px;
-  margin-top: 10px;
+  padding: 3px 9px;
+  border-radius: var(--radius-pill);
   width: fit-content;
   background: var(--st-peach);
   color: var(--st-sienna);
+  cursor: pointer;
+  border: none;
 }
 
 html.dark .jh-bento-badge {
@@ -224,14 +239,59 @@ html.dark .jh-bento-badge {
   color: var(--st-sienna);
 }
 
+/* Reserve the top-right corner so the action never lands on the label. */
+.jh-bento-card:has(.jh-bento-badge) .jh-bento-label {
+  padding-right: 104px;
+}
+
+/* Inline swatch for a value list that stands in for a legend — keeps identity
+   on the colour without costing the extra line a real legend would. */
+.jh-key-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 2px;
+  margin-right: 4px;
+  vertical-align: 1px;
+}
+
+.jh-key-dot[data-slot="1"] { background: var(--dv-s1); }
+.jh-key-dot[data-slot="2"] { background: var(--dv-s2); }
+.jh-key-dot[data-slot="3"] { background: var(--dv-s3); }
+
+/* Marks a tile whose numbers are illustrative placeholders, not measurements.
+   Rendered by lockedTile() when a metric has no real data yet. */
+.jh-bento-sample-chip {
+  display: inline-block;
+  margin-left: 8px;
+  font-family: var(--st-sans);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 1px 7px;
+  border-radius: var(--radius-pill);
+  background: var(--st-peach);
+  color: var(--st-sienna);
+  vertical-align: 1px;
+}
+
+html.dark .jh-bento-sample-chip {
+  background: var(--st-amber-dim);
+  color: var(--st-sienna);
+}
+
+.jh-bento-delta { color: #0ca30c; }
+html.dark .jh-bento-delta { color: #199e70; }
+
 .jh-bento-bench {
   font-family: var(--st-sans);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 500;
   line-height: 1.4;
   color: #898781;
   margin-top: auto;
-  padding-top: 12px;
+  padding-top: 8px;
   border-top: 1px solid var(--st-border);
 }
 
@@ -252,7 +312,7 @@ html.dark .jh-bento-bench cite {
   gap: 10px;
   min-height: 100%;
   border-radius: 18px;
-  padding: 20px 18px;
+  padding: 14px 14px;
   background: var(--st-fog);
   border: 1px solid var(--st-border);
   color: var(--st-ink);
@@ -273,15 +333,24 @@ html.dark .jh-bento-rail {
   flex: 1;
 }
 
+/* Count, reason, action. The action sits on its own line rather than fighting
+   the reason text for a ~264px rail — at three columns the button crowded the
+   wrapped copy. */
 .jh-bento-rail-row {
   display: grid;
-  grid-template-columns: 28px 1fr auto;
-  gap: 8px;
+  grid-template-columns: 30px 1fr;
+  gap: 4px 10px;
   align-items: start;
-  padding: 10px 10px;
-  border-radius: 12px;
+  padding: 12px;
+  border-radius: var(--radius-lg);
   background: var(--st-canvas, var(--st-mist));
   border: 1px solid var(--st-border);
+}
+
+.jh-bento-rail-row .jh-bento-rail-btn {
+  grid-column: 2;
+  justify-self: start;
+  margin-top: 4px;
 }
 
 html.dark .jh-bento-rail-row {
@@ -303,7 +372,7 @@ html.dark .jh-bento-rail-row {
 
 .jh-bento-rail-row-why {
   font-family: var(--st-sans);
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 500;
   line-height: 1.35;
   color: var(--st-ink);
@@ -311,7 +380,7 @@ html.dark .jh-bento-rail-row {
 
 .jh-bento-rail-row-meta {
   font-family: var(--st-sans);
-  font-size: 11px;
+  font-size: 12px;
   color: #898781;
   margin-top: 2px;
 }
@@ -319,11 +388,11 @@ html.dark .jh-bento-rail-row {
 .jh-bento-rail-btn {
   align-self: center;
   font-family: var(--st-sans);
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 600;
   line-height: 1;
   padding: 7px 10px;
-  border-radius: 100px;
+  border-radius: var(--radius-pill);
   border: 1px solid var(--st-border);
   background: var(--st-peach);
   color: var(--st-sienna);
@@ -355,29 +424,61 @@ html.dark .jh-bento-rail-btn {
   align-items: center;
   justify-content: center;
   font-family: var(--st-sans);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   color: var(--st-ink);
   min-width: 0;
   flex: 1 1 auto;
+  overflow: hidden;
+  white-space: nowrap;
 }
+
+/* Stage names live here rather than inside the segments — the late stages are
+   only a few percent wide and their labels collided into unreadable slivers. */
+.jh-bento-funnel-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin-top: 8px;
+}
+
+.jh-bento-funnel-key {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--st-sans);
+  font-size: 12px;
+  color: #898781;
+  white-space: nowrap;
+}
+
+.jh-bento-funnel-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.jh-bento-funnel-dot[data-step="1"] { background: var(--dv-o1); }
+.jh-bento-funnel-dot[data-step="2"] { background: var(--dv-o2); }
+.jh-bento-funnel-dot[data-step="3"] { background: var(--dv-o3); }
+.jh-bento-funnel-dot[data-step="4"] { background: var(--dv-o4); }
+.jh-bento-funnel-dot[data-step="5"] { background: var(--dv-good); }
 
 .jh-bento-funnel-seg.is-deep {
   color: #e1e0d9;
 }
 
-/* Funnel ramp helpers (inline styles from JS may override) */
-.jh-bento-funnel-seg:nth-child(1) { background: #86b6ef; }
-.jh-bento-funnel-seg:nth-child(2) { background: #5598e7; }
-.jh-bento-funnel-seg:nth-child(3) { background: #2a78d6; }
-.jh-bento-funnel-seg:nth-child(4) { background: #1c5cab; }
-.jh-bento-funnel-seg:nth-child(5) { background: #104281; color: #e1e0d9; }
-
-html.dark .jh-bento-funnel-seg:nth-child(1) { background: #86b6ef; }
-html.dark .jh-bento-funnel-seg:nth-child(2) { background: #5598e7; }
-html.dark .jh-bento-funnel-seg:nth-child(3) { background: #3987e5; }
-html.dark .jh-bento-funnel-seg:nth-child(4) { background: #1c5cab; }
-html.dark .jh-bento-funnel-seg:nth-child(5) { background: #104281; color: #e1e0d9; }
+/* Funnel stages are ORDINAL — swapping them changes the meaning — so they take
+   one hue stepped by lightness, never separate hues. Both ramps validated
+   (monotone L, adjacent dL >= 0.06, single hue, light end clears the card).
+   The final stage means "won", so it wears the status-good token rather than
+   a deeper step: status is the right vocabulary for an outcome. */
+.jh-bento-funnel-seg:nth-child(1) { background: var(--dv-o1); }
+.jh-bento-funnel-seg:nth-child(2) { background: var(--dv-o2); }
+.jh-bento-funnel-seg:nth-child(3) { background: var(--dv-o3); }
+.jh-bento-funnel-seg:nth-child(4) { background: var(--dv-o4); }
+.jh-bento-funnel-seg:nth-child(5) { background: var(--dv-good); color: #fff; }
 
 /* ── Histogram (fit distribution) ─────────────────────────────── */
 
@@ -396,18 +497,25 @@ html.dark .jh-bento-hist {
   border-bottom-color: #383835;
 }
 
+/* No base fill here on purpose. Every bar carries `.is-above` or `.is-below`,
+   and the old `html.dark` gradient outranked those single-class rules — so
+   below-threshold bars kept rendering the legacy blue in dark mode. It was
+   invisible to a `backgroundColor` check because a gradient is background-IMAGE. */
 .jh-bento-hist-bar {
   flex: 1 1 0;
   min-width: 0;
   border-radius: 6px 6px 2px 2px;
-  background: linear-gradient(180deg, #86b6ef, #2a78d6);
   min-height: 2px;
   transition: height 0.2s ease;
 }
 
-html.dark .jh-bento-hist-bar {
-  background: linear-gradient(180deg, #5598e7, #3987e5);
-}
+/* Above/below the fit threshold. metrics.js emits these as classes rather than
+   inline hexes so the split can be themed; these are the untransplanted
+   defaults. */
+/* One series, two states. Emphasis is the semantic above/below-threshold
+   split, never the bar's own value re-encoded as colour. */
+.jh-bento-hist-bar.is-below { background: var(--dv-o1); }
+.jh-bento-hist-bar.is-above { background: var(--dv-s1); }
 
 .jh-bento-hist-labels {
   display: flex;
@@ -418,7 +526,7 @@ html.dark .jh-bento-hist-bar {
 .jh-bento-hist-labels span {
   flex: 1 1 0;
   font-family: var(--st-sans);
-  font-size: 9px;
+  font-size: 12px;
   font-weight: 600;
   text-align: center;
   color: #898781;
@@ -439,7 +547,7 @@ html.dark .jh-bento-hist-bar {
   align-items: center;
   gap: 8px;
   font-family: var(--st-sans);
-  font-size: 12px;
+  font-size: 14px;
   color: #898781;
 }
 .jh-bento-silence-row strong {
@@ -454,7 +562,7 @@ html.dark .jh-bento-hist-bar {
 
 .jh-bento-silence-track {
   height: 8px;
-  border-radius: 100px;
+  border-radius: var(--radius-pill);
   background: #e1e0d9;
   overflow: hidden;
 }
@@ -465,7 +573,7 @@ html.dark .jh-bento-silence-track {
 
 .jh-bento-silence-fill {
   height: 100%;
-  border-radius: 100px;
+  border-radius: var(--radius-pill);
   min-width: 2px;
 }
 
@@ -553,7 +661,7 @@ html.dark .jh-bento-dot.cat-5 { background: #008300; }
   padding: 8px 10px;
   border-radius: 10px;
   font-family: var(--st-sans);
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 500;
   line-height: 1.35;
   color: var(--st-ink);
@@ -572,7 +680,7 @@ html.dark .jh-metrics-tooltip {
 
 .jh-bento-empty {
   font-family: var(--st-sans);
-  font-size: 13px;
+  font-size: 12px;
   line-height: 1.45;
   color: #898781;
 }
@@ -587,7 +695,7 @@ html.dark .jh-metrics-tooltip {
   background: var(--st-mist);
   color: var(--st-ink);
   font-family: var(--st-sans);
-  font-size: 12px;
+  font-size: 14px;
 }
 
 .jh-sources-panel,
@@ -612,7 +720,7 @@ html.dark .jh-metrics-tooltip {
 
 .jh-sources-table th {
   color: #898781;
-  font-size: 11px;
+  font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
@@ -622,6 +730,566 @@ html.dark .jh-metrics-tooltip {
   align-items: center;
   gap: 4px;
   margin-left: 6px;
+  font-size: 14px;
+  color: #898781;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   Viz-led tile system
+   ──────────────────────────────────────────────────────────────
+   Every tile used to be one big number followed by a flat field of
+   same-size text, so nothing inside a tile had a second tier. These
+   components give each tile a chart as its primary content and demote
+   the number to a caption underneath it.
+
+   Data palette: the documented, CVD-validated categorical slots 1-3 plus
+   the fixed status scale. Chrome stays achromatic; only the data layer
+   carries hue. Slots were re-validated against this dashboard's own
+   surfaces (all-pairs, both modes) rather than assumed.
+   ══════════════════════════════════════════════════════════════ */
+
+:root {
+  --dv-s1: #2a78d6;   /* categorical slot 1 — blue   */
+  --dv-s2: #eb6834;   /* categorical slot 2 — orange */
+  --dv-s3: #1baf7a;   /* categorical slot 3 — aqua   */
+
+  /* Ordinal ramp, slot-1 hue stepped light->dark. Validated: monotone L,
+     adjacent dL >= 0.06, single hue, light end 2.14:1 on the card. */
+  --dv-o1: #7dafe0;
+  --dv-o2: #5695dc;
+  --dv-o3: #3573c4;
+  --dv-o4: #1d5695;
+  --dv-o5: #113c6b;
+
+  /* Status — fixed scale, never themed, always paired with a label. */
+  --dv-good: #0ca30c;
+  --dv-warn: #fab219;
+  --dv-serious: #ec835a;
+  --dv-critical: #d03b3b;
+
+  /* Unfilled meter track: a lighter step of the fill's own ramp, so state
+     reads across the whole bar rather than fill-vs-gray. */
+  --dv-track: #dbe7f5;
+  --dv-grid: #e1e0d9;
+  --dv-panel: rgba(4, 23, 43, 0.035);
+}
+
+html.dark {
+  --dv-s1: #3987e5;
+  --dv-s2: #d95926;
+  --dv-s3: #199e70;
+
+  /* Re-anchored for the dark card, not flipped. Near-surface step 2.31:1. */
+  --dv-o1: #31567f;
+  --dv-o2: #3d74b5;
+  --dv-o3: #4a93e8;
+  --dv-o4: #7fb6f2;
+  --dv-o5: #b8d7f8;
+
+  --dv-track: #2b3440;
+  --dv-grid: #383835;
+  --dv-panel: rgba(255, 255, 255, 0.045);
+}
+
+/* ── Tile scaffold ──────────────────────────────────────────── */
+
+/* The figure leads; the chart sits beneath it at PARTIAL width.
+   Capped on purpose — an earlier build let every meter stretch the full tile,
+   which turned a 670px card into a letterbox and made every tile look alike. */
+/* Block, not flex. Several viz helpers return more than one element (a meter
+   plus its legend, a slope plus its scale); as flex children those laid out
+   side by side and collapsed to nothing. Each helper owns its own layout. */
+.jh-bento-viz {
+  display: block;
+  min-height: 0;
+  margin: 6px 0 0;
+  max-width: 100%;
+}
+
+/* Only forms that genuinely need the width — funnel, distribution — opt in. */
+.jh-bento-viz.is-wide { max-width: 100%; }
+
+.jh-bento-viz > * { min-width: 0; }
+
+/* Three text tiers, so a tile is never a flat field of one size:
+   caption (the figure) / support (secondary) / meta (tertiary). */
+.jh-bento-caption {
+  font-family: var(--st-sans);
+  font-size: 12px;
+  line-height: 1.4;
+  color: #898781;
+}
+
+.jh-bento-caption b,
+.jh-bento-caption strong {
+  color: var(--st-ink);
+  font-weight: 600;
+  font-size: 12px;
+}
+
+/* The key metric — the summary, or the win, of its box. Deliberately breaks
+   the reference's serif-at-400 rule: at dashboard sizes the figure has to
+   carry the tile on its own, and 400 read as merely large rather than
+   emphatic. Everything else in the system stays at 400. */
+.jh-bento-figure {
+  font-family: var(--st-serif);
+  font-weight: 600;
+  font-size: 40px;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--st-ink);
+}
+
+.jh-bento-figure-sm { font-size: 26px; }
+
+/* Figure on the left, its mark on the right. Side by side the ring costs no
+   extra height, which is what lets the figure grow AND the board still fit. */
+.jh-bento-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.jh-bento-head > :first-child { min-width: 0; }
+
+/* Charts sit on their own recessed, rounded panel rather than floating on the
+   card — the inner-panel treatment from the reference. It gives the mark an
+   edge to sit against and stops a lone ring reading as a stray graphic. */
+.jh-bento-aside {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--dv-panel, transparent);
+  border-radius: 14px;
+  padding: 6px;
+}
+
+/* A value pinned to the data, the way the reference tags points on a line. */
+.jh-viz-chip {
+  display: inline-block;
+  font-family: var(--st-sans);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.2;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--st-ink);
+  color: var(--st-canvas, #fff);
+  white-space: nowrap;
+}
+
+html.dark .jh-viz-chip {
+  background: var(--st-raised, #2a2420);
+  color: var(--st-ink);
+}
+
+/* The qualifier riding beside the figure — "per week", "of 52". */
+.jh-bento-figure-unit {
+  font-family: var(--st-sans);
+  font-size: 14px;
+  font-weight: 500;
+  color: #898781;
+  margin-left: 7px;
+}
+
+/* One line saying what the figure means, directly under it. */
+.jh-bento-subline {
+  font-family: var(--st-sans);
+  font-size: 12px;
+  line-height: 1.4;
+  color: #898781;
+  margin-top: 4px;
+}
+
+/* Ratio: numerator carries the weight, denominator recedes. */
+.jh-bento-ratio {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  font-family: var(--st-serif);
+  font-weight: 400;
+  line-height: 1;
+  color: var(--st-ink);
+}
+.jh-bento-ratio-n { font-size: 34px; }
+.jh-bento-ratio-slash { font-size: 22px; color: #a3a29b; }
+.jh-bento-ratio-d { font-size: 22px; color: #898781; }
+
+/* Two co-equal figures — for tiles where one number genuinely isn't the
+   whole story (rate AND streak, live AND closed). */
+.jh-bento-pair {
+  display: flex;
+  align-items: stretch;
+  gap: 16px;
+}
+
+/* Each figure stacks over its own label. Without this the figure and its
+   caption sit on one line and read as "9per week". */
+.jh-bento-pair > *:not(.jh-bento-pair-div) {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.jh-bento-pair-div {
+  width: 1px;
+  background: var(--st-border);
+  flex: none;
+  align-self: stretch;
+}
+
+.jh-bento-pair-label {
+  font-family: var(--st-sans);
+  font-size: 12px;
+  line-height: 1.2;
+  color: #898781;
+}
+
+/* ── Meter: a proportion, with an optional benchmark tick ───── */
+
+.jh-viz-meter {
+  position: relative;
+  height: 10px;
+  border-radius: 5px;
+  background: var(--dv-track);
+  overflow: hidden;
+}
+
+.jh-viz-meter-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 5px;
+  background: var(--dv-s1);
+  min-width: 3px;
+}
+
+.jh-viz-meter-fill.is-good     { background: var(--dv-good); }
+.jh-viz-meter-fill.is-warn     { background: var(--dv-warn); }
+.jh-viz-meter-fill.is-serious  { background: var(--dv-serious); }
+.jh-viz-meter-fill.is-critical { background: var(--dv-critical); }
+
+/* Benchmark marker — sits above the fill, reads as a target line. */
+.jh-viz-meter-mark {
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  width: 2px;
+  background: var(--st-ink);
+  opacity: 0.55;
+}
+
+.jh-viz-meter-legend {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 6px;
+  font-family: var(--st-sans);
   font-size: 12px;
   color: #898781;
+}
+
+/* ── Split: a stacked proportion with direct labels ─────────── */
+
+.jh-viz-split {
+  display: flex;
+  gap: 2px;              /* surface gap separates touching marks */
+  height: 22px;
+}
+
+.jh-viz-split-seg {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  border-radius: 3px;
+  font-family: var(--st-sans);
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.jh-viz-split-seg[data-slot="1"] { background: var(--dv-s1); }
+.jh-viz-split-seg[data-slot="2"] { background: var(--dv-s2); }
+.jh-viz-split-seg[data-slot="3"] { background: var(--dv-s3); }
+
+/* Keys carry identity so colour never works alone. */
+.jh-viz-keys {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin-top: 8px;
+}
+
+.jh-viz-key {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--st-sans);
+  font-size: 12px;
+  color: #898781;
+  white-space: nowrap;
+}
+
+.jh-viz-key i {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+.jh-viz-key[data-slot="1"] i { background: var(--dv-s1); }
+.jh-viz-key[data-slot="2"] i { background: var(--dv-s2); }
+.jh-viz-key[data-slot="3"] i { background: var(--dv-s3); }
+
+/* ── Rows: labelled horizontal bars (buckets, distributions) ── */
+
+.jh-viz-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.jh-viz-row {
+  display: grid;
+  grid-template-columns: 104px 1fr 30px;
+  align-items: center;
+  gap: 10px;
+}
+
+.jh-viz-row-label {
+  font-family: var(--st-sans);
+  font-size: 12px;
+  color: #898781;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.jh-viz-row-track {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--dv-track);
+  overflow: hidden;
+}
+
+.jh-viz-row-fill {
+  height: 100%;
+  border-radius: 4px;
+  background: var(--dv-s1);
+  min-width: 2px;
+}
+
+.jh-viz-row-fill.is-good     { background: var(--dv-good); }
+.jh-viz-row-fill.is-warn     { background: var(--dv-warn); }
+.jh-viz-row-fill.is-serious  { background: var(--dv-serious); }
+.jh-viz-row-fill.is-critical { background: var(--dv-critical); }
+
+.jh-viz-row-val {
+  font-family: var(--st-sans);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--st-ink);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Slope: a before/after pair on one track ────────────────── */
+
+.jh-viz-slope {
+  position: relative;
+  height: 26px;
+  display: flex;
+  align-items: center;
+}
+
+.jh-viz-slope-track {
+  position: relative;
+  height: 8px;
+  width: 100%;
+  border-radius: 4px;
+  background: var(--dv-track);
+}
+
+.jh-viz-slope-bar {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 4px;
+  background: var(--dv-s1);
+}
+
+.jh-viz-slope-dot {
+  position: absolute;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 0 2px var(--st-canvas, #fff);   /* surface ring */
+}
+
+html.dark .jh-viz-slope-dot { box-shadow: 0 0 0 2px var(--st-card, #211d1a); }
+
+.jh-viz-slope-dot.is-before { background: #a3a29b; }
+.jh-viz-slope-dot.is-after  { background: var(--dv-s1); }
+
+.jh-viz-slope-scale {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--st-sans);
+  font-size: 12px;
+  color: #a3a29b;
+  margin-top: 2px;
+}
+
+/* ── Strip: a compact column series (consistency over time) ─── */
+
+/* Needs an explicit width: its bars are `flex: 1 1 0`, so in a shrink-to-fit
+   parent they collapsed to zero and the whole strip rendered invisible. */
+.jh-viz-strip {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 34px;
+  width: 100%;
+  max-width: 240px;
+}
+
+/* Same capsule-in-track treatment as the columns, so a run of weeks reads as
+   filled slots rather than a ragged skyline. */
+.jh-viz-strip-slot {
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 18px;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+  background: var(--dv-track);
+  border-radius: 999px;
+  padding: 2px;
+}
+
+.jh-viz-strip i {
+  width: 100%;
+  border-radius: 999px;
+  background: var(--dv-o2);
+  min-height: 5px;
+}
+
+.jh-viz-strip i.is-current { background: var(--dv-s1); }
+.jh-viz-strip i.is-empty   { background: transparent; }
+
+/* ── Ring: a proportion that isn't another horizontal bar ───── */
+
+.jh-viz-ring { display: block; flex: none; }
+
+/* Ring beside its keys — round mark, legible identity, still compact. */
+.jh-viz-ring-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.jh-viz-keys.is-stacked {
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 0;
+  align-items: flex-start;
+}
+.jh-viz-ring-track { stroke: var(--dv-track); }
+.jh-viz-ring-fill { stroke: var(--dv-s1); }
+
+.jh-viz-ring-fill.is-good     { stroke: var(--dv-good); }
+.jh-viz-ring-fill.is-warn     { stroke: var(--dv-warn); }
+.jh-viz-ring-fill.is-serious  { stroke: var(--dv-serious); }
+.jh-viz-ring-fill.is-critical { stroke: var(--dv-critical); }
+
+.jh-viz-ring-fill[data-slot="1"] { stroke: var(--dv-s1); }
+.jh-viz-ring-fill[data-slot="2"] { stroke: var(--dv-s2); }
+.jh-viz-ring-fill[data-slot="3"] { stroke: var(--dv-s3); }
+
+/* ── Dots: one mark per unit ─────────────────────────────────── */
+
+.jh-viz-dots {
+  display: grid;
+  grid-template-columns: repeat(13, 1fr);
+  gap: 3px;
+  width: 100%;
+  max-width: 160px;
+}
+
+.jh-viz-dots i {
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: var(--dv-track);
+}
+
+.jh-viz-dots i.is-on { background: var(--dv-s1); }
+
+/* ── Columns: a compact distribution ─────────────────────────── */
+
+.jh-viz-cols {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.jh-viz-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  min-width: 0;
+}
+
+/* Bar-in-track: the bar fills a visible rounded slot rather than floating on
+   the card. The empty part of the track stays legible, so each column reads as
+   "this much of the possible" instead of just a naked height. */
+.jh-viz-col-slot {
+  height: 34px;
+  width: 22px;
+  display: flex;
+  align-items: flex-end;
+  background: var(--dv-track);
+  border-radius: 999px;
+  padding: 2px;
+}
+
+.jh-viz-col-bar {
+  width: 100%;
+  border-radius: 999px;
+  background: var(--dv-o2);
+  min-height: 6px;
+}
+
+/* Ageing is ordinal, so buckets step through one ramp rather than wearing four
+   independent status hues — those read muddy against the warm card. */
+.jh-viz-col-bar[data-step="1"] { background: var(--dv-o1); }
+.jh-viz-col-bar[data-step="2"] { background: var(--dv-o2); }
+.jh-viz-col-bar[data-step="3"] { background: var(--dv-o3); }
+.jh-viz-col-bar[data-step="4"] { background: var(--dv-o4); }
+.jh-viz-col-bar[data-step="5"] { background: var(--dv-o5); }
+
+.jh-viz-col-bar.is-good     { background: var(--dv-good); }
+.jh-viz-col-bar.is-warn     { background: var(--dv-warn); }
+.jh-viz-col-bar.is-serious  { background: var(--dv-serious); }
+.jh-viz-col-bar.is-critical { background: var(--dv-critical); }
+
+.jh-viz-col-val {
+  font-family: var(--st-sans);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--st-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.jh-viz-col-label {
+  font-family: var(--st-sans);
+  font-size: 12px;
+  color: #898781;
+  white-space: nowrap;
 }

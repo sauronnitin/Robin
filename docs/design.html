@@ -1,0 +1,491 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Veya — Design System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,600;1,6..72,400&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════════════════════════
+   TOKENS — mirrored verbatim from docs/design.md
+   design.md is the source of truth. Do not edit one without the other.
+   ═══════════════════════════════════════════════════════════════ */
+:root{
+  /* colors — light */
+  --color-paper:#E5E2D9;
+  --color-leaf:#F1EFE9;
+  --color-raised:#FAF8F3;
+  --color-rule:#D3CEC1;
+  --color-rule-soft:#E2DED2;
+  --color-ink:#221C15;
+  --color-ink-secondary:#5F574C;
+  --color-ink-muted:#877F73;
+  --color-rubric:#A82A1F;
+  --color-rubric-mark:#C1352A;
+  --color-rubric-wash:#EFE5DC;
+  --color-on-rubric:#FAF8F3;
+  --color-ochre-ink:#96570F;
+  --color-ochre-object:#C1782A;
+  /* pigments — light */
+  --color-pigment-vermilion:#C1352A;
+  --color-pigment-verdigris:#0E7C55;
+  --color-pigment-ultramarine:#33509E;
+  --color-pigment-orpiment:#A8781C;
+  --color-pigment-tyrian:#6A3D8F;
+  --color-pigment-terre-verte:#7A8A1E;
+  /* wash ramp — light */
+  --color-wash-1:#ABA298; --color-wash-2:#857D71; --color-wash-3:#5F574C;
+  --color-wash-4:#3C352C; --color-wash-5:#221C15;
+
+  /* typography */
+  --font-serif:Newsreader,"Iowan Old Style","Palatino Linotype",Georgia,serif;
+  --font-mono:ui-monospace,"SF Mono","Cascadia Code",Consolas,monospace;
+  --type-display-size:56px;   --type-display-weight:400; --type-display-lh:1.06; --type-display-ls:-0.018em;
+  --type-h1-size:34px;        --type-h1-weight:400;      --type-h1-lh:1.16;     --type-h1-ls:-0.012em;
+  --type-h2-size:24px;        --type-h2-weight:400;      --type-h2-lh:1.24;     --type-h2-ls:-0.008em;
+  --type-h3-size:12px;        --type-h3-weight:600;      --type-h3-lh:1.4;      --type-h3-ls:0.12em;
+  --type-body-size:17px;      --type-body-weight:400;    --type-body-lh:1.62;
+  --type-body-small-size:15px;--type-body-small-weight:400;--type-body-small-lh:1.55;
+  --type-label-size:11px;     --type-label-weight:600;   --type-label-lh:1.4;   --type-label-ls:0.1em;
+  --type-data-size:14px;      --type-data-weight:500;    --type-data-lh:1.3;
+  --type-figure-size:40px;    --type-figure-weight:600;  --type-figure-lh:1.0;  --type-figure-ls:-0.02em;
+  --type-caption-size:11px;   --type-caption-weight:400; --type-caption-lh:1.5;
+
+  /* rounded */
+  --rounded-none:0px; --rounded-sm:2px; --rounded-md:3px; --rounded-lg:6px; --rounded-pill:999px;
+
+  /* spacing */
+  --space-xs:4px; --space-sm:8px; --space-md:12px; --space-lg:16px;
+  --space-xl:24px; --space-2xl:32px; --space-3xl:48px; --space-4xl:64px;
+}
+html[data-theme="dark"]{
+  --color-paper:#100F0A;
+  --color-leaf:#17150F;
+  --color-raised:#201D15;
+  --color-rule:#332F25;
+  --color-rule-soft:#26231B;
+  --color-ink:#EDE8DE;
+  --color-ink-secondary:#B0A899;
+  --color-ink-muted:#847C6E;
+  --color-rubric:#E0614A;
+  --color-rubric-mark:#E0614A;
+  --color-rubric-wash:#2A1A15;
+  --color-on-rubric:#17150F;
+  --color-ochre-object:#D9944A;
+  --color-pigment-vermilion:#E0614A;
+  --color-pigment-verdigris:#17997A;
+  --color-pigment-ultramarine:#6C86DC;
+  --color-pigment-orpiment:#B68F22;
+  --color-pigment-tyrian:#A276D6;
+  --color-pigment-terre-verte:#8E9C2C;
+  --color-wash-1:#544C40; --color-wash-2:#6D6455; --color-wash-3:#8B8273;
+  --color-wash-4:#A9A092; --color-wash-5:#CEC6B8;
+}
+
+/* ── page chrome (neutral, intentionally not the product UI) ── */
+*{box-sizing:border-box}
+body{margin:0;background:var(--color-paper);color:var(--color-ink);
+  font-family:var(--font-serif);font-size:var(--type-body-size);line-height:var(--type-body-lh)}
+.wrap{max-width:1080px;margin:0 auto;padding:var(--space-4xl) var(--space-xl) 96px}
+section{margin-bottom:var(--space-4xl)}
+.sec-head{display:flex;align-items:baseline;gap:var(--space-md);
+  border-bottom:1px solid var(--color-rule);padding-bottom:var(--space-sm);margin-bottom:var(--space-xl)}
+.sec-num{font-family:var(--font-mono);font-size:var(--type-label-size);font-weight:var(--type-label-weight);
+  letter-spacing:var(--type-label-ls);text-transform:uppercase;color:var(--color-rubric)}
+.sec-title{font-family:var(--font-serif);font-size:var(--type-h2-size);font-weight:var(--type-h2-weight);
+  line-height:var(--type-h2-lh);letter-spacing:var(--type-h2-ls);margin:0}
+.sec-note{font-size:var(--type-body-small-size);line-height:var(--type-body-small-lh);
+  color:var(--color-ink-secondary);max-width:66ch;margin:0 0 var(--space-xl)}
+.grp{font-family:var(--font-mono);font-size:var(--type-h3-size);font-weight:var(--type-h3-weight);
+  letter-spacing:var(--type-h3-ls);text-transform:uppercase;color:var(--color-ink-muted);
+  margin:var(--space-2xl) 0 var(--space-md)}
+
+/* header */
+header.mast{border-bottom:2px solid var(--color-ink);padding-bottom:var(--space-xl);margin-bottom:var(--space-lg)}
+h1.name{font-family:var(--font-serif);font-size:var(--type-display-size);font-weight:var(--type-display-weight);
+  line-height:var(--type-display-lh);letter-spacing:var(--type-display-ls);margin:0 0 var(--space-md)}
+.tagline{font-size:var(--type-body-size);color:var(--color-ink-secondary);max-width:62ch;margin:0}
+.mirror-note{font-family:var(--font-mono);font-size:var(--type-caption-size);line-height:1.9;
+  color:var(--color-ink-muted);margin:var(--space-lg) 0 var(--space-4xl)}
+.mirror-note code{color:var(--color-rubric)}
+.toggle{position:fixed;top:16px;right:16px;z-index:9;font-family:var(--font-mono);
+  font-size:var(--type-label-size);font-weight:var(--type-label-weight);letter-spacing:var(--type-label-ls);
+  text-transform:uppercase;background:var(--color-leaf);color:var(--color-ink);
+  border:1px solid var(--color-rule);border-radius:var(--rounded-sm);padding:8px 12px;cursor:pointer}
+.toggle:hover{background:var(--color-rubric);color:var(--color-on-rubric);border-color:var(--color-rubric)}
+.toggle:focus-visible{outline:2px solid var(--color-rubric);outline-offset:2px}
+
+/* colors */
+.sw-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(184px,1fr));gap:1px;
+  background:var(--color-rule);border:1px solid var(--color-rule)}
+.sw{background:var(--color-leaf)}
+.sw .chip{height:78px;display:flex;align-items:flex-end;padding:var(--space-sm)}
+.sw .chip span{font-family:var(--font-mono);font-size:var(--type-caption-size)}
+.sw .meta{padding:var(--space-md);border-top:1px solid var(--color-rule)}
+.sw .tk{font-family:var(--font-mono);font-size:var(--type-label-size);font-weight:var(--type-label-weight);
+  letter-spacing:0.04em;text-transform:uppercase;color:var(--color-ink);display:block}
+.sw .hex{font-family:var(--font-mono);font-size:var(--type-caption-size);color:var(--color-ink-muted);
+  display:block;margin-top:3px;text-transform:uppercase}
+
+/* type specimens */
+.spec{display:grid;grid-template-columns:180px minmax(0,1fr);gap:var(--space-xl);
+  padding:var(--space-lg) 0;border-bottom:1px solid var(--color-rule-soft);align-items:baseline}
+.spec:last-child{border-bottom:none}
+.spec .sp-meta{font-family:var(--font-mono);font-size:var(--type-caption-size);
+  line-height:var(--type-caption-lh);color:var(--color-ink-muted)}
+.spec .sp-meta b{display:block;color:var(--color-rubric);font-weight:600;
+  letter-spacing:var(--type-label-ls);text-transform:uppercase;font-size:var(--type-label-size);margin-bottom:4px}
+.sp-display{font-family:var(--font-serif);font-size:var(--type-display-size);font-weight:var(--type-display-weight);line-height:var(--type-display-lh);letter-spacing:var(--type-display-ls)}
+.sp-h1{font-family:var(--font-serif);font-size:var(--type-h1-size);font-weight:var(--type-h1-weight);line-height:var(--type-h1-lh);letter-spacing:var(--type-h1-ls)}
+.sp-h2{font-family:var(--font-serif);font-size:var(--type-h2-size);font-weight:var(--type-h2-weight);line-height:var(--type-h2-lh);letter-spacing:var(--type-h2-ls)}
+.sp-h3{font-family:var(--font-mono);font-size:var(--type-h3-size);font-weight:var(--type-h3-weight);line-height:var(--type-h3-lh);letter-spacing:var(--type-h3-ls);text-transform:uppercase}
+.sp-body{font-family:var(--font-serif);font-size:var(--type-body-size);font-weight:var(--type-body-weight);line-height:var(--type-body-lh)}
+.sp-body-small{font-family:var(--font-serif);font-size:var(--type-body-small-size);font-weight:var(--type-body-small-weight);line-height:var(--type-body-small-lh)}
+.sp-label{font-family:var(--font-mono);font-size:var(--type-label-size);font-weight:var(--type-label-weight);line-height:var(--type-label-lh);letter-spacing:var(--type-label-ls);text-transform:uppercase}
+.sp-data{font-family:var(--font-mono);font-size:var(--type-data-size);font-weight:var(--type-data-weight);line-height:var(--type-data-lh);font-variant-numeric:tabular-nums}
+.sp-figure{font-family:var(--font-serif);font-size:var(--type-figure-size);font-weight:var(--type-figure-weight);line-height:var(--type-figure-lh);letter-spacing:var(--type-figure-ls);font-variant-numeric:tabular-nums}
+.sp-caption{font-family:var(--font-mono);font-size:var(--type-caption-size);font-weight:var(--type-caption-weight);line-height:var(--type-caption-lh)}
+
+/* spacing + radius */
+.scale-row{display:flex;align-items:center;gap:var(--space-lg);padding:var(--space-sm) 0}
+.scale-bar{background:var(--color-rubric);height:16px}
+.scale-lbl{font-family:var(--font-mono);font-size:var(--type-caption-size);color:var(--color-ink-muted);min-width:104px}
+.rad-grid{display:flex;flex-wrap:wrap;gap:var(--space-lg)}
+.rad{text-align:center}
+.rad .box{width:92px;height:92px;background:var(--color-leaf);border:1px solid var(--color-rule)}
+.rad .lbl{font-family:var(--font-mono);font-size:var(--type-caption-size);color:var(--color-ink-muted);margin-top:var(--space-sm)}
+
+/* elevation */
+.elev-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:var(--space-lg)}
+.elev{padding:var(--space-lg);border-radius:var(--rounded-md)}
+.e-paper{background:var(--color-paper);border:1px solid var(--color-rule)}
+.e-leaf{background:var(--color-leaf);border:1px solid var(--color-rule)}
+.e-raised{background:var(--color-raised);border:1px solid var(--color-rule)}
+.e-rule{background:var(--color-leaf);border:none;border-top:2px solid var(--color-ink);padding-top:var(--space-md)}
+.elev .t{font-family:var(--font-mono);font-size:var(--type-label-size);font-weight:600;
+  letter-spacing:var(--type-label-ls);text-transform:uppercase;color:var(--color-ink);display:block;margin-bottom:6px}
+.elev .d{font-size:var(--type-body-small-size);color:var(--color-ink-secondary);line-height:1.45}
+
+/* components */
+.comp-row{display:flex;flex-wrap:wrap;gap:var(--space-md);align-items:center;margin-bottom:var(--space-md)}
+.comp-note{font-family:var(--font-mono);font-size:var(--type-caption-size);color:var(--color-ink-muted);
+  margin:0 0 var(--space-sm)}
+.btn{font-family:var(--font-mono);font-size:var(--type-label-size);font-weight:var(--type-label-weight);
+  letter-spacing:var(--type-label-ls);text-transform:uppercase;line-height:var(--type-label-lh);
+  border-radius:var(--rounded-sm);padding:10px 18px;border:1px solid transparent;cursor:pointer}
+.btn-primary{background:var(--color-ink);color:var(--color-raised)}
+.btn-primary:hover,.btn-primary.is-hover{background:var(--color-rubric);color:var(--color-on-rubric)}
+.btn-primary.is-disabled{background:var(--color-rule-soft);color:var(--color-ink-muted);cursor:not-allowed}
+.btn-secondary{background:var(--color-leaf);color:var(--color-ink);border-color:var(--color-rule)}
+.btn-secondary:hover{border-color:var(--color-ink)}
+.btn:focus-visible{outline:2px solid var(--color-rubric);outline-offset:2px}
+.field{max-width:320px}
+.inp{width:100%;height:38px;background:var(--color-raised);color:var(--color-ink);
+  font-family:var(--font-mono);font-size:var(--type-data-size);font-weight:var(--type-data-weight);
+  border:1px solid var(--color-rule);border-radius:var(--rounded-sm);padding:10px 12px}
+.inp:focus{outline:none;border-color:var(--color-rubric);box-shadow:0 0 0 1px var(--color-rubric)}
+.inp.is-focus{border-color:var(--color-rubric);box-shadow:0 0 0 1px var(--color-rubric)}
+.inp.is-error{border-color:var(--color-rubric)}
+.err{font-family:var(--font-mono);font-size:var(--type-caption-size);color:var(--color-rubric);
+  margin-top:6px;display:flex;gap:6px;align-items:center}
+.card{background:var(--color-leaf);border:1px solid var(--color-rule);border-radius:var(--rounded-md);
+  padding:var(--space-xl);max-width:340px}
+.card h4{font-family:var(--font-serif);font-size:var(--type-h2-size);font-weight:400;margin:0 0 var(--space-sm)}
+.card p{font-size:var(--type-body-small-size);line-height:var(--type-body-small-lh);
+  color:var(--color-ink-secondary);margin:0}
+.tile{background:var(--color-leaf);border:1px solid var(--color-rule);border-radius:var(--rounded-md);
+  padding:var(--space-lg);min-width:190px}
+.tile .tl{font-family:var(--font-mono);font-size:var(--type-label-size);font-weight:600;
+  letter-spacing:var(--type-label-ls);text-transform:uppercase;color:var(--color-ink-muted);display:block}
+.tile .fig{font-family:var(--font-serif);font-size:var(--type-figure-size);font-weight:var(--type-figure-weight);
+  line-height:var(--type-figure-lh);letter-spacing:var(--type-figure-ls);font-variant-numeric:tabular-nums;
+  display:block;margin:var(--space-sm) 0 6px}
+.tile .sub{font-family:var(--font-mono);font-size:var(--type-caption-size);color:var(--color-ink-secondary)}
+.chip{display:inline-block;font-family:var(--font-mono);font-size:var(--type-caption-size);
+  background:var(--color-rubric-wash);color:var(--color-rubric);border-radius:var(--rounded-sm);
+  padding:3px 7px;letter-spacing:0.06em;text-transform:uppercase}
+.tw{overflow-x:auto;border:1px solid var(--color-rule);border-radius:var(--rounded-md)}
+table{width:100%;border-collapse:collapse;min-width:440px;background:var(--color-leaf)}
+th{text-align:left;font-family:var(--font-mono);font-size:var(--type-label-size);font-weight:var(--type-label-weight);
+  letter-spacing:var(--type-label-ls);text-transform:uppercase;color:var(--color-rubric);
+  padding:12px 16px;border-bottom:1px solid var(--color-rule)}
+td{padding:12px 16px;border-bottom:1px solid var(--color-rule-soft);font-family:var(--font-mono);
+  font-size:var(--type-data-size);font-variant-numeric:tabular-nums;color:var(--color-ink-secondary)}
+tr:last-child td{border-bottom:none}
+.nav{display:flex;gap:var(--space-xs);flex-wrap:wrap}
+.nav a{font-family:var(--font-mono);font-size:var(--type-label-size);font-weight:var(--type-label-weight);
+  letter-spacing:var(--type-label-ls);text-transform:uppercase;color:var(--color-ink-secondary);
+  text-decoration:none;padding:8px 12px;border-radius:var(--rounded-sm)}
+.nav a.is-active{background:var(--color-rubric-wash);color:var(--color-ink)}
+.nav a:hover{color:var(--color-ink)}
+
+/* do / don't */
+.dd{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:var(--space-xl)}
+.dd ul{list-style:none;margin:0;padding:0}
+.dd li{display:grid;grid-template-columns:20px 1fr;gap:var(--space-md);padding:var(--space-md) 0;
+  border-bottom:1px solid var(--color-rule-soft);font-size:var(--type-body-small-size);
+  line-height:var(--type-body-small-lh);color:var(--color-ink-secondary)}
+.dd li:last-child{border-bottom:none}
+.dd .mk{font-family:var(--font-mono);font-weight:700}
+.dd .do .mk{color:var(--color-pigment-verdigris)}
+.dd .dont .mk{color:var(--color-rubric)}
+.dd h3{font-family:var(--font-mono);font-size:var(--type-h3-size);font-weight:var(--type-h3-weight);
+  letter-spacing:var(--type-h3-ls);text-transform:uppercase;margin:0 0 var(--space-sm);color:var(--color-ink)}
+
+@media(max-width:720px){
+  .spec{grid-template-columns:1fr;gap:var(--space-sm)}
+  .wrap{padding:var(--space-2xl) var(--space-lg) 64px}
+  h1.name{font-size:38px}
+}
+</style>
+</head>
+<body>
+<button class="toggle" id="tg" type="button">Dark</button>
+<div class="wrap">
+
+<header class="mast">
+  <h1 class="name">Veya</h1>
+  <p class="tagline">An honest job-application companion styled as printed matter — laid paper, iron-gall ink, and a single rubric red that marks attention rather than judgement.</p>
+</header>
+<p class="mirror-note">
+  This file is the human-readable mirror of <code>docs/design.md</code>.<br>
+  <code>design.md</code> is the source of truth — the agent reads it; you read this.<br>
+  Every swatch and component below is styled from the same token values. They are written and updated together.
+</p>
+
+<!-- ── 01 COLORS ─────────────────────────────────────────── -->
+<section>
+  <div class="sec-head"><span class="sec-num">01</span><h2 class="sec-title">Colors</h2></div>
+  <p class="sec-note">The ground is laid rag paper, not cream. <code>ink</code> is iron-gall — a very dark warm brown, never black. <code>rubric</code> is the only interface accent and marks <em>attend to this</em>, never <em>how you did</em>. There is deliberately no success green.</p>
+
+  <p class="grp">Surfaces</p>
+  <div class="sw-grid">
+    <div class="sw"><div class="chip" style="background:var(--color-paper)"></div><div class="meta"><span class="tk">paper</span><span class="hex">#E5E2D9 / #100F0A</span></div></div>
+    <div class="sw"><div class="chip" style="background:var(--color-leaf)"></div><div class="meta"><span class="tk">leaf</span><span class="hex">#F1EFE9 / #17150F</span></div></div>
+    <div class="sw"><div class="chip" style="background:var(--color-raised)"></div><div class="meta"><span class="tk">raised</span><span class="hex">#FAF8F3 / #201D15</span></div></div>
+    <div class="sw"><div class="chip" style="background:var(--color-rule)"></div><div class="meta"><span class="tk">rule</span><span class="hex">#D3CEC1 / #332F25</span></div></div>
+  </div>
+
+  <p class="grp">Ink</p>
+  <div class="sw-grid">
+    <div class="sw"><div class="chip" style="background:var(--color-ink)"><span style="color:var(--color-leaf)">14.67:1</span></div><div class="meta"><span class="tk">ink</span><span class="hex">#221C15 / #EDE8DE</span></div></div>
+    <div class="sw"><div class="chip" style="background:var(--color-ink-secondary)"><span style="color:var(--color-leaf)">6.18:1</span></div><div class="meta"><span class="tk">ink-secondary</span><span class="hex">#5F574C / #B0A899</span></div></div>
+    <div class="sw"><div class="chip" style="background:var(--color-ink-muted)"><span style="color:var(--color-leaf)">3.44:1</span></div><div class="meta"><span class="tk">ink-muted</span><span class="hex">#877F73 / #847C6E</span></div></div>
+  </div>
+
+  <p class="grp">Rubric — the one loud thing</p>
+  <div class="sw-grid">
+    <div class="sw"><div class="chip" style="background:var(--color-rubric)"><span style="color:var(--color-on-rubric)">6.06:1 · AA text</span></div><div class="meta"><span class="tk">rubric</span><span class="hex">#A82A1F / #E0614A</span></div></div>
+    <div class="sw"><div class="chip" style="background:var(--color-rubric-mark)"><span style="color:var(--color-on-rubric)">4.79:1 · marks</span></div><div class="meta"><span class="tk">rubric-mark</span><span class="hex">#C1352A</span></div></div>
+    <div class="sw"><div class="chip" style="background:var(--color-rubric-wash)"><span style="color:var(--color-rubric)">backing only</span></div><div class="meta"><span class="tk">rubric-wash</span><span class="hex">#EFE5DC / #2A1A15</span></div></div>
+  </div>
+
+  <p class="grp">Ochre — illustration layer only, never interface</p>
+  <div class="sw-grid">
+    <div class="sw"><div class="chip" style="background:var(--color-ochre-object)"><span style="color:#221C15">objects / fills</span></div><div class="meta"><span class="tk">ochre-object</span><span class="hex">#C1782A / #D9944A</span></div></div>
+    <div class="sw"><div class="chip" style="background:var(--color-ochre-ink)"><span style="color:var(--color-leaf)">4.98:1 · text-safe</span></div><div class="meta"><span class="tk">ochre-ink</span><span class="hex">#96570F</span></div></div>
+  </div>
+  <p class="comp-note" style="margin-top:12px">⚠ Vermilion against ochre measures <b>1.47:1</b> — they are not separable side by side. The domain split is what keeps both usable.</p>
+
+  <p class="grp">Pigments — categorical, opt-in per screen, fixed order, never cycled</p>
+  <p class="comp-note" style="margin:0 0 12px">A screen earns pigments only when it carries genuinely categorical series that are <b>not</b> already distinguished by a direct label. If the marks are labelled, hue encodes nothing the text does not, and spending it costs the monochrome read — use the wash steps instead. The Dashboard runs on ink and rubric alone: one chromatic value in either mode.</p>
+  <div class="sw-grid">
+    <div class="sw"><div class="chip" style="background:var(--color-pigment-vermilion)"></div><div class="meta"><span class="tk">i · vermilion</span><span class="hex">#C1352A / #E0614A</span></div></div>
+    <div class="sw"><div class="chip" style="background:var(--color-pigment-verdigris)"></div><div class="meta"><span class="tk">ii · verdigris</span><span class="hex">#0E7C55 / #17997A</span></div></div>
+    <div class="sw"><div class="chip" style="background:var(--color-pigment-ultramarine)"></div><div class="meta"><span class="tk">iii · ultramarine</span><span class="hex">#33509E / #6C86DC</span></div></div>
+    <div class="sw"><div class="chip" style="background:var(--color-pigment-orpiment)"></div><div class="meta"><span class="tk">iv · orpiment</span><span class="hex">#A8781C / #B68F22</span></div></div>
+    <div class="sw"><div class="chip" style="background:var(--color-pigment-tyrian)"></div><div class="meta"><span class="tk">v · tyrian</span><span class="hex">#6A3D8F / #A276D6</span></div></div>
+    <div class="sw"><div class="chip" style="background:var(--color-pigment-terre-verte)"></div><div class="meta"><span class="tk">vi · terre verte</span><span class="hex">#7A8A1E / #8E9C2C</span></div></div>
+  </div>
+
+  <p class="grp">Wash — sequential magnitude, one ink thinned</p>
+  <div style="display:flex;border:1px solid var(--color-rule)">
+    <div style="flex:1;height:56px;background:var(--color-wash-1)"></div>
+    <div style="flex:1;height:56px;background:var(--color-wash-2)"></div>
+    <div style="flex:1;height:56px;background:var(--color-wash-3)"></div>
+    <div style="flex:1;height:56px;background:var(--color-wash-4)"></div>
+    <div style="flex:1;height:56px;background:var(--color-wash-5)"></div>
+  </div>
+  <p class="comp-note" style="margin-top:8px">wash-1 → wash-5 · monotone lightness · light end clears the surface at 2.19:1</p>
+</section>
+
+<!-- ── 02 TYPOGRAPHY ─────────────────────────────────────── -->
+<section>
+  <div class="sec-head"><span class="sec-num">02</span><h2 class="sec-title">Typography</h2></div>
+  <p class="sec-note">Two families only. An old-style serif on an ancient substrate, set against a monospace that reads as a precise instrument. There is no sans-serif — the absence is deliberate, and a third family collapses the tension.</p>
+
+  <div class="spec"><div class="sp-meta"><b>display</b>Newsreader · 56px · 400<br>lh 1.06 · ls −0.018em</div><div class="sp-display">Ink on paper</div></div>
+  <div class="spec"><div class="sp-meta"><b>h1</b>Newsreader · 34px · 400<br>lh 1.16 · ls −0.012em</div><div class="sp-h1">The last revolution was printed</div></div>
+  <div class="spec"><div class="sp-meta"><b>h2</b>Newsreader · 24px · 400<br>lh 1.24 · ls −0.008em</div><div class="sp-h2">Silence is the expected outcome</div></div>
+  <div class="spec"><div class="sp-meta"><b>h3</b>Mono · 12px · 600<br>ls 0.12em · uppercase</div><div class="sp-h3">Section label</div></div>
+  <div class="spec"><div class="sp-meta"><b>body</b>Newsreader · 17px · 400<br>lh 1.62</div><div class="sp-body">Between 48% and 75% of applications never get a response. Silence is the expected outcome, not a signal about you.</div></div>
+  <div class="spec"><div class="sp-meta"><b>body-small</b>Newsreader · 15px · 400<br>lh 1.55</div><div class="sp-body-small">Labelled as an estimate, never as measured time. Based on 35 minutes per application — edit that below.</div></div>
+  <div class="spec"><div class="sp-meta"><b>label</b>Mono · 11px · 600<br>ls 0.1em · uppercase</div><div class="sp-label">Applications sent</div></div>
+  <div class="spec"><div class="sp-meta"><b>data</b>Mono · 14px · 500<br>tabular numerals</div><div class="sp-data">1,284 · 58 → 74 · 12.4%</div></div>
+  <div class="spec"><div class="sp-meta"><b>figure</b>Newsreader · 40px · 600<br><b style="color:var(--color-ink-muted);display:inline;font-size:inherit;letter-spacing:0;text-transform:none">proportional</b> · ls −0.02em</div><div class="sp-figure" style="font-variant-numeric:proportional-nums">1,284</div></div>
+  <div class="spec"><div class="sp-meta"><b>caption</b>Mono · 11px · 400<br>lh 1.5</div><div class="sp-caption">Needs about 10 outcomes to mean anything.</div></div>
+</section>
+
+<!-- ── 03 SPACING ────────────────────────────────────────── -->
+<section>
+  <div class="sec-head"><span class="sec-num">03</span><h2 class="sec-title">Spacing</h2></div>
+  <p class="sec-note">A 4px base scale. Density is comfortable, not tight — a page that crowds its content reads as anxious, which is the exact feeling the product exists to reduce.</p>
+  <div class="scale-row"><span class="scale-lbl">xs · 4px</span><div class="scale-bar" style="width:var(--space-xs)"></div></div>
+  <div class="scale-row"><span class="scale-lbl">sm · 8px</span><div class="scale-bar" style="width:var(--space-sm)"></div></div>
+  <div class="scale-row"><span class="scale-lbl">md · 12px</span><div class="scale-bar" style="width:var(--space-md)"></div></div>
+  <div class="scale-row"><span class="scale-lbl">lg · 16px</span><div class="scale-bar" style="width:var(--space-lg)"></div></div>
+  <div class="scale-row"><span class="scale-lbl">xl · 24px</span><div class="scale-bar" style="width:var(--space-xl)"></div></div>
+  <div class="scale-row"><span class="scale-lbl">2xl · 32px</span><div class="scale-bar" style="width:var(--space-2xl)"></div></div>
+  <div class="scale-row"><span class="scale-lbl">3xl · 48px</span><div class="scale-bar" style="width:var(--space-3xl)"></div></div>
+  <div class="scale-row"><span class="scale-lbl">4xl · 64px</span><div class="scale-bar" style="width:var(--space-4xl)"></div></div>
+</section>
+
+<!-- ── 04 RADIUS ─────────────────────────────────────────── -->
+<section>
+  <div class="sec-head"><span class="sec-num">04</span><h2 class="sec-title">Radius</h2></div>
+  <p class="sec-note">Paper is cut, not moulded, so corners stay close to sharp. Past 8px the system starts reading as a friendly consumer app, which contradicts the position.</p>
+  <div class="rad-grid">
+    <div class="rad"><div class="box" style="border-radius:var(--rounded-none)"></div><div class="lbl">none · 0px</div></div>
+    <div class="rad"><div class="box" style="border-radius:var(--rounded-sm)"></div><div class="lbl">sm · 2px<br>controls</div></div>
+    <div class="rad"><div class="box" style="border-radius:var(--rounded-md)"></div><div class="lbl">md · 3px<br>cards</div></div>
+    <div class="rad"><div class="box" style="border-radius:var(--rounded-lg)"></div><div class="lbl">lg · 6px<br>rare</div></div>
+    <div class="rad"><div class="box" style="border-radius:var(--rounded-pill)"></div><div class="lbl">pill · 999px<br>badges only</div></div>
+  </div>
+</section>
+
+<!-- ── 05 ELEVATION ──────────────────────────────────────── -->
+<section>
+  <div class="sec-head"><span class="sec-num">05</span><h2 class="sec-title">Elevation &amp; Depth</h2></div>
+  <p class="sec-note">There are no drop shadows in this system. Depth comes from three warm surface steps separated by hairlines — layering is how physical paper actually stacks, and a shadow would simulate a lighting model paper on a desk does not have.</p>
+  <div class="elev-grid">
+    <div class="elev e-paper"><span class="t">paper</span><span class="d">Page ground. Everything sits on it.</span></div>
+    <div class="elev e-leaf"><span class="t">leaf</span><span class="d">Cards, bands, chart surfaces. One step up.</span></div>
+    <div class="elev e-raised"><span class="t">raised</span><span class="d">Inputs, inset panels, table headers.</span></div>
+    <div class="elev e-rule"><span class="t">2px ink rule</span><span class="d">For a stronger division — never a heavier shadow.</span></div>
+  </div>
+</section>
+
+<!-- ── 06 COMPONENTS ─────────────────────────────────────── -->
+<section>
+  <div class="sec-head"><span class="sec-num">06</span><h2 class="sec-title">Components</h2></div>
+  <p class="sec-note">Hover states are rendered as labelled static copies where they cannot be triggered without interaction.</p>
+
+  <p class="grp">Buttons</p>
+  <p class="comp-note">Rubric red fills a surface on hover — the colour arrives on intent, which is rubrication's original job.</p>
+  <div class="comp-row">
+    <button class="btn btn-primary" type="button">Start a run</button>
+    <button class="btn btn-primary is-hover" type="button">Start a run</button>
+    <button class="btn btn-primary is-disabled" type="button" disabled>Start a run</button>
+    <button class="btn btn-secondary" type="button">Open archive</button>
+  </div>
+  <p class="comp-note">default · hover · disabled · secondary</p>
+
+  <p class="grp">Inputs</p>
+  <div class="comp-row" style="align-items:flex-start">
+    <div class="field"><input class="inp" type="text" value="product designer" aria-label="Search terms"></div>
+    <div class="field"><input class="inp is-focus" type="text" value="product designer" aria-label="Search terms focused"></div>
+    <div class="field">
+      <input class="inp is-error" type="text" value="" aria-label="Search terms with error" aria-describedby="e1">
+      <p class="err" id="e1"><span aria-hidden="true">✗</span> Add at least one search term to start a run.</p>
+    </div>
+  </div>
+  <p class="comp-note">default · focus (2px rubric ring) · error — a genuine failure earns the loud colour, and the written message carries the meaning</p>
+
+  <p class="grp">Card anatomy — five slots, fixed order</p>
+  <p class="comp-note" style="margin:0 0 12px">Only the label is required. The rest are optional but never reorder. <b>One figure per card</b> — a second number means a second card, or prose in the subline. <b>The viz sits on the card floor at full width</b> (<code>margin-top:auto</code>), so every plot in a row lands on the same line. A plot tucked beside the figure makes two focal points inside one small card, and the figure loses.</p>
+  <div class="card" style="max-width:340px">
+    <div style="font-family:var(--font-mono);font-size:var(--type-label-size);font-weight:600;letter-spacing:var(--type-label-ls);text-transform:uppercase;color:var(--color-ink-muted)">1 · label</div>
+    <div style="display:flex;align-items:baseline;gap:8px;margin-top:9px;font-family:var(--font-serif);font-size:var(--type-figure-size);font-weight:var(--type-figure-weight);line-height:1;letter-spacing:var(--type-figure-ls);font-variant-numeric:proportional-nums">64%<span style="font-family:var(--font-mono);font-size:11px;color:var(--color-ink-muted);letter-spacing:.06em">2 · unit, on the baseline</span></div>
+    <p style="margin:7px 0 0;font-size:var(--type-body-small-size);color:var(--color-ink-secondary)">3 · subline — the plain-English reading of the figure.</p>
+    <div style="margin-top:18px">
+      <div style="height:8px;width:100%;border-radius:var(--rounded-sm);background:var(--color-rule);overflow:hidden"><div style="height:100%;width:64%;background:var(--color-wash-5)"></div></div>
+      <div style="display:flex;justify-content:space-between;margin-top:6px;font-family:var(--font-mono);font-size:11px;color:var(--color-ink-muted)"><span>4 · viz band</span><span>on the floor</span></div>
+    </div>
+    <div style="margin-top:10px;font-family:var(--font-mono);font-size:11px;color:var(--color-ink-muted)">5 · caption — the citation or the caveat</div>
+  </div>
+  <p class="comp-note" style="margin:12px 0 0">A single ratio is a <b>meter</b>, never a two-slice ring — the number is already printed larger beside it, so a donut restates and competes with it. Rings are for part-to-whole with three or more segments, and even then a stacked split usually reads better at card width.</p>
+
+  <p class="grp">Card &amp; stat tile</p>
+  <div class="comp-row" style="align-items:flex-start">
+    <div class="card">
+      <h4>Nothing back yet</h4>
+      <p>That's normal — most applications never get a reply. Worth a follow-up, or a close. Your call.</p>
+    </div>
+    <div class="tile">
+      <span class="tl">Applications sent</span>
+      <span class="fig">1,284</span>
+      <span class="sub">since 12 March</span>
+    </div>
+    <div class="tile">
+      <span class="tl">Response rate <span class="chip">Sample</span></span>
+      <span class="fig">—</span>
+      <span class="sub">needs about 10 outcomes to mean anything</span>
+    </div>
+  </div>
+
+  <p class="grp">Table</p>
+  <div class="tw">
+    <table>
+      <thead><tr><th>Company</th><th>Fit</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td>Finch</td><td>95</td><td>Applied</td></tr>
+        <tr><td>Airtable</td><td>88</td><td>Tailored</td></tr>
+        <tr><td>Anthropic</td><td>84</td><td>Queued</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="comp-note">Header labels are mono in rubric red — the rubric doing its original job: naming what follows.</p>
+
+  <p class="grp">Navigation</p>
+  <nav class="nav">
+    <a href="#" class="is-active">Dashboard</a>
+    <a href="#">Pipeline</a>
+    <a href="#">Knowledge</a>
+    <a href="#">Settings</a>
+  </nav>
+</section>
+
+<!-- ── 07 DO / DON'T ─────────────────────────────────────── -->
+<section>
+  <div class="sec-head"><span class="sec-num">07</span><h2 class="sec-title">Do's and Don'ts</h2></div>
+  <div class="dd">
+    <div class="do">
+      <h3>✓ Do</h3>
+      <ul>
+        <li><span class="mk">✓</span><span>Keep exactly one loud thing per view. If two elements are red, neither is.</span></li>
+        <li><span class="mk">✓</span><span>Carry state with an icon, a label, and a weight — colour is the last channel, never the only one.</span></li>
+        <li><span class="mk">✓</span><span>Set every figure in a tabular numeral style so columns align.</span></li>
+        <li><span class="mk">✓</span><span>Use hairlines and surface steps for structure; let layering do what shadows would.</span></li>
+        <li><span class="mk">✓</span><span>Re-run the palette validator before introducing any colour.</span></li>
+        <li><span class="mk">✓</span><span>Keep ochre in illustration and rubric in interface — they measure 1.47:1 against each other.</span></li>
+      </ul>
+    </div>
+    <div class="dont">
+      <h3>✗ Don't</h3>
+      <ul>
+        <li><span class="mk">✗</span><span>Don't add a success green or a congratulatory state. Nothing here congratulates.</span></li>
+        <li><span class="mk">✗</span><span>Don't use red for staleness, waiting, or lateness. Silence gets neutral ink.</span></li>
+        <li><span class="mk">✗</span><span>Don't introduce a sans-serif. The serif/mono pairing is the identity.</span></li>
+        <li><span class="mk">✗</span><span>Don't add drop shadows, gradients, or radii above 8px.</span></li>
+        <li><span class="mk">✗</span><span>Don't cycle categorical pigments for a seventh series — fold it into "Other".</span></li>
+        <li><span class="mk">✗</span><span>Don't let text wear a pigment colour. The mark carries identity; the number stays in ink.</span></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+</div>
+<script>
+(function(){
+  var r=document.documentElement,b=document.getElementById('tg');
+  b.addEventListener('click',function(){
+    var dark=r.getAttribute('data-theme')==='dark';
+    r.setAttribute('data-theme',dark?'light':'dark');
+    b.textContent=dark?'Dark':'Light';
+  });
+})();
+</script>
+</body>
+</html>
