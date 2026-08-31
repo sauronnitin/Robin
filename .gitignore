@@ -99,3 +99,6 @@ debug-*.log
 
 # Vendored third-party tool build artifacts
 tools/open-resume-parser/node_modules/
+
+# Claude Code skills lockfile (dev-tooling, not app functionality)
+skills-lock.json
