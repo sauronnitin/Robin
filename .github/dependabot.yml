@@ -6,6 +6,11 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5
+    ignore:
+      # Pinned deliberately: newer litellm injects cache_breakpoint into Groq
+      # calls, which breaks them. See the override-dependencies comment in
+      # pyproject.toml -- do not let Dependabot re-propose this bump.
+      - dependency-name: "litellm"
 
   # Node deps for the resume-parser sidecar
   - package-ecosystem: "npm"
