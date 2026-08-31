@@ -52,6 +52,7 @@ DEFAULT_ENABLED = [
     "greenhouse",
     "lever",
     "ashby",
+    "workable",
     "remoteok",
     "remotive",
     "jobicy",
@@ -61,6 +62,7 @@ DEFAULT_ENABLED = [
     "themuse",
     "freehire",
     "rise",
+    "fourdayweek",
     "github",
     "hn",
     "serpapi",
@@ -201,12 +203,27 @@ def extended_catalog(cfg: dict[str, Any] | None = None) -> list[dict[str, str]]:
     return out
 
 
+def enabled_source_ids(cfg: dict[str, Any] | None = None) -> list[str]:
+    """Source ids Browse has checked on. Scout must use this same list."""
+    data = cfg or load_job_sources()
+    raw = data.get("enabled_sources") or DEFAULT_ENABLED
+    out: list[str] = []
+    seen: set[str] = set()
+    for item in raw:
+        sid = str(item or "").strip().lower()
+        if not sid or sid in seen:
+            continue
+        seen.add(sid)
+        out.append(sid)
+    return out or list(DEFAULT_ENABLED)
+
+
 def catalog_payload() -> dict[str, Any]:
     cfg = load_job_sources()
     return {
         "ok": True,
         "sources": extended_catalog(cfg),
-        "enabled_sources": cfg.get("enabled_sources") or DEFAULT_ENABLED,
+        "enabled_sources": enabled_source_ids(cfg),
         "company_watchlist": cfg.get("company_watchlist") or [],
         "free_source_targets": cfg.get("free_source_targets") or [],
         "discovered_apis": cfg.get("discovered_apis") or [],

@@ -19,12 +19,14 @@ from dotenv import load_dotenv
 from pydantic import BaseModel, Field
 
 from jobhunter_ai.job_feed import fetch_job_feed
+from jobhunter_ai.job_sources_config import enabled_source_ids
 from jobhunter_ai.truncate import truncate_for_llm
 
 load_dotenv(Path(__file__).resolve().parents[3] / ".env", override=False)
 
 _MAX_TOTAL = 20
-_MAX_DESC = 180
+_MAX_DESC = 120
+_BROWSE_LIMIT = 100
 _USER_AGENT = "Robin/1.0 (+https://github.com/robin)"
 _TIMEOUT = 12
 
@@ -68,21 +70,21 @@ class JobApisToolInput(BaseModel):
 
 
 class JobApisTool(BaseTool):
-    """Fetch product-design job listings from the shared job feed.
+    """Fetch role-matched job listings from the same feed Browse uses.
 
-    Same providers and query as Browse: company ATS watchlist (Greenhouse,
-    Lever, Ashby, Workable) plus open APIs. Returns a compact JSON list of
-    up to 20 listings. queries/sources from the LLM are optional refinements
-    on the resume-derived default, not a requirement.
+    Always searches every source enabled on Browse (company ATS watchlist plus
+    open APIs). LLM-supplied sources/queries are ignored so Scout cannot
+    silently drop boards. Returns a compact JSON list.
     """
 
     name: str = "job_apis_multi_source"
     description: str = (
-        "Fetch product-design job listings from the shared job feed "
-        "(company ATS watchlist plus RemoteOK, Remotive, Jobicy, Freehire, Rise, "
-        "Arbeitnow, Himalayas, Working Nomads, The Muse, GitHub, Hacker News, SerpAPI). "
-        "Returns a compact JSON list of up to 20 listings. "
-        "Takes one argument: confirm=true. queries and sources are optional."
+        "Fetch job listings from the same sources as the Browse page "
+        "(every enabled board: Greenhouse, Lever, Ashby, Workable, RemoteOK, "
+        "Remotive, Jobicy, Arbeitnow, Himalayas, Working Nomads, The Muse, "
+        "Freehire, Rise, 4 Day Week, GitHub, Hacker News, SerpAPI, and any "
+        "others checked on in Browse). Returns a compact JSON list. "
+        "Takes one argument: confirm=true. Do not pass sources or queries."
     )
     args_schema: Type[BaseModel] = JobApisToolInput
 
@@ -100,13 +102,14 @@ class JobApisTool(BaseTool):
                 max_chars=3200,
             )
 
-        query_parts = [str(q).strip() for q in (queries or []) if str(q).strip()]
-        query = " ".join(query_parts[:2]) or None
-        allowed = [str(s).strip().lower() for s in (sources or []) if str(s).strip()]
+        # Ignore LLM sources/queries. Scout must use Browse's enabled list and
+        # the resume-derived search terms, the same default Browse Search uses.
+        _ = (confirm, queries, sources)
+        enabled = enabled_source_ids()
         feed = fetch_job_feed(
-            query=query,
-            sources=allowed or None,
-            limit=_MAX_TOTAL,
+            query=None,
+            sources=None,
+            limit=_BROWSE_LIMIT,
         )
         combined = list(feed.get("jobs") or []) + list(feed.get("adjacent") or [])
         out: list[dict] = []
@@ -123,8 +126,16 @@ class JobApisTool(BaseTool):
                 }
             )
 
+        returned_sources = sorted({str(j.get("source") or "") for j in out if j.get("source")})
+        used = [str(s) for s in (feed.get("sources_used") or []) if s]
+        consulted = ", ".join(enabled) or "none"
+        from_boards = ", ".join(used or returned_sources) or "none"
         payload = json.dumps(out, ensure_ascii=True)
+        header = (
+            f"Job listings from Browse sources ({len(out)} shown of {len(combined)} fetched). "
+            f"Enabled: {consulted}. Returned from: {from_boards}."
+        )
         return truncate_for_llm(
-            f"Job listings from multi-source API ({len(out)} found):\n{payload}",
+            f"{header}\n{payload}",
             max_chars=3200,
         )

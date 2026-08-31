@@ -14,8 +14,8 @@ from jobhunter_ai import role_profile
 from jobhunter_ai.job_sources import fetch_all
 from jobhunter_ai.job_sources.base import NormalizedJob
 from jobhunter_ai.job_sources_config import (
-    DEFAULT_ENABLED,
     SOURCE_CATALOG,
+    enabled_source_ids,
     load_job_sources,
     watchlist_slugs,
 )
@@ -241,7 +241,7 @@ def fetch_job_feed(
     cfg = load_job_sources()
     wanted = {s.strip().lower() for s in (sources or []) if str(s).strip()}
     if not wanted:
-        wanted = {s.lower() for s in (cfg.get("enabled_sources") or DEFAULT_ENABLED)}
+        wanted = set(enabled_source_ids(cfg))
 
     explicit_query = (query or "").strip()
     fetch_query = resolve_feed_query(query)
