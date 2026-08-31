@@ -3,6 +3,15 @@
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Robin</title>
+<script>
+(function(){
+  try {
+    if (localStorage.getItem('jh-steep-theme') === 'dark') {
+      document.documentElement.classList.add('dark');
+    }
+  } catch (e) {}
+})();
+</script>
 <script src="https://cdn.tailwindcss.com"></script>
 <script>
 tailwind.config = {
@@ -29,15 +38,23 @@ tailwind.config = {
   }
 }
 </script>
-<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,500;0,8..60,600;1,8..60,300&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,500;0,8..60,600;1,8..60,300&family=DM+Sans:wght@300;400;500;600&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="kg.css">
 <link rel="stylesheet" href="apply.css">
 <link rel="stylesheet" href="metrics.css">
+<link rel="stylesheet" href="keys-hint.css">
+<!-- Dashboard visual pilots. Both are scoped to #s-dashboard only; every other
+     screen keeps the current Steep look for side-by-side comparison.
+     Exactly one should be enabled at a time — swap the comment to compare.
+     Veya (docs/design.md) is the current direction; Antimetal is the superseded
+     one, kept linkable so the two can be diffed in a single session. -->
+<!-- <link rel="stylesheet" href="antimetal-pilot.css"> -->
+<link rel="stylesheet" href="veya-pilot.css">
 <style>
 :root {
-  --st-canvas:  #ffffff;
-  --st-mist:    #f2f2f3;
-  --st-fog:     #fafafb;
+  --st-canvas:  #f6f4ef;
+  --st-mist:    #ece7dc;
+  --st-fog:     #f0ede4;
   --st-ink:     #17191c;
   --st-slate:   #777b86;
   --st-ash:     #979799;
@@ -47,6 +64,37 @@ tailwind.config = {
   --st-border:  rgba(4, 23, 43, 0.06);
   --st-serif:   "Source Serif 4", Georgia, ui-serif, serif;
   --st-sans:    "DM Sans", ui-sans-serif, system-ui, sans-serif;
+
+  /* Generic tokens: kg.css / apply.css / metrics.css reference these names
+     directly (not the --st- prefix above). They previously had no definition
+     anywhere mockup.html loads, so every var(--radius-*) / var(--shadow-*)
+     in those three files was silently resolving to nothing. Defined here to
+     match style.css's values so both pages (this one and /canvas) render
+     the same shapes and elevation. */
+  --font-display: var(--st-serif);
+  --font-body: var(--st-sans);
+  --font-mono: ui-monospace, "SF Mono", "Cascadia Code", "JetBrains Mono", Consolas, monospace;
+
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-chip: 4px;
+  --radius-card: 14px;
+  --radius-pill: 9999px;
+
+  --shadow-sm: 0 1px 2px rgba(23, 25, 28, 0.05), 0 2px 8px rgba(23, 25, 28, 0.06);
+  --shadow-md: 0 2px 6px rgba(23, 25, 28, 0.07), 0 8px 20px rgba(23, 25, 28, 0.09);
+  --shadow-lg: 0 4px 16px rgba(23, 25, 28, 0.10), 0 16px 40px rgba(23, 25, 28, 0.14);
+
+  --space-4: 4px;
+  --space-8: 8px;
+  --space-12: 12px;
+  --space-16: 16px;
+  --space-24: 24px;
+  --space-32: 32px;
+  --space-48: 48px;
+  --space-64: 64px;
 }
 
   /* Steep Dark — same var names, inverted editorial palette */
@@ -56,8 +104,13 @@ tailwind.config = {
     --st-fog:     #2a2420;
     --st-ink:     #f0e8df;
     --st-slate:   #9b9189;
-    --st-ash:     #6b6460;
-    --st-smoke:   #6b6460;
+    /* Was #6b6460, which measured 2.64:1 on --st-raised and 2.88:1 on
+       --st-card — far under the 4.5 AA floor, and the single cause of ~336
+       failing text nodes across every screen (labels, captions, meta, empty
+       states). #958c84 clears it at 4.64:1 while staying dimmer than
+       --st-slate (4.96:1), so the quiet-text hierarchy is preserved. */
+    --st-ash:     #958c84;
+    --st-smoke:   #958c84;
     --st-peach:   rgba(196,128,80,0.24);
     --st-sienna:  #e8c49a;
     --st-border:  rgba(240,232,223,0.07);
@@ -70,6 +123,10 @@ tailwind.config = {
     --st-raised:  #2a2420;
     --st-btn-ink: #f0e8df;
     --st-btn-on:  #171411;
+
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35), 0 2px 10px rgba(0, 0, 0, 0.35);
+    --shadow-md: 0 2px 6px rgba(0, 0, 0, 0.4), 0 10px 28px rgba(0, 0, 0, 0.45);
+    --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.45), 0 16px 40px rgba(0, 0, 0, 0.55);
   }
   html.dark body,
   html.dark .st-body {
@@ -117,6 +174,19 @@ tailwind.config = {
     border: 1px solid var(--st-border) !important;
     box-shadow: 0 4px 16px rgba(0,0,0,0.22) !important;
     backdrop-filter: none !important;
+  }
+  /* The light sheet forces rgba(255,255,255,0.88) !important onto every
+     `.screen .rounded-2xl.border`, with no dark counterpart — so panels like
+     the profile's resume dropzone (#pResDrop) rendered as a white block with
+     light text on it, i.e. invisible copy. Mirror it here. */
+  html.dark .screen .rounded-2xl.border,
+  html.dark .screen .rounded-2xl.border.border-slate-800 {
+    background: var(--st-card) !important;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.22) !important;
+    backdrop-filter: none !important;
+  }
+  html.dark .screen .rounded-2xl.border.border-dashed {
+    background: var(--st-raised) !important;
   }
   html.dark .st-peach-panel {
     background: var(--st-peach) !important;
@@ -203,9 +273,64 @@ tailwind.config = {
   html.dark #s-profile .h-11,
   html.dark #s-settings .h-11,
   html.dark #s-linkedin .h-11,
-  html.dark #browseSticky > div {
+  html.dark #browseSticky > div,
+  html.dark #s-browse > div > div:first-child > div {
     background: rgba(15,13,11,0.90) !important;
   }
+
+  /* ── Dark-mode surfaces the light sheet never mirrored ──────────────────
+     The light theme paints panels with broad `!important` rules
+     (`.screen .rounded-2xl`, `.rounded-xl.border` → rgba(255,255,255,.88)).
+     Only the `.rounded-2xl.border` variant had a dark counterpart, so bare
+     `.rounded-2xl` / `.rounded-xl.border` panels stayed WHITE in dark mode
+     across Browse, Apply, Sources and Knowledge. Same bug class as the
+     profile's resume dropzone. Mirrored here for all of them. */
+  html.dark .screen .rounded-2xl,
+  html.dark .screen .rounded-xl.border {
+    background: var(--st-card) !important;
+    border: 1px solid var(--st-border) !important;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.22) !important;
+    backdrop-filter: none !important;
+  }
+  /* dashed dropzones read as a recess, not a card */
+  html.dark .screen .rounded-2xl.border-dashed,
+  html.dark .screen .rounded-xl.border.border-dashed {
+    background: var(--st-raised) !important;
+  }
+
+  /* ── Semantic colours the light sheet remapped, with no dark counterpart ──
+     The light theme rewrites Tailwind's semantic utilities to dark, saturated
+     inks (`.text-red-*` → #b24b2a, `.text-amber-*` → #8a6200,
+     `.text-emerald-*` → #1a6355) using !important. On dark grounds those are
+     the LEAST readable colours in the app — exactly the ones carrying
+     status meaning. Re-lit here for dark. */
+  html.dark .text-red-400,
+  html.dark .text-red-500,
+  html.dark .text-rose-400,
+  html.dark .jh-bento-sources-line .is-bad,
+  html.dark .jh-bento-card.is-critical .jh-bento-num {
+    color: #ef8f88 !important;
+  }
+  html.dark .text-amber-400,
+  html.dark .text-amber-500 { color: #e3b168 !important; }
+  html.dark .text-emerald-400,
+  html.dark .text-emerald-500 { color: #6cc6ab !important; }
+
+  /* Peach callout: its muted text is hardcoded to the LIGHT sienna at 70%
+     (rgba(93,42,26,.70)) rather than the token, so it never inverted — it
+     measured 1.44:1, the worst contrast in the app, and it carries the
+     dry-run warnings. In dark the panel is a translucent amber wash, so the
+     muted text takes the panel's own dimmed amber. */
+  html.dark .st-peach-panel .text-slate-500,
+  html.dark .st-peach-panel .text-slate-400,
+  html.dark .jh-peri .text-slate-500,
+  html.dark .jh-peri .text-slate-400 { color: rgba(232,196,154,0.82) !important; }
+
+  /* Status reds written as INLINE styles by JS (apply.js / metrics.js emit
+     `color:#d03b3b`). Inline can only be beaten by !important, so this is
+     the only way to reach them without editing those emitters. */
+  html.dark [style*="#d03b3b"],
+  html.dark [style*="color:#d03b3b"] { color: #ef8f88 !important; }
   /* Browse job list continues the sticky/top wash surface (dark only) */
   html.dark #browseListCol,
   html.dark #browseListArea,
@@ -288,13 +413,13 @@ html, body {
 }
 .st-caption {
   font-family: var(--st-sans);
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 400;
   color: var(--st-ash);
 }
 .st-kicker {
   font-family: var(--st-sans);
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 500;
   letter-spacing: 0.10em;
   text-transform: uppercase;
@@ -323,12 +448,12 @@ nav {
 }
 .st-mark {
   width: 34px; height: 34px;
-  border-radius: 9999px;
+  border-radius: var(--radius-pill);
   border: 1px solid var(--st-border);
   background: var(--st-fog);
   display: flex; align-items: center; justify-content: center;
   font-family: var(--st-serif);
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 400;
   color: var(--st-ink);
   flex-shrink: 0;
@@ -343,7 +468,7 @@ nav {
 }
 .st-wordmark-sub {
   font-family: var(--st-sans);
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 400;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -367,10 +492,17 @@ nav .nav-item {
   cursor: pointer;
   transition: color 0.12s;
 }
-nav .nav-item svg {
-  width: 16px;
-  height: 16px;
+nav .nav-item svg,
+nav .nav-foot-btn svg {
+  width: 16px !important;
+  height: 16px !important;
   flex-shrink: 0;
+  display: block;
+  opacity: 1;
+}
+nav .nav-item svg[hidden],
+nav .nav-foot-btn svg[hidden] {
+  display: none !important;
 }
 nav .nav-user-name {
   font-size: 14px !important;
@@ -388,6 +520,16 @@ nav .nav-foot-btn {
   font-family: var(--st-sans) !important;
   font-size: 14px !important;
   font-weight: 400 !important;
+}
+nav .nav-sandbox-label {
+  font-family: var(--st-sans);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: var(--st-ash);
+  padding: 6px 16px 4px;
+  pointer-events: none;
 }
 nav .nav-item:hover { color: var(--st-ink) !important; }
 nav .nav-item.nav-active,
@@ -408,7 +550,7 @@ nav .border-slate-800, nav .border-t, nav .border-b, nav .border-r {
   background: var(--st-ink);
   color: var(--st-canvas);
   font-family: var(--st-sans);
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 500;
   letter-spacing: 0.04em;
   padding: 7px 20px;
@@ -467,6 +609,36 @@ nav .border-slate-800, nav .border-t, nav .border-b, nav .border-r {
 #ob {
   background: var(--st-canvas) !important;
   isolation: isolate;
+  overflow-y: auto;
+}
+
+/* ── Onboarding is always light ───────────────────────────────────────────
+   The hero is a watercolour on cream paper, so a dark treatment never sat
+   right: either a bright band cutting into a dark page, or a night repaint
+   that lost the artwork's character. So the front door keeps the light
+   palette whatever the theme, and the app goes dark after it.
+   Done by re-declaring the light tokens ON #ob rather than by fighting each
+   `html.dark` rule: those rules still match, but every var they resolve now
+   reads light inside this subtree. That covers the shared input/select
+   overrides too, which are !important and otherwise unreachable. */
+html.dark #ob {
+  --st-canvas:  #f6f4ef;
+  --st-mist:    #ece7dc;
+  --st-fog:     #f0ede4;
+  --st-ink:     #17191c;
+  --st-slate:   #777b86;
+  --st-ash:     #979799;
+  --st-smoke:   #a3a6af;
+  --st-peach:   #fbe1d1;
+  --st-sienna:  #5d2a1a;
+  --st-border:  rgba(4, 23, 43, 0.06);
+  --st-border-hi: rgba(4, 23, 43, 0.12);
+  --st-page:    #f6f4ef;
+  --st-card:    #ffffff;
+  --st-raised:  #ffffff;
+  --st-btn-ink: #17191c;
+  --st-btn-on:  #f6f4ef;
+  color-scheme: light;   /* native controls (the Gender select) follow too */
 }
 #ob::before {
   content: "";
@@ -480,6 +652,121 @@ nav .border-slate-800, nav .border-t, nav .border-b, nav .border-r {
     radial-gradient(ellipse 50% 45% at 60% 85%, rgba(251,225,209,0.45), transparent 55%);
 }
 #ob > * { position: relative; z-index: 1; }
+
+#ob > .ob-hero {
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
+  width: 100%;
+  max-width: 2060px;
+  height: 346px; /* 432px - 20%; the plate's own paper padding supplies the blank space on top */
+  /* sampled from the painting's own paper (#fcf6e2, warmer than --st-canvas):
+     without this the image's edge shows as a visible seam against the page */
+  background: #fcf6e2;
+  -webkit-mask-image: linear-gradient(to bottom, black 78%, transparent 100%);
+  mask-image: linear-gradient(to bottom, black 78%, transparent 100%);
+}
+/* The branch is a literal onboarding progress bar: it enters from the left
+   edge and is revealed left-to-right as --branch-reveal grows, uncovering
+   more of the (single, already-painted) branch and its leaves together —
+   no separate "leaf growth" animation needed, since revealing the same
+   painting IS the leaves growing. window.robinSetOnboardingProgress(0..1)
+   is the hook the onboarding flow calls as questions get answered; it
+   starts at a fixed "stopped roughly at the middle" position, matching
+   where the bird's perch sits, until real progress comes in. */
+@property --branch-reveal {
+  syntax: '<percentage>';
+  inherits: true;
+  initial-value: 66%;
+}
+/* Geometry shared by the artwork and the bird. Both layers use exactly this
+   box, so the sprite and the bird baked into the plate stay locked together
+   at any viewport width or hero height — the bird is positioned in the
+   ARTWORK's coordinate space, not the hero's.
+   The extra 100px of width (with the matching negative left) shifts the whole
+   scene left while still covering the full width — no gap on the right. */
+.ob-hero-bg-wrap, .ob-bird-layer {
+  position: absolute; left: -100px; top: 0; width: calc(100% + 100px);
+}
+/* The continuous paper ground: mirror-tiled and tone-matched to the painting's
+   own stock, so the junction with the plate above it is invisible.
+   It gets its OWN width — +200px, not +100px — because the artwork's -100px
+   shift otherwise leaves 100px of hero uncovered on the right. Being uniform
+   texture, it needn't share the plate's geometry, so widening it here cannot
+   disturb the bird/plate alignment. */
+.ob-hero-paper {
+  position: absolute; left: -100px; top: 0; width: calc(100% + 200px);
+  /* a global `img { max-width: 100% }` silently clamped this back to the
+     hero's width, which is why the right 100px stayed uncovered */
+  max-width: none;
+  display: block; height: auto; z-index: 0;
+}
+.ob-hero-bg-wrap {
+  --branch-reveal: 66%;
+  /* two masks composited: the left-to-right progress reveal, and a short
+     fade on the image's own top edge so its paper doesn't butt against the
+     hero's flat background as a visible hairline */
+  -webkit-mask-image:
+    linear-gradient(to right, black calc(var(--branch-reveal) - 7%), transparent var(--branch-reveal)),
+    linear-gradient(to bottom, transparent 0, black 26px);
+  mask-image:
+    linear-gradient(to right, black calc(var(--branch-reveal) - 7%), transparent var(--branch-reveal)),
+    linear-gradient(to bottom, transparent 0, black 26px);
+  -webkit-mask-composite: source-in;
+  mask-composite: intersect;
+  transition: --branch-reveal 900ms ease-out;
+}
+/* full painting always visible at its own proportions — width fills the
+   hero edge to edge, height follows naturally, never cropped by object-fit */
+.ob-hero-bg { display: block; width: 100%; height: auto; }
+
+/* Hybrid bird, resting half. Two plates of the SAME painting, identical
+   everywhere except that this one has a robin painted onto the knot in the
+   artwork's own watercolour. At rest this is what you see — a bird that is
+   genuinely part of the painting, not a sprite parked on top of it. The
+   animated sprite only exists while the bird is actually moving; the two
+   cross-fade into each other at the same size and position, so the handoff
+   reads as the bird settling into the paper. */
+.ob-hero-bg-bird {
+  position: absolute; left: 0; top: 0; width: 100%; height: auto;
+  opacity: 0; transition: opacity 420ms ease;
+}
+.ob-hero-bg-bird.on { opacity: 1; }
+
+/* The bird's own layer: same box as the artwork (see the shared rule above)
+   plus the plate's aspect ratio, so its height always equals the rendered
+   image height. Every bird coordinate is therefore a percentage OF THE
+   PAINTING — the sprite lands on the painted bird no matter how the hero is
+   resized. It deliberately sits outside .ob-hero-bg-wrap so the progress
+   reveal's mask never clips or fades the bird. */
+.ob-bird-layer {
+  aspect-ratio: 2576 / 566;
+  pointer-events: none;
+  z-index: 1;
+}
+.ob-bird {
+  position: absolute; height: 34.81%; aspect-ratio: 460 / 544;
+  left: -12%; top: 30%; transform: translate(-50%, -96%) rotate(4deg);
+  pointer-events: auto;
+}
+.ob-bird-inner { position: relative; width: 100%; height: 100%; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.18)); cursor: pointer; }
+.ob-rig { position: absolute; inset: 0; display: none; }
+.ob-rig.on { display: block; }
+.ob-pose { position: absolute; left: 0; bottom: 0; width: 100%; height: auto; opacity: 0; transition: opacity 90ms ease-in-out; }
+.ob-pose.on { opacity: 1; }
+/* flying sprites are cropped to the full wingspan (much wider canvas than
+   the perched body-only crop) — scaled up so the body reads the same size
+   perched vs flying; origin bottom-center so wings flare from the feet */
+#obPoseGlide { transform: scale(1.85); transform-origin: 50% 100%; }
+#obPoseFlapUp, #obPoseFlapDown { transform: scale(1.45); transform-origin: 50% 100%; }
+
+/* child of .ob-bird, so it follows the bird while it flies rather than
+   staying pinned to one spot on the artwork */
+.ob-chirp { position: absolute; left: 72%; top: -6%; width: 20px; height: 20px; opacity: 0; pointer-events: none; z-index: 2; }
+.ob-chirp svg { width: 100%; height: 100%; }
+.ob-chirp path { stroke: var(--st-sienna); fill: none; stroke-width: 2.4; stroke-linecap: round; }
+.ob-chirp.small { width: 13px; height: 13px; }
+
 
 /* Local wash (section hero) — richer peach + lilac */
 .st-wash, .jh-wash {
@@ -528,12 +815,12 @@ nav .border-slate-800, nav .border-t, nav .border-b, nav .border-r {
   letter-spacing: -0.02em;
   color: var(--st-ink) !important;
 }
-.jh-kicker { font-family: var(--st-sans); font-size: 10px; font-weight: 500; letter-spacing: 0.10em; text-transform: uppercase; color: var(--st-ash); }
+.jh-kicker { font-family: var(--st-sans); font-size: 14px; font-weight: 500; letter-spacing: 0.10em; text-transform: uppercase; color: var(--st-ash); }
 .jh-ink-bar {
   background: var(--st-ink);
   color: var(--st-canvas);
   font-family: var(--st-sans);
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 500;
   letter-spacing: 0.04em;
   padding: 7px 20px;
@@ -542,12 +829,12 @@ nav .border-slate-800, nav .border-t, nav .border-b, nav .border-r {
 }
 .jh-mark {
   width: 34px; height: 34px;
-  border-radius: 9999px;
+  border-radius: var(--radius-pill);
   border: 1px solid var(--st-border);
   background: var(--st-fog);
   display: flex; align-items: center; justify-content: center;
   font-family: var(--st-serif);
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 400;
   color: var(--st-ink);
   flex-shrink: 0;
@@ -555,12 +842,12 @@ nav .border-slate-800, nav .border-t, nav .border-b, nav .border-r {
 .jh-btn-primary, .st-btn-primary {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
   padding: 10px 22px;
-  border-radius: 9999px !important;
+  border-radius: var(--radius-pill) !important;
   background: var(--st-ink) !important;
   color: var(--st-canvas) !important;
   border: 1px solid var(--st-ink) !important;
   font-family: var(--st-sans) !important;
-  font-size: 13px !important;
+  font-size: 14px !important;
   font-weight: 500 !important;
   cursor: pointer;
   letter-spacing: 0.01em;
@@ -571,12 +858,12 @@ nav .border-slate-800, nav .border-t, nav .border-b, nav .border-r {
 .jh-btn-ghost, .jh-btn-secondary, .st-btn-ghost {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
   padding: 10px 22px;
-  border-radius: 9999px !important;
+  border-radius: var(--radius-pill) !important;
   background: transparent !important;
   color: var(--st-ink) !important;
   border: 1px solid rgba(4,23,43,0.25) !important;
   font-family: var(--st-sans) !important;
-  font-size: 13px !important;
+  font-size: 14px !important;
   font-weight: 400 !important;
   cursor: pointer;
   box-shadow: none !important;
@@ -602,6 +889,106 @@ nav .border-slate-800, nav .border-t, nav .border-b, nav .border-r {
     0 0 0 1px rgba(4,23,43,0.07),
     0 6px 16px rgba(0,0,0,0.07),
     0 20px 40px -8px rgba(0,0,0,0.06) !important;
+}
+
+/* ── Front-door question flow ─────────────────────────────────────────────
+   One question at a time under the hero. Deliberately quiet: no card, no
+   border — the branch overhead is the progress indicator, so the form
+   itself should not compete with it. */
+.ob-flow {
+  width: min(860px, 94vw);
+  display: flex; flex-direction: column; align-items: center;
+  text-align: center; gap: 18px;   /* generous vertical breathing room */
+}
+.ob-head { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+/* back sits immediately beside the title, not parked at the far edge */
+.ob-title-row { display: flex; align-items: center; justify-content: center; gap: 10px; max-width: 100%; }
+.ob-back {
+  flex: 0 0 auto;
+  font-family: var(--st-sans); font-size: 17px; line-height: 1;
+  color: var(--st-slate); background: none; border: 0;
+  padding: 8px 10px; cursor: pointer; border-radius: var(--radius-pill);
+}
+.ob-back:hover { color: var(--st-ink); background: rgba(0,0,0,0.04); }
+.ob-back[hidden] { display: none; }
+
+.ob-step-meta {
+  font-family: var(--st-sans); font-size: 11.5px; letter-spacing: 0.10em;
+  text-transform: uppercase; color: var(--st-ash);
+}
+.ob-q {
+  font-family: var(--st-serif); font-weight: 600;   /* bold, centred, one line */
+  font-size: clamp(19px, 2.1vw, 25px); line-height: 1.25;
+  color: var(--st-ink); margin: 0; text-align: center;
+  white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis;
+}
+.ob-why {
+  font-family: var(--st-sans); font-size: 13px; color: var(--st-slate);
+  margin: 0; text-align: center; white-space: nowrap;   /* subtitle on one line */
+  max-width: 100%; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* Options default to a single row. Sets of 5+ get two rows instead of one
+   cramped line — that's the only case that wraps. */
+.ob-choices { display: flex; flex-wrap: nowrap; justify-content: center; gap: 16px; width: 100%; }
+.ob-choices.wrap2 { flex-wrap: wrap; max-width: 660px; margin: 0 auto; }
+.ob-choices:empty { display: none; }
+.ob-choice {
+  font-family: var(--st-sans); font-size: 13.5px; line-height: 1.35;
+  white-space: nowrap;   /* labels never wrap inside a pill */
+  padding: 9px 16px; border-radius: var(--radius-pill);
+  border: 1px solid var(--st-border); background: rgba(255,255,255,0.72);
+  color: var(--st-ink); cursor: pointer; text-align: left;
+  transition: background 140ms ease, border-color 140ms ease, transform 90ms ease;
+}
+.ob-choice:hover { background: rgba(255,255,255,0.95); border-color: var(--st-ash); }
+.ob-choice:active { transform: translateY(1px); }
+.ob-choice .ob-choice-sub { display: block; font-size: 11.5px; color: var(--st-slate); margin-top: 1px; }
+/* selection is unmistakable: filled, darker border, subtle lift */
+.ob-choice.sel {
+  background: var(--st-ink); border-color: var(--st-ink); color: var(--st-canvas);
+  box-shadow: 0 2px 8px rgba(23,25,28,0.18);
+}
+.ob-choice.sel .ob-choice-sub { color: rgba(255,255,255,0.72); }
+
+.ob-text {
+  width: 100%; font-family: var(--st-sans); font-size: 14px;
+  padding: 10px 14px; border-radius: var(--radius-lg);
+  border: 1px solid var(--st-border); background: rgba(255,255,255,0.8);
+  color: var(--st-ink); outline: none;
+}
+.ob-text:focus { border-color: var(--st-ash); background: #fff; }
+
+/* Both CTAs share a shape and sit on one line; only the fill separates them.
+   Primary = filled ink. Secondary = stroked pill, no fill. */
+.ob-actions { display: flex; align-items: center; justify-content: center; gap: 10px; }
+.ob-btn {
+  font-family: var(--st-sans); font-size: 13.5px; font-weight: 500;
+  padding: 10px 26px; border-radius: var(--radius-pill);
+  cursor: pointer; transition: background 140ms ease, border-color 140ms ease, opacity 140ms ease;
+}
+.ob-btn-primary { background: var(--st-ink); color: var(--st-canvas); border: 1px solid var(--st-ink); }
+.ob-btn-primary:hover { opacity: 0.88; }
+.ob-btn-secondary { background: transparent; color: var(--st-slate); border: 1px solid var(--st-ash); }
+.ob-btn-secondary:hover { color: var(--st-ink); border-color: var(--st-ink); }
+.ob-btn[hidden] { display: none; }
+
+.ob-upload { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.ob-drop {
+  width: 100%; display: flex; flex-direction: column; align-items: center; gap: 3px;
+  padding: 20px 16px; border-radius: var(--radius-xl);
+  border: 1px dashed var(--st-ash); background: rgba(255,255,255,0.55);
+  cursor: pointer; font-family: var(--st-sans); color: var(--st-ink);
+  transition: border-color 140ms ease, background 140ms ease;
+}
+.ob-drop:hover, .ob-drop.drag { border-color: var(--st-ink); background: rgba(255,255,255,0.85); }
+.ob-drop-icon { font-size: 17px; color: var(--st-slate); }
+.ob-drop-main { font-size: 13.5px; }
+.ob-drop-sub { font-size: 11.5px; color: var(--st-slate); }
+.ob-file {
+  display: flex; align-items: center; gap: 7px; font-family: var(--st-sans);
+  font-size: 12.5px; color: var(--st-ink);
+  background: var(--st-peach); padding: 7px 13px; border-radius: var(--radius-pill);
 }
 
 /* Sticky browse header: frosted glass over mesh, not opaque slate */
@@ -739,7 +1126,7 @@ nav .border-slate-800, nav .border-t, nav .border-b, nav .border-r {
   width: 28px;
   height: 28px;
   border: none;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   background: transparent;
   color: var(--st-ash);
   cursor: pointer;
@@ -752,7 +1139,7 @@ nav .border-slate-800, nav .border-t, nav .border-b, nav .border-r {
 }
 #browseDetailFloat .jh-hf-kicker {
   font-family: var(--st-sans);
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 500;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -787,7 +1174,7 @@ nav .border-slate-800, nav .border-t, nav .border-b, nav .border-r {
 }
 #browseDetailFloat .jh-hf-tags .jh-wp-chip,
 #browseDetailFloat .jh-hf-tags .jh-src-chip {
-  font-size: 11px !important;
+  font-size: 12px !important;
   padding: 2px 7px !important;
 }
 #browseDetailFloat .jh-hf-facts {
@@ -799,7 +1186,7 @@ nav .border-slate-800, nav .border-t, nav .border-b, nav .border-r {
   flex-shrink: 0;
 }
 #browseDetailFloat .jh-hf-fact {
-  border-radius: 9999px;
+  border-radius: var(--radius-pill);
   background: var(--st-fog);
   border: 1px solid var(--st-border);
   padding: 4px 10px;
@@ -809,14 +1196,14 @@ nav .border-slate-800, nav .border-t, nav .border-b, nav .border-r {
   max-width: 100%;
 }
 #browseDetailFloat .jh-hf-fact span {
-  font-size: 9px;
+  font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--st-ash);
   white-space: nowrap;
 }
 #browseDetailFloat .jh-hf-fact strong {
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 500;
   color: var(--st-ink);
   white-space: nowrap;
@@ -831,7 +1218,7 @@ nav .border-slate-800, nav .border-t, nav .border-b, nav .border-r {
   padding: 12px 14px;
 }
 #browseDetailFloat .jh-hf-desc-label {
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -839,7 +1226,7 @@ nav .border-slate-800, nav .border-t, nav .border-b, nav .border-r {
   margin-bottom: 8px;
 }
 #browseDetailFloat .jh-hf-excerpt {
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.55;
   color: rgba(4,23,43,0.78);
 }
@@ -926,7 +1313,7 @@ html.dark .jh-rings-stage .jh-ring-track {
 .jh-rings-center-sub {
   fill: var(--st-ash);
   font-family: var(--st-sans);
-  font-size: 9px;
+  font-size: 12px;
 }
 .jh-rings-legend {
   display: flex;
@@ -942,7 +1329,7 @@ html.dark .jh-rings-stage .jh-ring-track {
 }
 .jh-ring-label {
   font-family: var(--st-sans);
-  font-size: 9px;
+  font-size: 12px;
   font-weight: 500;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -950,13 +1337,13 @@ html.dark .jh-rings-stage .jh-ring-track {
 }
 .jh-ring-value {
   font-family: var(--st-sans);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
 .jh-ring-unit {
   margin-left: 3px;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 400;
   color: var(--st-ash);
 }
@@ -1028,7 +1415,7 @@ nav {
   align-items: center;
   gap: 8px;
   padding: 8px 12px;
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   margin-bottom: 8px;
   background: var(--st-fog);
   border: 1px solid var(--st-border);
@@ -1037,7 +1424,7 @@ nav {
 /* ── Stage dot ── */
 .st-stage-dot {
   width: 7px; height: 7px;
-  border-radius: 9999px;
+  border-radius: var(--radius-pill);
   flex-shrink: 0;
   background: var(--st-ash);
 }
@@ -1050,7 +1437,7 @@ nav {
   display: inline-flex;
   align-items: center;
   padding: 2px 9px;
-  border-radius: 9999px;
+  border-radius: var(--radius-pill);
   background: var(--st-canvas);
   border: 1px solid rgba(4,23,43,0.10);
   font-family: var(--st-sans);
@@ -1080,12 +1467,12 @@ nav {
 }
 .jh-metrics-range-btn {
   font-family: var(--st-sans);
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 500;
   color: var(--st-ash);
   background: transparent;
   border: 1px solid var(--st-border);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   padding: 4px 10px;
   cursor: pointer;
 }
@@ -1110,7 +1497,7 @@ html.dark .jh-metrics-range-btn.is-active {
   background: rgba(255,255,255,0.78);
   border-radius: 20px;
   padding: 16px 18px;
-  box-shadow: 0 0 0 1px rgba(4,23,43,0.04), 0 8px 24px rgba(0,0,0,0.05);
+  box-shadow: 0 0 0 1px rgba(4,23,43,0.04), var(--shadow-sm);
 }
 html.dark .jh-metrics-card {
   background: rgba(33,29,26,0.85);
@@ -1147,7 +1534,7 @@ html.dark .jh-metrics-card {
   gap: 6px;
   min-height: 96px;
   color: #898781;
-  font-size: 13px;
+  font-size: 14px;
 }
 .jh-metrics-grid-2 {
   display: grid;
@@ -1169,9 +1556,9 @@ html.dark .jh-metrics-card {
   pointer-events: none;
   background: #211d1a;
   color: #fafafb;
-  font-size: 12px;
+  font-size: 14px;
   padding: 6px 10px;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   max-width: 240px;
   box-shadow: 0 8px 24px rgba(0,0,0,0.25);
 }
@@ -1234,7 +1621,7 @@ html:not(.dark) .jh-metrics-tooltip {
 }
 .st-tab {
   font-family: var(--st-sans);
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 400;
   color: var(--st-ash);
   padding: 14px 0;
@@ -1255,11 +1642,11 @@ html:not(.dark) .jh-metrics-tooltip {
   align-items: center;
   gap: 6px;
   padding: 5px 13px;
-  border-radius: 9999px;
+  border-radius: var(--radius-pill);
   background: transparent;
   border: 1px solid var(--st-border);
   font-family: var(--st-sans);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 400;
   color: var(--st-ash);
   cursor: pointer;
@@ -1267,7 +1654,7 @@ html:not(.dark) .jh-metrics-tooltip {
 }
 .st-rchip:hover { border-color: rgba(4,23,43,0.18); color: var(--st-ink); }
 .st-rchip.is-active { background: var(--st-ink); color: var(--st-canvas); border-color: var(--st-ink); }
-.st-rchip-dot { width: 6px; height: 6px; border-radius: 9999px; background: var(--st-ash); flex-shrink: 0; }
+.st-rchip-dot { width: 6px; height: 6px; border-radius: var(--radius-pill); background: var(--st-ash); flex-shrink: 0; }
 /* Approved is the only chromatic chip — uses peach */
 .st-rchip-approved { background: rgba(251,225,209,0.50); border-color: rgba(93,42,26,0.15); color: var(--st-sienna); }
 .st-rchip-approved .st-rchip-dot { background: var(--st-sienna); }
@@ -1276,12 +1663,12 @@ html:not(.dark) .jh-metrics-tooltip {
 .st-btn-primary {
   display: inline-flex; align-items: center; gap: 8px;
   padding: 10px 22px;
-  border-radius: 9999px;
+  border-radius: var(--radius-pill);
   background: var(--st-ink);
   color: var(--st-canvas);
   border: 1px solid var(--st-ink);
   font-family: var(--st-sans);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
   cursor: pointer;
   letter-spacing: 0.01em;
@@ -1291,12 +1678,12 @@ html:not(.dark) .jh-metrics-tooltip {
 .st-btn-ghost {
   display: inline-flex; align-items: center; gap: 8px;
   padding: 10px 22px;
-  border-radius: 9999px;
+  border-radius: var(--radius-pill);
   background: transparent;
   color: var(--st-ink);
   border: 1px solid rgba(4,23,43,0.25);
   font-family: var(--st-sans);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 400;
   cursor: pointer;
   letter-spacing: 0.01em;
@@ -1310,7 +1697,7 @@ select, textarea {
   background: var(--st-canvas) !important;
   border: 1px solid rgba(4,23,43,0.12) !important;
   color: var(--st-ink) !important;
-  border-radius: 14px !important;
+  border-radius: var(--radius-card) !important;
   font-family: var(--st-sans) !important;
   font-size: 14px !important;
   box-shadow: none !important;
@@ -1351,7 +1738,7 @@ textarea.prof-field {
   padding: 0 14px;
   background: var(--st-canvas) !important;
   border: 1px solid rgba(4,23,43,0.12) !important;
-  border-radius: 14px !important;
+  border-radius: var(--radius-card) !important;
   color: var(--st-ink) !important;
   font-family: var(--st-sans) !important;
   font-size: 14px !important;
@@ -1404,7 +1791,7 @@ textarea.st-field:focus {
   align-items: center;
   justify-content: center;
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   background: transparent;
   color: var(--st-ash);
   cursor: pointer;
@@ -1425,7 +1812,7 @@ textarea.st-field:focus {
 .st-nested {
   position: relative;
   padding: 16px;
-  border-radius: 16px;
+  border-radius: var(--radius-xl);
   background: var(--st-fog);
   border: 1px solid var(--st-border);
 }
@@ -1434,7 +1821,7 @@ textarea.st-field:focus {
   align-items: center;
   gap: 6px;
   padding: 6px 10px;
-  border-radius: 9999px;
+  border-radius: var(--radius-pill);
   background: var(--st-canvas);
   border: 1px solid rgba(4,23,43,0.12);
   font-family: var(--st-sans);
@@ -1455,7 +1842,7 @@ textarea.st-field:focus {
 .st-section-dot {
   width: 8px;
   height: 8px;
-  border-radius: 9999px;
+  border-radius: var(--radius-pill);
   background: var(--st-ash);
   flex-shrink: 0;
 }
@@ -1490,12 +1877,12 @@ textarea.st-field:focus {
 #s-profile .st-acc-head:hover { background: rgba(4,23,43,0.03); }
 #s-profile #pBar {
   background: var(--st-ink) !important;
-  border-radius: 9999px;
+  border-radius: var(--radius-pill);
 }
 #s-profile .st-progress-track {
   flex: 1;
   height: 6px;
-  border-radius: 9999px;
+  border-radius: var(--radius-pill);
   background: var(--st-mist);
   overflow: hidden;
 }
@@ -1533,6 +1920,28 @@ html.dark .st-section-dot.is-done { background: var(--st-amber); }
 html.dark #s-profile .st-acc-head:hover { background: rgba(240,232,223,0.04); }
 html.dark #s-profile #pBar { background: var(--st-amber) !important; }
 html.dark #s-profile .st-progress-track { background: var(--st-fog); }
+
+/* ── Profile, dark mode ───────────────────────────────────────────────────
+   The profile markup still carries ~47 raw Tailwind slate utilities, which
+   are COOL blue-greys (slate-900 #0f172a). Steep's dark palette is warm
+   (#171411 / #211d1a / #2a2420), so the two read as two different products
+   stacked on each other — panels look blue-tinted and washed against the
+   page. Remapped to tokens here rather than rewriting every class attribute,
+   which keeps light mode untouched and stays reversible. */
+html.dark #s-profile .bg-slate-950,
+html.dark #s-profile .bg-slate-900\/50,
+html.dark #s-profile .bg-slate-950\/60 { background: var(--st-raised) !important; }
+html.dark #s-profile .bg-slate-800 { background: var(--st-card) !important; }
+
+html.dark #s-profile .border-slate-500,
+html.dark #s-profile .border-slate-700,
+html.dark #s-profile .border-slate-800 { border-color: var(--st-border-hi, rgba(240,232,223,0.13)) !important; }
+
+html.dark #s-profile .text-slate-200,
+html.dark #s-profile .text-slate-300 { color: var(--st-ink) !important; }
+html.dark #s-profile .text-slate-400,
+html.dark #s-profile .text-slate-500,
+html.dark #s-profile .text-slate-600 { color: var(--st-slate) !important; }
 
 /* ── Tailwind color override bridge (neutralizes injected dark classes) ── */
 .text-slate-50, .text-slate-100, .text-slate-200,
@@ -1613,7 +2022,7 @@ html.dark #s-profile .st-progress-track { background: var(--st-fog); }
   font-family: var(--st-sans) !important;
   font-size: 14px !important;
   font-weight: 500 !important;
-  border-radius: 9999px !important;
+  border-radius: var(--radius-pill) !important;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   line-height: 1.2;
@@ -1628,19 +2037,12 @@ html.dark #s-profile .st-progress-track { background: var(--st-fog); }
   font-family: var(--st-sans) !important;
   font-size: 14px !important;
   font-weight: 500 !important;
-  border-radius: 9999px !important;
+  border-radius: var(--radius-pill) !important;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   line-height: 1.2;
   padding: 4px 10px !important;
 }
-html.dark #jList .jh-src-chip,
-html.dark #jdTags .jh-src-chip {
-  background: var(--st-sienna) !important;
-  border-color: var(--st-sienna) !important;
-  color: var(--st-page) !important;
-}
-
 /* Job card type + logo aligned to company + title baselines */
 #jList .jh-job-card {
   font-size: 14px;
@@ -1664,13 +2066,13 @@ html.dark #jdTags .jh-src-chip {
   width: auto;
   max-width: 48px;
   min-width: 36px;
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
   flex-shrink: 0;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+  box-shadow: var(--shadow-sm);
 }
 #jList .jh-job-logo-img {
   position: absolute;
@@ -1739,13 +2141,13 @@ html.dark #jList .jh-job-logo-img { background: var(--st-fog); }
   cursor: pointer;
   list-style: none;
   font-family: var(--st-sans);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--st-ink);
 }
 
 #jList .jh-adj-head::-webkit-details-marker { display: none; }
-#jList .jh-adj-head::before { content: '▸'; color: var(--st-ash); font-size: 10px; }
+#jList .jh-adj-head::before { content: '▸'; color: var(--st-ash); font-size: 12px; }
 #jList .jh-adj-wrap[open] .jh-adj-head::before { content: '▾'; }
 
 #jList .jh-adj-count {
@@ -1754,13 +2156,13 @@ html.dark #jList .jh-job-logo-img { background: var(--st-fog); }
   color: var(--st-slate);
   background: var(--st-fog);
   border: 1px solid var(--st-border);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   padding: 1px 8px;
 }
 
 #jList .jh-adj-note {
   font-family: var(--st-sans);
-  font-size: 12px;
+  font-size: 14px;
   color: var(--st-slate);
   line-height: 1.5;
   margin: 8px 0 10px;
@@ -1791,7 +2193,7 @@ html.dark #jList .jh-job-logo-img { background: var(--st-fog); }
   background: var(--st-peach) !important;
   border: 1px solid rgba(93,42,26,0.12) !important;
   padding: 2px 10px !important;
-  border-radius: 9999px !important;
+  border-radius: var(--radius-pill) !important;
   flex-shrink: 0;
   line-height: 1.3;
 }
@@ -1876,7 +2278,7 @@ html.dark #jList .jh-job-queued {
 #filterBar .fchip,
 button.fchip[class*="indigo"],
 button.fchip[class*="slate"] {
-  border-radius: 9999px !important;
+  border-radius: var(--radius-pill) !important;
   background: transparent !important;
   border: 1px solid var(--st-border) !important;
   color: var(--st-ash) !important;
@@ -1917,8 +2319,8 @@ button.fchip[class*="slate"] {
   z-index: 80 !important;
   background: var(--st-canvas) !important;
   border: 1px solid var(--st-border) !important;
-  border-radius: 16px !important;
-  box-shadow: 0 8px 28px rgba(0,0,0,0.14) !important;
+  border-radius: var(--radius-xl) !important;
+  box-shadow: var(--shadow-md) !important;
 }
 
 /* ── Dashboard tabs ── */
@@ -1928,7 +2330,7 @@ button.fchip[class*="slate"] {
   border-color: transparent !important;
   border-radius: 0 !important;
   font-family: var(--st-sans) !important;
-  font-size: 12px !important;
+  font-size: 14px !important;
   font-weight: 400 !important;
 }
 #dtab-recent.border-indigo-500, #dtab-recent[class*="text-indigo"],
@@ -1946,7 +2348,7 @@ a.bg-indigo-600 {
   background-image: none !important;
   color: var(--st-ink) !important;
   border: 1px solid rgba(4,23,43,0.25) !important;
-  border-radius: 9999px !important;
+  border-radius: var(--radius-pill) !important;
   box-shadow: none !important;
 }
 button.bg-indigo-600.st-btn-primary {
@@ -1960,9 +2362,9 @@ button.bg-indigo-600.st-btn-primary {
   background: var(--st-ink) !important;
   color: var(--st-canvas) !important;
   border: 1px solid var(--st-ink) !important;
-  border-radius: 9999px !important;
+  border-radius: var(--radius-pill) !important;
   font-family: var(--st-sans) !important;
-  font-size: 11px !important;
+  font-size: 14px !important;
   font-weight: 500 !important;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -1982,7 +2384,7 @@ button.bg-indigo-600.st-btn-primary {
   min-width: 140px;
   max-width: 280px;
   border: none;
-  border-radius: 16px;
+  border-radius: var(--radius-xl);
   background: rgba(255,255,255,0.82);
   box-shadow:
     0 0 0 1px rgba(4,23,43,0.05),
@@ -2015,14 +2417,14 @@ button.bg-indigo-600.st-btn-primary {
   font-weight: 500;
   color: var(--st-slate);
 }
-#browseApiLogChevron { font-size: 9px; opacity: 0.7; }
+#browseApiLogChevron { font-size: 12px; opacity: 0.7; }
 #browseApiLogBody {
   overflow-y: auto;
   overflow-x: hidden;
   padding: 0 10px 8px;
   max-height: 54px;
   font-family: var(--st-sans);
-  font-size: 10px;
+  font-size: 14px;
   line-height: 1.45;
   color: var(--st-ash);
 }
@@ -2042,12 +2444,12 @@ button.bg-indigo-600.st-btn-primary {
   background: transparent;
   color: var(--st-ash);
   font-family: var(--st-sans);
-  font-size: 10px;
+  font-size: 14px;
   font-weight: 500;
   letter-spacing: 0.03em;
   text-transform: uppercase;
   padding: 2px 7px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   cursor: pointer;
 }
 #browseApiLogTabs .alog-tab.is-active {
@@ -2070,7 +2472,7 @@ button.bg-indigo-600.st-btn-primary {
   padding: 0 10px 8px;
   max-height: 54px;
   font-family: var(--st-sans);
-  font-size: 10px;
+  font-size: 14px;
   line-height: 1.45;
   color: var(--st-ash);
 }
@@ -2088,7 +2490,7 @@ button.bg-indigo-600.st-btn-primary {
 }
 #browseApiLogFixBtn {
   border: 0;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   padding: 3px 10px;
   font-family: var(--st-sans);
   font-size: 10.5px;
@@ -2102,7 +2504,7 @@ button.bg-indigo-600.st-btn-primary {
   cursor: default;
 }
 #browseApiLogFixMsg {
-  font-size: 10px;
+  font-size: 14px;
   color: var(--st-slate);
   line-height: 1.35;
 }
@@ -2151,7 +2553,7 @@ nav *, .rounded-2xl, .rounded-xl, button, input, select, #jdPanel, #jList > div 
   transition-duration: 150ms;
 }
 input[type=file] { display: none; }
-#canvasFrame { border:0; width:100%; height:100%; display:block; }
+#canvasFrame { border:0; width:100%; flex:1 1 auto; min-height:0; height:auto; display:block; }
 #s-canvas { background: var(--st-canvas); }
 .section-body {
   overflow: hidden;
@@ -2209,7 +2611,11 @@ input[type=file] { display: none; }
   }
 }
 html.dark .profile-sticky-head {
-  background: color-mix(in srgb, var(--st-ink, #0b1220) 88%, transparent);
+  /* Was var(--st-ink, #0b1220). The #0b1220 fallback shows a dark surface was
+     intended, but --st-ink IS defined and in dark mode it is #f0e8df — the
+     light TEXT colour. A text token used as a surface, so the header rendered
+     as a bright cream band above the dark page. --st-page is the surface. */
+  background: color-mix(in srgb, var(--st-page, #171411) 92%, transparent);
 }
 #profilePreviewCol {
   min-width: 0;
@@ -2270,7 +2676,7 @@ html.dark .profile-sticky-head {
 }
 #resumeOriginalEmpty {
   color: var(--st-smoke);
-  font-size: 12px;
+  font-size: 14px;
   text-align: center;
   padding: 48px 16px;
   line-height: 1.5;
@@ -2288,7 +2694,7 @@ html.dark #resumePreviewHint {
   border-top-color: var(--st-border);
 }
 
-#pBar { background: var(--st-ink) !important; border-radius: 100px; }
+#pBar { background: var(--st-ink) !important; border-radius: var(--radius-pill); }
 
 /* Ask Cursor (collapsible right rail) */
 #app { position: relative; }
@@ -2381,7 +2787,7 @@ html.dark .jh-asst-rail-btn.is-active {
   line-height: 1.2;
 }
 .jh-asst-sub {
-  font-size: 11px;
+  font-size: 14px;
   color: var(--st-slate);
   margin-top: 2px;
 }
@@ -2390,7 +2796,7 @@ html.dark .jh-asst-rail-btn.is-active {
   border: 1px solid var(--st-border);
   background: transparent;
   color: var(--st-slate);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   width: 28px;
   height: 28px;
   display: inline-flex;
@@ -2413,7 +2819,7 @@ html.dark .jh-asst-rail-btn.is-active {
   max-width: 96%;
   padding: 0.45rem 0.6rem;
   border-radius: 10px;
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.45;
   word-break: break-word;
 }
@@ -2434,7 +2840,7 @@ html.dark .jh-asst-rail-btn.is-active {
   background: transparent;
   border: 1px dashed var(--st-border);
   color: var(--st-slate);
-  font-size: 12px;
+  font-size: 14px;
 }
 .jh-asst-msg.error { border-color: rgba(180, 70, 60, 0.45); color: #b84a42; }
 .jh-asst-msg.pending { opacity: 0.65; font-style: italic; }
@@ -2442,7 +2848,7 @@ html.dark .jh-asst-rail-btn.is-active {
   border-style: solid;
   border-color: rgba(60, 130, 90, 0.35);
   color: #3d7a52;
-  font-size: 12px;
+  font-size: 14px;
 }
 .jh-asst-compose-wrap {
   border-top: 1px solid var(--st-border);
@@ -2462,7 +2868,7 @@ html.dark .jh-asst-rail-btn.is-active {
   gap: 0.35rem;
   padding: 0.2rem 0.35rem 0.2rem 0.2rem;
   border: 1px solid var(--st-border);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   background: var(--st-canvas);
   max-width: 140px;
 }
@@ -2470,22 +2876,22 @@ html.dark .jh-asst-rail-btn.is-active {
   width: 32px;
   height: 32px;
   object-fit: cover;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   flex-shrink: 0;
 }
 .jh-asst-att-vid {
   width: 32px;
   height: 32px;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   background: var(--st-mist);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--st-slate);
 }
 .jh-asst-att-name {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--st-slate);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -2497,7 +2903,7 @@ html.dark .jh-asst-rail-btn.is-active {
   right: -6px;
   width: 18px;
   height: 18px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   border: 1px solid var(--st-border);
   background: var(--st-canvas);
   color: var(--st-slate);
@@ -2556,66 +2962,550 @@ html.dark .jh-asst-send { background: var(--st-peach); color: var(--st-sienna); 
 <body class="st-body antialiased select-none h-screen overflow-hidden">
 
 <!-- ═══════════ ONBOARDING ═══════════ -->
-<div id="ob" class="ob-bg fixed inset-0 z-50 flex flex-col items-center justify-center gap-3">
-  <!-- Logo mark -->
-  <div class="st-mark mb-1" style="width:56px;height:56px;font-size:14px">R</div>
-  <h1 class="st-h1">Welcome to Robin</h1>
-  <p class="text-smoke text-sm mb-3">How would you like to get started?</p>
+<div id="ob" class="ob-bg fixed inset-0 z-50 flex flex-col items-center justify-start gap-3">
+  <!-- Full-bleed hero illustration — a live, reactive bird over a static ink-wash branch -->
+  <div class="ob-hero" id="obHero">
+    <!-- paper is never masked: it always spans the full hero, so only the ink
+         grows with progress. Without this the reveal erased the paper too and
+         the hero showed its flat ground past the growth edge. -->
+    <img class="ob-hero-paper" id="obHeroPaper" src="assets/robin-hero/paper-wide.png" alt="" />
+    <div class="ob-hero-bg-wrap" id="obHeroBgWrap">
+      <img class="ob-hero-bg" id="obHeroBg" src="assets/robin-hero/branch-wide.png" alt="" />
+      <img class="ob-hero-bg-bird" id="obPlateBird" src="assets/robin-hero/branch-wide-bird.png" alt="" />
+    </div>
 
-  <div class="flex gap-4">
-    <!-- Upload Resume -->
-    <div id="obUpCard" class="w-56 p-7 rounded-2xl border border-ash cursor-pointer flex flex-col items-center text-center gap-3 group">
-      <div class="w-14 h-14 rounded-full border border-ash flex items-center justify-center">
-        <svg class="text-smoke group-hover:text-ink" width="26" height="26" viewBox="0 0 24 24" fill="none">
-          <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" stroke="currentColor" stroke-width="1.5"/>
-          <polyline points="14 2 14 8 20 8" stroke="currentColor" stroke-width="1.5"/>
-          <line x1="8" y1="13" x2="16" y2="13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-          <line x1="8" y1="17" x2="13" y2="17" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-        </svg>
-      </div>
-      <div class="font-semibold text-slate-200 group-hover:text-white">Upload Resume</div>
-      <div class="text-xs text-slate-500 leading-relaxed">Upload your resume and we'll fill out your profile for you</div>
-      <input type="file" id="rfInput" accept=".pdf,.doc,.docx">
-      <!-- Upload trigger -->
-      <div id="rfTrigger" class="hidden w-full border border-dashed border-ash hover:border-offblack rounded-xl p-3 text-center cursor-pointer" onclick="document.getElementById('rfInput').click()">
-        <div class="text-slate-500 text-lg mb-1">↑</div>
-        <div class="text-xs text-slate-400">Click or drag PDF here</div>
-        <div class="text-xs text-slate-600 mt-1">PDF, DOC, DOCX · max 10MB</div>
-      </div>
-      <!-- Resume preview -->
-      <div id="rfPreview" class="hidden w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-left">
-        <div class="flex items-center gap-2 mb-2">
-          <span class="text-base">📄</span>
-          <span id="rfName" class="text-xs font-semibold text-slate-300 truncate"></span>
+    <!-- bird layer: same box as the artwork, but unmasked, so the progress
+         reveal never clips the bird -->
+    <div class="ob-bird-layer" id="obBirdLayer">
+      <div class="ob-bird" id="obBird">
+        <div class="ob-bird-inner" id="obBirdInner">
+          <div class="ob-rig on" id="obRigPerched">
+            <img class="ob-pose on" id="obPoseNeutral" src="assets/robin-hero/pose-neutral.png" alt="Robin, perched" />
+            <img class="ob-pose" id="obPoseSinging" src="assets/robin-hero/pose-singing.png" alt="Robin, singing" />
+          </div>
+          <div class="ob-rig" id="obRigFlying">
+            <img class="ob-pose" id="obPoseGlide" src="assets/robin-hero/pose-glide.png" alt="Robin, gliding" />
+            <img class="ob-pose" id="obPoseFlapUp" src="assets/robin-hero/pose-flap-up.png" alt="Robin, wings up" />
+            <img class="ob-pose" id="obPoseFlapDown" src="assets/robin-hero/pose-flap-down.png" alt="Robin, wings down" />
+          </div>
         </div>
-        <div class="space-y-1.5">
-          <div class="h-1.5 rounded-full bg-lake/40 w-full" style="background:#2b59d1;opacity:.35"></div>
-          <div class="h-1 rounded-full bg-slate-700 w-4/5"></div>
-          <div class="h-1 rounded-full bg-slate-700 w-11/12"></div>
-          <div class="h-1 rounded-full bg-slate-700 w-3/4"></div>
-          <div class="h-1 rounded-full bg-slate-700 w-5/6"></div>
+        <!-- inside .ob-bird so the song mark travels with the bird in flight -->
+        <div class="ob-chirp" id="obChirp">
+          <svg viewBox="0 0 24 24"><path d="M3 12 Q7 6 12 8 Q17 10 21 5 M4 16 Q8 12 13 13" /></svg>
         </div>
-        <div class="mt-2 text-xs text-emerald-400">✓ Ready to parse</div>
       </div>
     </div>
 
-    <!-- Skip Setup -->
-    <div id="obSkipCard" class="w-56 p-7 rounded-2xl border border-ash cursor-pointer flex flex-col items-center text-center gap-3 group">
-      <div class="w-14 h-14 rounded-full border border-ash flex items-center justify-center">
-        <svg class="text-smoke group-hover:text-ink" width="28" height="28" viewBox="0 0 24 24" fill="none">
-          <polygon points="5,4 15,12 5,20" fill="currentColor"/>
-          <line x1="19" y1="4" x2="19" y2="20" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
-        </svg>
+  </div>
+  <h1 class="st-h1" id="obTitle" style="margin-top:-28px">Welcome to Robin</h1>
+  <p class="text-smoke text-sm mb-3" id="obSubtitle">How would you like to get started?</p>
+
+  <!-- One question at a time. The branch overhead grows as these are answered. -->
+  <div class="ob-flow" id="obFlow" hidden>
+    <!-- back sits to the left of the title, never in the CTA row -->
+    <div class="ob-head">
+      <div class="ob-step-meta" id="obStepCount"></div>
+      <div class="ob-title-row">
+        <button type="button" class="ob-back" id="obBack" aria-label="Back">←</button>
+        <h2 class="ob-q" id="obQ"></h2>
       </div>
-      <div class="font-semibold text-slate-200 group-hover:text-white">Skip Setup</div>
-      <div class="text-xs text-slate-500 leading-relaxed">Jump straight to browsing jobs</div>
+    </div>
+    <p class="ob-why" id="obWhy"></p>
+
+    <!-- resume step -->
+    <div class="ob-upload" id="obUpload" hidden>
+      <input type="file" id="rfInput" accept=".pdf,.doc,.docx" hidden>
+      <button type="button" class="ob-drop" id="obDrop">
+        <span class="ob-drop-icon">↑</span>
+        <span class="ob-drop-main">Click or drop your resume here</span>
+        <span class="ob-drop-sub">PDF, DOC, DOCX · max 10MB</span>
+      </button>
+      <div class="ob-file" id="obFile" hidden><span>📄</span><span id="rfName"></span></div>
+    </div>
+
+    <div class="ob-choices" id="obChoices"></div>
+    <input type="text" class="ob-text" id="obText" hidden autocomplete="off">
+
+    <!-- one CTA row: stroked secondary + filled primary -->
+    <div class="ob-actions">
+      <button type="button" class="ob-btn ob-btn-secondary" id="obSkip">Skip</button>
+      <button type="button" class="ob-btn ob-btn-primary" id="obNext">Continue</button>
     </div>
   </div>
 
-  <button id="obContBtn" class="st-btn-primary hidden mt-3">
-    Get started
-  </button>
+  <!-- kept in the DOM (hidden): applyResumeUpload() uses it as a status target -->
+  <button id="obContBtn" class="st-btn-primary hidden mt-3">Get started</button>
 </div>
+
+<script>
+// Robin hero bird — reactive character over the onboarding branch painting.
+// Ported from the locked prototype (claude.ai/code/artifact/82e2e790-f65f-4de8-aedd-49bcbee016dc),
+// re-tuned for this hero's wide/short aspect ratio (2060x332 vs the prototype's square 680x680 stage).
+(function(){
+  const bird = document.getElementById('obBird');
+  const rigPerched = document.getElementById('obRigPerched');
+  const rigFlying = document.getElementById('obRigFlying');
+  const poseNeutral = document.getElementById('obPoseNeutral');
+  const poseSinging = document.getElementById('obPoseSinging');
+  const poseGlide = document.getElementById('obPoseGlide');
+  const poseFlapUp = document.getElementById('obPoseFlapUp');
+  const poseFlapDown = document.getElementById('obPoseFlapDown');
+  const chirp = document.getElementById('obChirp');
+  const plateBird = document.getElementById('obPlateBird');
+  if(!bird) return; // hero not present on this build
+
+  // --- hybrid rest state -------------------------------------------------
+  // The bird has two renderings: the sprite rig (moves) and the bird painted
+  // into the plate (rests). Only ever one is opaque; they cross-fade at the
+  // same size and position. XFADE must match .ob-hero-bg-bird's transition.
+  const XFADE = 420;
+  const wait = ms => new Promise(r => setTimeout(r, ms));
+  let painted = false;
+  function showPainted(on){
+    painted = on;
+    plateBird.classList.toggle('on', on);
+    bird.style.opacity = on ? 0 : 1;
+  }
+  // hand off to the painting: sprite fades out as the painted bird fades in
+  async function settleIntoPainting(){
+    bird.style.transition = `opacity ${XFADE}ms ease`;
+    showPainted(true);
+    await wait(XFADE);
+  }
+  // hand back to the sprite before anything animates
+  async function liftFromPainting(){
+    if(!painted) return;
+    bird.style.transition = `opacity ${XFADE}ms ease`;
+    showPainted(false);
+    await wait(XFADE);
+  }
+
+  let busy = true; // busy during entrance
+  let flapTimer = null;
+
+  // ------------------------------------------------------------------
+  // Position system: `pos` is the single source of truth for #obBird's
+  // left/top/rotation. moveAlong() always builds explicit offset:0 and
+  // offset:1 keyframes (never leaving the endpoint implicit — a missing
+  // final keyframe makes WAAPI interpolate toward the *underlying* style,
+  // which caused a real bug: the bird visibly flew backward on its own
+  // path). It also writes the destination to inline style before creating
+  // the animation and runs with fill:'none', so a finished animation is
+  // never left overriding the inline style — no stale Animation object,
+  // no snap on handoff.
+  // ------------------------------------------------------------------
+  // All coordinates are percentages OF THE PAINTING (.ob-bird-layer shares the
+  // plate's box and aspect ratio), not of the hero — so resizing the hero can
+  // never drift the sprite off the bird baked into the plate.
+  // LAND is derived from where that bird actually sits: image px (1283,102)
+  // 166x197 in a 2576x566 plate, anchored at translate(-50%,-96%).
+  const START = { left: -12, top: 30, rot: 4 };      // off-stage left
+  // Locked to the bird baked into the plate at image px (1238,102) 166x197.
+  // Slid left from 53.03 so the RIGHT foot stops overhanging the point where
+  // the knot drops away — both feet now meet solid branch.
+  const LAND  = { left: 51.28, top: 51.44, rot: 0 };
+  let posAnim = null;
+  let pos = { ...START };
+
+  function styleFor(p){
+    return {
+      left: `${p.left}%`,
+      top: `${p.top}%`,
+      transform: `translate(-50%,-96%) rotate(${p.rot}deg)`,
+    };
+  }
+  function setPos(p){
+    pos = { left: p.left, top: p.top, rot: p.rot };
+    const s = styleFor(pos);
+    bird.style.left = s.left;
+    bird.style.top = s.top;
+    bird.style.transform = s.transform;
+  }
+  function moveAlong(path, options){
+    posAnim?.cancel();
+    const last = path.length - 1;
+    const frames = [Object.assign(styleFor(pos), { offset: 0 })];
+    path.forEach((p, i) => {
+      frames.push(Object.assign(styleFor(p), { offset: i === last ? 1 : p.at }));
+    });
+    setPos(path[last]);
+    posAnim = bird.animate(frames, Object.assign({}, options, { fill: 'none' }));
+    // Never let one dropped animation strand the whole sequence. `finished`
+    // occasionally never settles here (an animation that is cancelled or
+    // never starts leaves the promise pending), and because every step is
+    // awaited, that froze the bird mid-glide with the entrance half-done.
+    // The destination is already in inline style, so timing out is visually
+    // safe — worst case the move snaps instead of easing.
+    const dur = (options && options.duration) || 0;
+    return Promise.race([
+      posAnim.finished.catch(() => {}),
+      new Promise(res => setTimeout(res, dur + 400)),
+    ]);
+  }
+  setPos(START);
+
+  function setGroup(group){
+    rigPerched.classList.toggle('on', group === 'perched');
+    rigFlying.classList.toggle('on', group === 'flying');
+  }
+  function setPerchedPose(el){
+    poseNeutral.classList.toggle('on', el === poseNeutral);
+    poseSinging.classList.toggle('on', el === poseSinging);
+  }
+  function startFlutter(){
+    let toggle = false;
+    poseGlide.classList.remove('on');
+    poseFlapUp.classList.add('on');
+    flapTimer = setInterval(() => {
+      toggle = !toggle;
+      poseFlapUp.classList.toggle('on', !toggle);
+      poseFlapDown.classList.toggle('on', toggle);
+    }, 160);
+  }
+  function stopFlutter(){
+    if(flapTimer){ clearInterval(flapTimer); flapTimer = null; }
+    poseFlapUp.classList.remove('on');
+    poseFlapDown.classList.remove('on');
+  }
+
+  // Debounce shared by every chirp source (click, ambient timer, question
+  // progress) so a fast run of triggers can't stack mouth-open poses on top
+  // of each other. 1s matches the shortest gap a human interaction can
+  // realistically produce between two "answer a question" events.
+  const CHIRP_COOLDOWN_MS = 1000;
+  let lastChirpAt = 0;
+  function chirpOnCooldown(){
+    return Date.now() - lastChirpAt < CHIRP_COOLDOWN_MS;
+  }
+  // Extra dwell tacked onto every mouth-open pose beyond the audio itself —
+  // a mouth that closes the instant the tone ends reads as a glitch, not a
+  // bird finishing a phrase.
+  const CHIRP_TAIL_MS = 1000;
+  // Lets robinQuiet() cut a mouth-open dwell short instead of letting it run
+  // out on its own — onboarding can end mid-chirp (the flow calls
+  // setProgressComplete() then robinQuiet() back to back), and a chirp that
+  // keeps singing through the fly-away exit reads as broken, not charming.
+  let resolveQuietWait = null;
+  function waitOrQuiet(ms){
+    return Promise.race([
+      wait(ms),
+      new Promise(res => { resolveQuietWait = res; }),
+    ]);
+  }
+
+  // --- synthesized sounds, no audio files needed ---
+  let actx;
+  function ensureAudio(){
+    if(!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
+    if(actx.state === 'suspended') actx.resume();
+    return actx;
+  }
+  function tone(ctx, now, startOffset, freqStart, freqEnd, dur, peak){
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(freqStart, now + startOffset);
+    osc.frequency.exponentialRampToValueAtTime(freqEnd, now + startOffset + dur);
+    const releaseEnd = now + startOffset + dur + 0.05;
+    gain.gain.setValueAtTime(0.0001, now + startOffset);
+    gain.gain.exponentialRampToValueAtTime(peak, now + startOffset + 0.008);
+    gain.gain.exponentialRampToValueAtTime(0.0008, now + startOffset + dur);
+    gain.gain.linearRampToValueAtTime(0, releaseEnd);
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.start(now + startOffset);
+    osc.stop(releaseEnd + 0.02);
+  }
+  function playChirpTone(){
+    try{
+      const ctx = ensureAudio();
+      const now = ctx.currentTime;
+      tone(ctx, now, 0.00, 2400, 3400, 0.09, 0.16);
+      tone(ctx, now, 0.11, 2800, 4100, 0.07, 0.14);
+      tone(ctx, now, 0.24, 2200, 3000, 0.10, 0.15);
+      return 390; // ms — last note (0.24 + 0.10 dur + 0.05 release) rounded up
+    }catch(e){ return 0; }
+  }
+  function playSmallChirp(){
+    try{
+      const ctx = ensureAudio();
+      const now = ctx.currentTime;
+      tone(ctx, now, 0, 2900, 3400, 0.13, 0.07);
+    }catch(e){}
+  }
+
+  // A chirp that is never twice the same: random number of notes, random
+  // pitch contour and random gaps. A fixed motif on a loop reads as a UI
+  // sound effect; a varying one reads as a bird. Returns its length in ms so
+  // the caller can time the visual to it.
+  function playRandomChirp(peak){
+    try{
+      const ctx = ensureAudio();
+      const now = ctx.currentTime;
+      const notes = 1 + Math.floor(Math.random() * 3);   // 1-3 notes
+      let t = 0;
+      for(let i = 0; i < notes; i++){
+        const dur = 0.06 + Math.random() * 0.10;
+        const f0 = 2200 + Math.random() * 1000;
+        const rise = Math.random() < 0.65;               // mostly rising, sometimes falling
+        const f1 = rise ? f0 + 300 + Math.random() * 900 : Math.max(1400, f0 - 400 - Math.random() * 600);
+        tone(ctx, now, t, f0, f1, dur, peak * (0.8 + Math.random() * 0.4));
+        t += dur + 0.035 + Math.random() * 0.10;
+      }
+      return t * 1000;
+    }catch(e){ return 0; }
+  }
+
+  // The bird sings on the way in and falls quiet as it settles. Phrases are
+  // scheduled for the duration of the flight and cancelled the moment it
+  // lands, so the song never outlives the entrance.
+  let songTimers = [];
+  function startFlightSong(durationMs){
+    stopFlightSong();
+    let t = 120;
+    while(t < durationMs - 150){
+      songTimers.push(setTimeout(() => {
+        const len = playRandomChirp(0.13);
+        pulseChirpMark(len < 260);
+      }, t));
+      t += 420 + Math.random() * 460;
+    }
+  }
+  function stopFlightSong(){
+    songTimers.forEach(clearTimeout);
+    songTimers = [];
+  }
+
+  function pulseChirpMark(small){
+    chirp.classList.toggle('small', !!small);
+    chirp.animate(
+      [
+        { opacity: 0, transform: 'translate(-10%,-140%) scale(0.7)' },
+        { opacity: small ? 0.6 : 1, transform: 'translate(-10%,-150%) scale(1)', offset: 0.35 },
+        { opacity: 0, transform: 'translate(-10%,-160%) scale(1.05)' },
+      ],
+      { duration: small ? 600 : 900, easing: 'ease-out' }
+    );
+  }
+
+  // the bird can only sing as the sprite, so it lifts out of the painting for
+  // the duration of the song and settles back into it afterwards. Mouth-open
+  // time is mapped to how long the tone actually runs (plus CHIRP_TAIL_MS),
+  // not a fixed guess, so a longer song keeps the beak open longer.
+  async function doChirp(){
+    if(busy || chirpOnCooldown() || quiet) return;
+    lastChirpAt = Date.now();
+    busy = true;
+    await liftFromPainting();
+    if(quiet){ setPerchedPose(poseNeutral); await settleIntoPainting(); busy = false; return; }
+    const len = playChirpTone();
+    pulseChirpMark(false);
+    setPerchedPose(poseSinging);
+    await waitOrQuiet(len + CHIRP_TAIL_MS);
+    setPerchedPose(poseNeutral);
+    if(!quiet) await wait(160);
+    await settleIntoPainting();
+    busy = false;
+  }
+  // Ambient chirps vary in BOTH length and spacing — a fixed motif on a fixed
+  // interval reads as a notification sound, not as a bird sitting in a tree.
+  // The mouth must open for these too, so — unlike before — this now lifts
+  // the sprite out of the painting for the phrase and settles it back
+  // afterwards, same as doChirp. Occasionally throws in a head turn so the
+  // two idle gestures read as one animal doing two things, not two timers.
+  async function doSmallAmbientChirp(){
+    if(busy || chirpOnCooldown() || quiet) return;
+    lastChirpAt = Date.now();
+    busy = true;
+    const wasPainted = painted;
+    await liftFromPainting();
+    if(quiet){ setPerchedPose(poseNeutral); if(wasPainted) await settleIntoPainting(); busy = false; return; }
+    if(Math.random() < 0.5) tiltHeadAnimation();
+    const len = playRandomChirp(0.075);
+    pulseChirpMark(len < 300);
+    setPerchedPose(poseSinging);
+    await waitOrQuiet(len + CHIRP_TAIL_MS);
+    setPerchedPose(poseNeutral);
+    if(wasPainted){
+      if(!quiet) await wait(120);
+      await settleIntoPainting();
+    }
+    busy = false;
+  }
+  // The bird belongs to the onboarding screen. Once the user is in the app it
+  // must go quiet — an unexplained chirp from a hidden screen is a bug, not
+  // charm. window.robinQuiet() is called when onboarding finishes.
+  let ambientTimer = null, idleTimer = null, quiet = false;
+  function scheduleAmbient(){
+    if(quiet) return;
+    const delay = 14000 + Math.random() * 26000; // 14-40s, quiet and irregular
+    ambientTimer = setTimeout(() => { doSmallAmbientChirp(); scheduleAmbient(); }, delay);
+  }
+  // Core head-turn animation, reusable by both the standalone idle-tilt timer
+  // and doSmallAmbientChirp (which wants a head turn synced to a chirp, from
+  // inside a busy/lifted-from-painting state the standalone guard would block).
+  function tiltHeadAnimation(){
+    const dir = Math.random() < 0.5 ? -1 : 1;
+    const deg = 3 + Math.random() * 3;
+    rigPerched.animate(
+      [
+        { transform: 'rotate(0deg)' },
+        { transform: `rotate(${dir * deg}deg)`, offset: 0.4 },
+        { transform: 'rotate(0deg)' },
+      ],
+      { duration: 480, easing: 'ease-in-out' }
+    );
+  }
+  function doIdleTilt(){
+    // a bird that is currently part of the painting cannot tilt its head —
+    // the ambient chirp (sound + chirp mark) carries the idle life instead
+    if(busy || painted) return;
+    tiltHeadAnimation();
+  }
+  function scheduleIdleTilt(){
+    if(quiet) return;
+    const delay = 5000 + Math.random() * 9000;
+    idleTimer = setTimeout(() => { doIdleTilt(); scheduleIdleTilt(); }, delay);
+  }
+  window.robinQuiet = function(){
+    quiet = true;
+    clearTimeout(ambientTimer); clearTimeout(idleTimer);
+    stopFlightSong(); stopFlutter();
+    // cut short a chirp that's mid mouth-open rather than letting it ride out
+    if(resolveQuietWait){ resolveQuietWait(); resolveQuietWait = null; }
+    // Hard stop for audio: Web Audio scheduling is absolute-time (osc.start/
+    // stop already committed), so clearing timers or flipping `quiet` can't
+    // silence a note that's already playing. Suspending the context halts
+    // the whole graph immediately — the actual guarantee behind "no
+    // chirping inside the main app", not just "no NEW chirps get started".
+    if(actx && actx.state === 'running') actx.suspend().catch(() => {});
+  };
+
+  let isAway = false;
+
+  async function land(){
+    startFlutter();
+    await moveAlong(
+      [{ left: LAND.left, top: LAND.top, rot: 0 }],
+      { duration: 480, easing: 'cubic-bezier(.2,.8,.3,1)' }
+    );
+    stopFlutter();
+    stopFlightSong();   // quiet the moment it settles
+    setGroup('perched');
+    setPerchedPose(poseNeutral);
+    busy = false;
+  }
+
+  async function glideInFromLeft(){
+    setPos(START);
+    // appear instantly at the off-stage start, not via a leftover cross-fade
+    bird.style.transition = 'none';
+    bird.style.opacity = 1;
+    plateBird.classList.remove('on');
+    painted = false;
+    setGroup('flying');
+    poseFlapUp.classList.remove('on'); poseFlapDown.classList.remove('on');
+    poseGlide.classList.add('on');
+
+    // sings on the way in — the song is scheduled across the glide and the
+    // brake, and stopFlightSong() in land() cuts it as the bird settles
+    startFlightSong(1000 + 300);
+    await moveAlong(
+      [
+        { left: 28, top: 36, rot: -2, at: 0.55 },
+        // ends where land()'s brake begins — slightly short of and above the
+        // perch, so the brake reads as a genuine last hop down onto it
+        { left: LAND.left - 6, top: LAND.top - 8, rot: 3 },
+      ],
+      { duration: 1000, easing: 'cubic-bezier(.25,.55,.3,1)' }
+    );
+    await land();
+  }
+
+  // The greeting is now the flight song, not a post-landing one — the bird
+  // arrives singing and falls quiet as it settles, so all that's left here is
+  // the handoff into the artwork, which is where it lives when idle.
+  async function settleAfterLanding(){
+    await wait(220);
+    await settleIntoPainting();
+  }
+
+  async function flyAway(){
+    if(busy) return;
+    busy = true;
+    await liftFromPainting();
+    setGroup('flying');
+    startFlutter();
+    // exits up and to the right, off the top edge — a different path than
+    // the left-side entrance, not a backtrack of it. Exit-only: it does not
+    // fly itself back in, it just leaves.
+    await moveAlong(
+      [
+        { left: LAND.left + 10, top: LAND.top - 22, rot: 10, at: 0.5 },
+        { left: LAND.left + 22, top: -12, rot: 15 },
+      ],
+      { duration: 1200, easing: 'cubic-bezier(.3,.6,.4,1)' }
+    );
+    stopFlutter();
+    bird.style.opacity = 0;
+    isAway = true;
+    busy = false;
+  }
+
+  async function enter(){
+    busy = true;
+    await glideInFromLeft();
+    await settleAfterLanding();
+    scheduleAmbient();
+    scheduleIdleTilt();
+  }
+
+  // The onboarding flow calls this once every question is answered: the bird
+  // leaves before the screen does. Resolves when it is off-frame, so the
+  // caller can start the fade only after the exit reads as finished.
+  window.robinFlyAway = async function(){
+    if(isAway) return;
+    busy = false;                 // the flow owns the sequence now
+    await flyAway();
+  };
+
+  bird.addEventListener('click', doChirp);
+
+  // Branch-as-progress-bar: the branch is one continuous painting, revealed
+  // left-to-right via clip-path as the onboarding flow advances. Revealing
+  // more of the SAME painting is what makes the leaves "grow" too — there's
+  // no separate leaf animation. INITIAL_REVEAL matches where the bird's
+  // perch sits, so at 0% progress the branch has already "grown" exactly to
+  // the bird, and stops there until real answers come in.
+  const heroBgWrap = document.getElementById('obHeroBgWrap');
+  // must clear the painted bird's right edge (~56%) plus the 7% soft edge,
+  // or the reveal's fade washes the resting bird out
+  const INITIAL_REVEAL = 66;
+  // Tracks the last fraction actually reported by the flow (not the initial
+  // setOnboardingProgress(0) call below) so every forward step — and only a
+  // forward step, not the back button undoing one — earns a chirp.
+  let lastProgressFraction = 0;
+  function setOnboardingProgress(fraction){
+    const f = Math.max(0, Math.min(1, fraction));
+    const pct = INITIAL_REVEAL + f * (100 - INITIAL_REVEAL);
+    heroBgWrap.style.setProperty('--branch-reveal', pct + '%');
+    // f === 1 is onboarding finishing (setProgressComplete() → robinQuiet()
+    // right after) — skip that last chirp rather than starting one just to
+    // cut it off a beat later.
+    if(f > lastProgressFraction && f < 1) doSmallAmbientChirp();
+    lastProgressFraction = f;
+  }
+  setOnboardingProgress(0);
+  // hook for the onboarding question flow: window.robinSetOnboardingProgress(answeredCount / totalQuestions)
+  window.robinSetOnboardingProgress = setOnboardingProgress;
+
+  // wait for just the hero's own images, not the whole (large) app's load
+  // event — this is one small piece of a much bigger single-page app
+  const heroBg = document.querySelector('#obHero .ob-hero-bg');
+  const decodeAll = [heroBg, poseNeutral, poseGlide]
+    .map(img => img.decode ? img.decode().catch(() => {}) : Promise.resolve());
+  Promise.all(decodeAll).then(enter);
+})();
+</script>
 
 
 <!-- ═══════════ APP SHELL ═══════════ -->
@@ -2642,54 +3532,58 @@ html.dark .jh-asst-send { background: var(--st-peach); color: var(--st-sienna); 
     <!-- Nav -->
     <div class="flex-1 p-2 flex flex-col gap-0.5">
       <button data-s="dashboard" class="nav-item flex items-center gap-2.5 w-full px-3 py-2 rounded-lg text-[13px] font-medium text-slate-400 hover:bg-slate-800 hover:text-slate-200">
-        <svg class="w-4 h-4 opacity-70" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="6" height="6" rx="1.5"/><rect x="9" y="1" width="6" height="6" rx="1.5"/><rect x="1" y="9" width="6" height="6" rx="1.5"/><rect x="9" y="9" width="6" height="6" rx="1.5"/></svg>
+        <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M3.5 2A1.5 1.5 0 0 0 2 3.5v2A1.5 1.5 0 0 0 3.5 7h2A1.5 1.5 0 0 0 7 5.5v-2A1.5 1.5 0 0 0 5.5 2h-2ZM3.5 9A1.5 1.5 0 0 0 2 10.5v2A1.5 1.5 0 0 0 3.5 14h2A1.5 1.5 0 0 0 7 12.5v-2A1.5 1.5 0 0 0 5.5 9h-2ZM9 3.5A1.5 1.5 0 0 1 10.5 2h2A1.5 1.5 0 0 1 14 3.5v2A1.5 1.5 0 0 1 12.5 7h-2A1.5 1.5 0 0 1 9 5.5v-2ZM10.5 9A1.5 1.5 0 0 0 9 10.5v2a1.5 1.5 0 0 0 1.5 1.5h2a1.5 1.5 0 0 0 1.5-1.5v-2A1.5 1.5 0 0 0 12.5 9h-2Z"/></svg>
         Dashboard
       </button>
       <button data-s="profile" class="nav-item flex items-center gap-2.5 w-full px-3 py-2 rounded-lg text-[13px] font-medium text-slate-400 hover:bg-slate-800 hover:text-slate-200">
-        <svg class="w-4 h-4 opacity-70" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="5" r="3" stroke="currentColor" stroke-width="1.5"/><path d="M2 14c0-3 2.7-5 6-5s6 2 6 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM12.735 14c.618 0 1.093-.561.872-1.139a6.002 6.002 0 0 0-11.215 0c-.22.578.254 1.139.872 1.139h9.47Z"/></svg>
         Profile
       </button>
       <button data-s="browse" class="nav-item flex items-center gap-2.5 w-full px-3 py-2 rounded-lg text-[13px] font-medium text-slate-400 hover:bg-slate-800 hover:text-slate-200">
-        <svg class="w-4 h-4 opacity-70" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M2 8h12M2 12h8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M9.965 11.026a5 5 0 1 1 1.06-1.06l2.755 2.754a.75.75 0 1 1-1.06 1.06l-2.755-2.754ZM10.5 7a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0Z" clip-rule="evenodd"/></svg>
         Browse
       </button>
       <button data-s="sources" class="nav-item flex items-center gap-2.5 w-full px-3 py-2 rounded-lg text-[13px] font-medium text-slate-400 hover:bg-slate-800 hover:text-slate-200">
-        <svg class="w-4 h-4 opacity-70" viewBox="0 0 16 16" fill="none"><path d="M2 3.5h12M2 8h12M2 12.5h8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="12.5" cy="12.5" r="1.5" fill="currentColor"/></svg>
+        <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 7c3.314 0 6-1.343 6-3s-2.686-3-6-3-6 1.343-6 3 2.686 3 6 3Z"/><path d="M8 8.5c1.84 0 3.579-.37 4.914-1.037A6.33 6.33 0 0 0 14 6.78V8c0 1.657-2.686 3-6 3S2 9.657 2 8V6.78c.346.273.72.5 1.087.683C4.42 8.131 6.16 8.5 8 8.5Z"/><path d="M8 12.5c1.84 0 3.579-.37 4.914-1.037.366-.183.74-.41 1.086-.684V12c0 1.657-2.686 3-6 3s-6-1.343-6-3v-1.22c.346.273.72.5 1.087.683C4.42 12.131 6.16 12.5 8 12.5Z"/></svg>
         Sources
       </button>
       <button data-s="apply" class="nav-item flex items-center gap-2.5 w-full px-3 py-2 rounded-lg text-[13px] font-medium text-slate-400 hover:bg-slate-800 hover:text-slate-200">
-        <svg class="w-4 h-4 opacity-70" viewBox="0 0 16 16" fill="none"><rect x="2" y="3" width="3.4" height="10" rx="1" stroke="currentColor" stroke-width="1.4"/><rect x="6.3" y="3" width="3.4" height="7" rx="1" stroke="currentColor" stroke-width="1.4"/><rect x="10.6" y="3" width="3.4" height="4.5" rx="1" stroke="currentColor" stroke-width="1.4"/></svg>
+        <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M12 2a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h1a1 1 0 0 0 1-1V3a1 1 0 0 0-1-1h-1ZM6.5 6a1 1 0 0 1 1-1h1a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1V6ZM2 9a1 1 0 0 1 1-1h1a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V9Z"/></svg>
         Apply
         <span class="rail-badge kg-badge ml-auto" id="applyCountBadge" hidden>0</span>
       </button>
       <div class="my-1.5 mx-2 border-t border-slate-800"></div>
+      <div class="nav-sandbox" role="group" aria-label="Sandbox">
+      <div class="nav-sandbox-label">Sandbox</div>
       <button data-s="linkedin" class="nav-item flex items-center gap-2.5 w-full px-3 py-2 rounded-lg text-[13px] font-medium text-slate-400 hover:bg-slate-800 hover:text-slate-200">
-        <svg class="w-4 h-4 opacity-70" viewBox="0 0 24 24" fill="currentColor"><path d="M20.5 2h-17A1.5 1.5 0 002 3.5v17A1.5 1.5 0 003.5 22h17a1.5 1.5 0 001.5-1.5v-17A1.5 1.5 0 0020.5 2zM8 19H5v-9h3zM6.5 8.25A1.75 1.75 0 118.3 6.5a1.78 1.78 0 01-1.8 1.75zM19 19h-3v-4.74c0-1.42-.6-1.93-1.38-1.93A1.74 1.74 0 0013 14.19V19h-3v-9h2.9v1.3a3.11 3.11 0 012.7-1.4c1.55 0 3.36.86 3.36 3.66z"/></svg>
+        <svg viewBox="-2 -2 28 28" fill="currentColor" aria-hidden="true"><path d="M20.5 2h-17A1.5 1.5 0 002 3.5v17A1.5 1.5 0 003.5 22h17a1.5 1.5 0 001.5-1.5v-17A1.5 1.5 0 0020.5 2zM8 19H5v-9h3zM6.5 8.25A1.75 1.75 0 118.3 6.5a1.78 1.78 0 01-1.8 1.75zM19 19h-3v-4.74c0-1.42-.6-1.93-1.38-1.93A1.74 1.74 0 0013 14.19V19h-3v-9h2.9v1.3a3.11 3.11 0 012.7-1.4c1.55 0 3.36.86 3.36 3.66z"/></svg>
         LinkedIn Lab
       </button>
       <button data-s="knowledge" class="nav-item flex items-center gap-2.5 w-full px-3 py-2 rounded-lg text-[13px] font-medium text-slate-400 hover:bg-slate-800 hover:text-slate-200">
-        <svg class="w-4 h-4 opacity-70" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="2.2" stroke="currentColor" stroke-width="1.4"/><circle cx="3.5" cy="4.5" r="1.4" stroke="currentColor" stroke-width="1.3"/><circle cx="12.5" cy="4.2" r="1.4" stroke="currentColor" stroke-width="1.3"/><circle cx="4" cy="12" r="1.4" stroke="currentColor" stroke-width="1.3"/><circle cx="12.2" cy="11.8" r="1.4" stroke="currentColor" stroke-width="1.3"/><path d="M4.7 5.4L6.6 7.1M9.4 7.1l1.9-1.7M6.5 9.2l-1.6 1.8M9.5 9.2l1.7 1.7" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+        <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M12 6a2 2 0 1 0-1.994-1.842L5.323 6.5a2 2 0 1 0 0 3l4.683 2.342a2 2 0 1 0 .67-1.342L5.995 8.158a2.03 2.03 0 0 0 0-.316L10.677 5.5c.353.311.816.5 1.323.5Z"/></svg>
         Knowledge Graph
         <span class="rail-badge kg-badge ml-auto" id="kgNodeBadge" hidden>0</span>
       </button>
       <button data-s="canvas" class="nav-item flex items-center gap-2.5 w-full px-3 py-2 rounded-lg text-[13px] font-medium text-slate-400 hover:bg-slate-800 hover:text-slate-200">
-        <svg class="w-4 h-4 opacity-70" viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M5 11l2-2 2 2 4-5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M2 4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4Zm10.5 5.707a.5.5 0 0 0-.146-.353l-1-1a.5.5 0 0 0-.708 0L9.354 9.646a.5.5 0 0 1-.708 0L6.354 7.354a.5.5 0 0 0-.708 0l-2 2a.5.5 0 0 0-.146.353V12a.5.5 0 0 0 .5.5h8a.5.5 0 0 0 .5-.5V9.707ZM12 5a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z" clip-rule="evenodd"/></svg>
         Canvas
       </button>
+      </div>
     </div>
 
     <!-- Bottom -->
     <div class="p-2 border-t border-slate-800 flex flex-col gap-0.5">
       <button data-s="settings" class="nav-item nav-foot-btn flex items-center gap-2.5 w-full px-3 py-2 rounded-lg text-slate-500 hover:bg-slate-800 hover:text-slate-300">
-        <svg class="w-4 h-4 opacity-70" viewBox="0 0 16 16" fill="none"><path d="M8 10.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5z" stroke="currentColor" stroke-width="1.4"/><path d="M2.5 8.6V7.4l1.2-.3a4.7 4.7 0 01.4-1L3.5 4.8l.8-.8 1.3.6c.3-.16.66-.3 1-.4L7.4 2.5h1.2l.3 1.2c.34.1.7.24 1 .4l1.3-.6.8.8-.6 1.3c.16.3.3.66.4 1l1.2.3v1.2l-1.2.3a4.7 4.7 0 01-.4 1l.6 1.3-.8.8-1.3-.6c-.3.16-.66.3-1 .4l-.3 1.2H7.4l-.3-1.2a4.7 4.7 0 01-1-.4l-1.3.6-.8-.8.6-1.3a4.7 4.7 0 01-.4-1L2.5 8.6z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>
+        <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M6.455 1.45A.5.5 0 0 1 6.952 1h2.096a.5.5 0 0 1 .497.45l.186 1.858a4.996 4.996 0 0 1 1.466.848l1.703-.769a.5.5 0 0 1 .639.206l1.047 1.814a.5.5 0 0 1-.14.656l-1.517 1.09a5.026 5.026 0 0 1 0 1.694l1.516 1.09a.5.5 0 0 1 .141.656l-1.047 1.814a.5.5 0 0 1-.639.206l-1.703-.768c-.433.36-.928.649-1.466.847l-.186 1.858a.5.5 0 0 1-.497.45H6.952a.5.5 0 0 1-.497-.45l-.186-1.858a4.993 4.993 0 0 1-1.466-.848l-1.703.769a.5.5 0 0 1-.639-.206l-1.047-1.814a.5.5 0 0 1 .14-.656l1.517-1.09a5.033 5.033 0 0 1 0-1.694l-1.516-1.09a.5.5 0 0 1-.141-.656L2.46 3.593a.5.5 0 0 1 .639-.206l1.703.769c.433-.36.928-.65 1.466-.848l.186-1.858Zm-.177 7.567-.022-.037a2 2 0 0 1 3.466-1.997l.022.037a2 2 0 0 1-3.466 1.997Z" clip-rule="evenodd"/></svg>
         Settings
       </button>
       <button type="button" id="themeToggleBtn" onclick="toggleSteepTheme()" class="nav-foot-btn flex items-center gap-2.5 w-full px-3 py-2 rounded-lg text-slate-500 hover:text-slate-300" title="Toggle Steep light / dark">
-        <span id="themeIcon" class="w-4 text-center">☾</span>
+        <svg id="themeIconMoon" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M14.438 10.148c.19-.425-.321-.787-.748-.601A5.5 5.5 0 0 1 6.453 2.31c.186-.427-.176-.938-.6-.748a6.501 6.501 0 1 0 8.585 8.586Z"/></svg>
+        <svg id="themeIconSun" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true" hidden><path d="M8 1a.75.75 0 0 1 .75.75v1.5a.75.75 0 0 1-1.5 0v-1.5A.75.75 0 0 1 8 1ZM10.5 8a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0ZM12.95 4.11a.75.75 0 1 0-1.06-1.06l-1.062 1.06a.75.75 0 0 0 1.061 1.062l1.06-1.061ZM15 8a.75.75 0 0 1-.75.75h-1.5a.75.75 0 0 1 0-1.5h1.5A.75.75 0 0 1 15 8ZM11.89 12.95a.75.75 0 0 0 1.06-1.06l-1.06-1.062a.75.75 0 0 0-1.062 1.061l1.061 1.06ZM8 12a.75.75 0 0 1 .75.75v1.5a.75.75 0 0 1-1.5 0v-1.5A.75.75 0 0 1 8 12ZM5.172 11.89a.75.75 0 0 0-1.061-1.062L3.05 11.89a.75.75 0 1 0 1.06 1.06l1.06-1.06ZM4 8a.75.75 0 0 1-.75.75h-1.5a.75.75 0 0 1 0-1.5h1.5A.75.75 0 0 1 4 8ZM4.11 5.172A.75.75 0 0 0 5.173 4.11L4.11 3.05a.75.75 0 1 0-1.06 1.06l1.06 1.06Z"/></svg>
         <span id="themeLabel">Dark</span>
       </button>
-      <button class="nav-foot-btn flex items-center gap-2.5 w-full px-3 py-2 rounded-lg text-slate-500 hover:bg-slate-800 hover:text-slate-300">
-        <svg class="w-4 h-4" viewBox="0 0 16 16" fill="none"><path d="M2 8h12M9 3l5 5-5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <button type="button" class="nav-foot-btn flex items-center gap-2.5 w-full px-3 py-2 rounded-lg text-slate-500 hover:bg-slate-800 hover:text-slate-300">
+        <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M2 4.75A2.75 2.75 0 0 1 4.75 2h3a2.75 2.75 0 0 1 2.75 2.75v.5a.75.75 0 0 1-1.5 0v-.5c0-.69-.56-1.25-1.25-1.25h-3c-.69 0-1.25.56-1.25 1.25v6.5c0 .69.56 1.25 1.25 1.25h3c.69 0 1.25-.56 1.25-1.25v-.5a.75.75 0 0 1 1.5 0v.5A2.75 2.75 0 0 1 7.75 14h-3A2.75 2.75 0 0 1 2 11.25v-6.5Zm9.47.47a.75.75 0 0 1 1.06 0l2.25 2.25a.75.75 0 0 1 0 1.06l-2.25 2.25a.75.75 0 1 1-1.06-1.06l.97-.97H5.25a.75.75 0 0 1 0-1.5h7.19l-.97-.97a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd"/></svg>
         Sign out
       </button>
     </div>
@@ -2711,7 +3605,10 @@ html.dark .jh-asst-send { background: var(--st-peach); color: var(--st-sienna); 
                 <div class="flex-1 min-w-[220px]">
                   <div class="flex items-start justify-between gap-3 mb-1">
                     <div class="min-w-0">
-                      <h1 class="st-h1 mb-1">Find jobs fast</h1>
+                      <div class="flex items-center gap-1.5 mb-1">
+                        <h1 class="st-h1 mb-0">Find jobs fast</h1>
+                        <button type="button" class="jh-need" data-jh-need="browse" aria-label="What Browse search needs"></button>
+                      </div>
                       <div class="text-[12px] text-slate-400 mb-3">Search by title, skill, or company, then use the tabs below to narrow it down.</div>
                     </div>
                     <div id="browsePieMini" class="jh-activity-rings" title="Workplace mix for current filters">
@@ -2752,7 +3649,7 @@ html.dark .jh-asst-send { background: var(--st-peach); color: var(--st-sienna); 
                       </div>
                     </div>
                   </div>
-                  <div class="flex gap-2 items-center">
+                    <div class="flex gap-2 items-center">
                     <div class="relative flex-1 min-w-0">
                       <svg class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 w-4 h-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z" clip-rule="evenodd"/></svg>
                       <input id="srchIn" type="text" placeholder="Search jobs, skills, companies..."
@@ -2950,28 +3847,46 @@ html.dark .jh-asst-send { background: var(--st-peach); color: var(--st-sienna); 
 
     <!-- ════ APPLY ════ -->
     <div class="screen hidden flex-1 flex flex-col overflow-hidden" id="s-apply">
-      <div class="h-11 flex-shrink-0 border-b border-slate-800 flex items-center px-5 gap-2 bg-slate-900/70">
-        <span class="st-kicker">Apply</span>
-        <div class="ml-auto flex items-center gap-2">
-          <button id="applyRefreshBtn" class="jh-apply-btn" type="button">Refresh</button>
-          <button id="applyScanBtn" class="jh-apply-btn is-primary" type="button">Check for replies</button>
+      <div class="jh-apply-runbar" id="applyRunBar">
+        <div class="jh-apply-runbar-lead">
+          <span class="st-kicker">Apply</span>
+          <button type="button" class="jh-need" data-jh-need="apply_start" aria-label="What Apply Start needs"></button>
+          <span id="applyDryBadge" class="jh-apply-mode-badge is-dry">DRY_RUN: not submitting</span>
         </div>
+        <div class="jh-apply-runbar-meta" aria-live="polite">
+          <span id="applyRunAgent" class="jh-apply-run-stat jh-apply-run-agent">Idle</span>
+          <span id="applyRunTokens" class="jh-apply-run-stat" title="0 tokens">0</span>
+          <span id="applyRunElapsed" class="jh-apply-run-stat">00:00</span>
+        </div>
+        <div class="jh-apply-runbar-dots" id="applyRunDots" aria-label="Tokens this run by agent"></div>
+        <div class="jh-apply-runbar-actions">
+          <button id="applyRunStartBtn" class="jh-apply-btn is-primary" type="button">Start</button>
+          <button id="applyRunPauseBtn" class="jh-apply-btn" type="button" disabled>Pause</button>
+          <button id="applyRunStopBtn" class="jh-apply-btn" type="button" disabled>Stop</button>
+          <button id="applyRefreshBtn" class="jh-apply-btn" type="button">Refresh</button>
+          <div class="jh-need-cluster">
+            <button id="applyScanBtn" class="jh-apply-btn" type="button">Check for replies</button>
+            <button type="button" class="jh-need" data-jh-need="apply_replies" aria-label="What Check for replies needs"></button>
+          </div>
+        </div>
+        <p id="applyLiveWarn" class="jh-apply-runbar-warn hidden">LIVE: can submit. Pause is available if you need to stop LLM calls.</p>
+        <p id="applyRunMsg" class="jh-apply-runbar-msg" hidden></p>
       </div>
       <div class="jh-apply-wrap">
         <div class="jh-apply-main">
           <h1 class="st-h1 mb-1">Your application queue</h1>
-          <div class="text-[12px] text-slate-500 mb-4">Jobs you queue from Browse land here. Each one moves left to right as Robin tailors it, submits it, and picks up the reply.</div>
+          <div class="text-[12px] text-slate-500 mb-4">Start finds jobs and works the queue. Queue extras from Browse if you want those first. Click a stage tile to open it. Drag a card onto any stage.</div>
 
           <!-- The flow, stated once so the page explains itself. -->
           <ol class="jh-apply-flow" aria-label="How a job reaches this page">
-            <li><span class="jh-apply-flow-n">1</span><span><b>Browse</b> — search and open a job</span></li>
-            <li><span class="jh-apply-flow-n">2</span><span><b>Queue it</b> — you decide what Robin works on</span></li>
-            <li><span class="jh-apply-flow-n">3</span><span><b>Track</b> — progress and replies show up here</span></li>
+            <li><span class="jh-apply-flow-n">1</span><span><b>Start</b> finds jobs and works the queue</span></li>
+            <li><span class="jh-apply-flow-n">2</span><span><b>Queue</b> from Browse is optional, not required</span></li>
+            <li><span class="jh-apply-flow-n">3</span><span><b>Track</b> progress and replies here</span></li>
           </ol>
 
           <div id="applySampleBanner" class="jh-apply-sample-banner hidden">
             <span class="jh-apply-sample-tag">Sample</span>
-            <span class="jh-apply-sample-copy">Nothing below is real — it is a preview of how a queued job moves through the board. Nothing was written to your database.</span>
+            <span class="jh-apply-sample-copy">Nothing below is real. It is a preview of how a queued job moves through the board. Nothing was written to your database.</span>
             <button class="jh-apply-btn" id="applySampleExit" type="button">Clear sample</button>
           </div>
 
@@ -3209,7 +4124,7 @@ html.dark .jh-asst-send { background: var(--st-peach); color: var(--st-sienna); 
               </button>
               <div class="section-body closed border-t border-slate-800" id="ps-aq">
                 <div class="px-5 py-4 space-y-3">
-                  <p class="text-[12.5px] text-slate-500 leading-relaxed">JobHunter never invents salary, years, work auth, or sponsorship. Set real values under Settings > Apply autofill, or leave blank so Apply skips those fields.</p>
+                  <p class="text-[12.5px] text-slate-500 leading-relaxed">Robin never invents salary, years, work auth, or sponsorship. Set real values under Settings > Apply autofill, or leave blank so Apply skips those fields.</p>
                   <button type="button" onclick="nav('settings')" class="st-btn-ghost">Open Apply autofill</button>
                 </div>
               </div>
@@ -3305,7 +4220,10 @@ html.dark .jh-asst-send { background: var(--st-peach); color: var(--st-sienna); 
           </div>
 
           <div class="st-mist-card space-y-3 lg:col-span-2">
-            <div class="text-[13px] font-semibold text-slate-100">Test controls</div>
+            <div class="flex items-center gap-1.5">
+              <div class="text-[13px] font-semibold text-slate-100">Test controls</div>
+              <button type="button" class="jh-need" data-jh-need="linkedin" aria-label="What LinkedIn Lab needs"></button>
+            </div>
             <p class="text-[12px] text-slate-500">Runs only the LinkedIn agent chain (Scout → Bot-check → Fit → Tailor → Cover → Compile → Easy / External → Log).</p>
             <div class="flex flex-wrap gap-2">
               <button onclick="startLiLoop()" id="liStartBtn" class="st-btn-primary">Start LI section</button>
@@ -3362,6 +4280,7 @@ html.dark .jh-asst-send { background: var(--st-peach); color: var(--st-sienna); 
     <div class="screen hidden flex-1 flex flex-col overflow-hidden" id="s-knowledge">
       <div class="h-11 flex-shrink-0 border-b border-slate-800 flex items-center px-5 gap-2 bg-slate-900/70">
         <span class="st-kicker">Knowledge Graph</span>
+        <button type="button" class="jh-need" data-jh-need="kg_pulse" aria-label="What Market Pulse needs"></button>
         <div class="flex-1"></div>
         <span class="text-[11px] text-slate-500">Individual · career reality check</span>
       </div>
@@ -3446,8 +4365,13 @@ html.dark .jh-asst-send { background: var(--st-peach); color: var(--st-sienna); 
               <div class="kg-insights" id="kgInsights">
                 <div class="kg-insights-head">
                   <span class="kg-insights-title">Career Intelligence</span>
-                  <button type="button" class="st-btn-ghost text-[12px]" id="kgRedoOnboarding" title="Redo the career onboarding questions">Redo onboarding</button>
-                  <button type="button" class="st-btn-ghost text-[12px]" id="kgAnalyzeBtn">Analyze</button>
+                  <div class="kg-insights-actions">
+                    <button type="button" class="st-btn-ghost text-[12px]" id="kgRedoOnboarding" title="Redo the career onboarding questions">Redo onboarding</button>
+                    <div class="jh-need-cluster">
+                      <button type="button" class="st-btn-ghost text-[12px]" id="kgAnalyzeBtn">Analyze</button>
+                      <button type="button" class="jh-need" data-jh-need="kg_analyze" aria-label="What Analyze needs"></button>
+                    </div>
+                  </div>
                 </div>
                 <div class="kg-insights-body" id="kgInsightsBody">
                   <p class="kg-insights-empty">Open this page to see your reality check. Analyze deepens the brief.</p>
@@ -3474,16 +4398,46 @@ html.dark .jh-asst-send { background: var(--st-peach); color: var(--st-sienna); 
             <section class="kg-pane-right" aria-label="Interactive knowledge graph">
               <div class="kg-graph-wrap" id="kgGraphWrap">
                 <canvas id="kgCanvas"></canvas>
-                <div class="kg-legend">
-                  <span class="kg-leg-item kg-leg-skill">Skill</span>
-                  <span class="kg-leg-item kg-leg-role">Role</span>
-                  <span class="kg-leg-item kg-leg-company">Company</span>
-                  <span class="kg-leg-item kg-leg-opp">Opportunity</span>
-                  <span class="kg-leg-item kg-leg-edu">Education</span>
-                  <span class="kg-leg-item kg-leg-gap">Gap</span>
-                  <span class="kg-leg-item kg-leg-band">Pay band</span>
+                <div class="kg-graph-toolbar">
+                  <input type="search" id="kgNodeSearch" class="kg-graph-search" placeholder="Filter nodes" autocomplete="off" spellcheck="false">
+                  <button type="button" class="kg-graph-toggle is-on" id="kgHideSmall" aria-pressed="true">Noticeable only</button>
+                  <button type="button" class="kg-graph-toggle" id="kgHiddenBtn" hidden>Hidden</button>
                 </div>
+                <div class="kg-imp-filters" role="group" aria-label="Importance">
+                  <button type="button" class="kg-imp-btn is-on" data-imp="risk">Risk</button>
+                  <button type="button" class="kg-imp-btn is-on" data-imp="potential">Potential</button>
+                  <button type="button" class="kg-imp-btn is-on" data-imp="normal">Normal</button>
+                </div>
+                <div class="kg-legend" id="kgTypeFilters">
+                  <button type="button" class="kg-leg-item kg-leg-skill is-on" data-kg-type="skill">Skill</button>
+                  <button type="button" class="kg-leg-item kg-leg-role is-on" data-kg-type="role">Role</button>
+                  <button type="button" class="kg-leg-item kg-leg-company is-on" data-kg-type="company">Company</button>
+                  <button type="button" class="kg-leg-item kg-leg-opp is-on" data-kg-type="opp">Opportunity</button>
+                  <button type="button" class="kg-leg-item kg-leg-edu is-on" data-kg-type="edu">Education</button>
+                  <button type="button" class="kg-leg-item kg-leg-gap is-on" data-kg-type="gap">Gap</button>
+                  <button type="button" class="kg-leg-item kg-leg-band is-on" data-kg-type="band">Pay band</button>
+                </div>
+                <p class="kg-graph-empty" id="kgGraphEmpty" hidden>No nodes match these filters.</p>
                 <div class="kg-node-tooltip" id="kgNodeTooltip" hidden></div>
+                <div class="kg-node-card" id="kgNodeCard" hidden>
+                  <div class="kg-node-card-head">
+                    <span class="kg-node-tag" id="kgNodeCardTag" aria-hidden="true"></span>
+                    <strong id="kgNodeCardTitle"></strong>
+                    <button type="button" class="kg-node-card-close" id="kgNodeCardClose" aria-label="Close">×</button>
+                  </div>
+                  <p class="kg-node-card-meta" id="kgNodeCardMeta"></p>
+                  <p class="kg-node-card-note" id="kgNodeCardNote"></p>
+                  <div class="kg-node-card-actions">
+                    <button type="button" class="st-btn-ghost text-[12px]" id="kgNodeCardHide">Hide from graph</button>
+                  </div>
+                </div>
+                <div class="kg-hidden-panel" id="kgHiddenPanel" hidden>
+                  <div class="kg-hidden-panel-head">
+                    <span>Hidden nodes</span>
+                    <button type="button" class="kg-node-card-close" id="kgHiddenPanelClose" aria-label="Close hidden list">×</button>
+                  </div>
+                  <div class="kg-hidden-panel-list" id="kgHiddenList"></div>
+                </div>
                 <div class="kg-role-picker" id="kgRolePicker" hidden>
                   <div class="kg-role-picker-head">
                     <span id="kgRolePickerTitle">Choose role</span>
@@ -3505,6 +4459,7 @@ html.dark .jh-asst-send { background: var(--st-peach); color: var(--st-sienna); 
                   <div class="kg-tf-body" id="kgTfBody"></div>
                   <div class="kg-tf-actions" id="kgTfActions">
                     <button type="button" class="kg-tf-ok" id="kgTfOk">OK</button>
+                    <button type="button" class="kg-tf-skip" id="kgTfSkip" hidden>Skip</button>
                     <span class="kg-tf-enter" id="kgTfEnterHint">press Enter ↵</span>
                   </div>
                 </div>
@@ -3529,6 +4484,12 @@ html.dark .jh-asst-send { background: var(--st-peach); color: var(--st-sienna); 
 
     <!-- ════ CANVAS (iframe — lazy-loaded to avoid freezing on startup) ════ -->
     <div class="screen hidden flex-1 flex flex-col overflow-hidden" id="s-canvas">
+      <div class="h-11 flex-shrink-0 border-b border-slate-800 flex items-center px-5 gap-2 bg-slate-900/70">
+        <span class="st-kicker">Canvas</span>
+        <button type="button" class="jh-need" data-jh-need="canvas" aria-label="What Canvas needs"></button>
+        <div class="flex-1"></div>
+        <span class="text-[11px] text-slate-500">Live graph · keys live in Settings</span>
+      </div>
       <iframe id="canvasFrame" src="" title="Robin Canvas"></iframe>
     </div>
 
@@ -3555,6 +4516,7 @@ html.dark .jh-asst-send { background: var(--st-peach); color: var(--st-sienna); 
             <div>
               <div class="text-[12.5px] text-slate-300">AutoFix</div>
               <div id="setAutofixHint" class="text-[11px] text-slate-500">Always on while Robin is in use</div>
+              <span class="jh-need-usedby">Uses the Gemini API key for allowlisted patches. Paste Gemini under API keys below.</span>
             </div>
             <span id="setAutofixBadge" class="text-[11px] font-semibold text-emerald-400 bg-emerald-950/40 border border-emerald-900/50 px-2 py-0.5 rounded">ON</span>
           </div>
@@ -3562,39 +4524,45 @@ html.dark .jh-asst-send { background: var(--st-peach); color: var(--st-sienna); 
 
         <div class="st-mist-card space-y-3">
           <div class="text-[13.5px] font-semibold text-slate-100">API keys and connections</div>
-          <p class="text-[12px] text-slate-500 leading-relaxed">Bring your own keys. Values save to local gitignored <code class="text-slate-400">.env</code> only. Secrets are never shown after save.</p>
+          <p class="text-[12px] text-slate-500 leading-relaxed">Bring your own keys. Values save to local gitignored <code class="text-slate-400">.env</code> only. Secrets are never shown after save. On Apply, Browse, LinkedIn Lab, Knowledge Graph, and Canvas, tap the solid ? to see which of these a feature uses, then fill it here.</p>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div class="st-field-wrap">
+            <div class="st-field-wrap" id="set-gemini">
               <label class="st-field-label" for="setKeyGemini">Gemini API key</label>
               <input id="setKeyGemini" type="password" autocomplete="off" placeholder="Paste key or leave blank if set" class="st-field">
               <span id="setKeyGeminiStatus" class="text-[11px] text-slate-500">…</span>
+              <span class="jh-need-usedby">Used by Apply Start (Score, Tailor, Cover, Humanize, Compile), Knowledge Graph Analyze, Canvas chat, and AutoFix.</span>
             </div>
-            <div class="st-field-wrap">
+            <div class="st-field-wrap" id="set-groq">
               <label class="st-field-label" for="setKeyGroq">Groq API key</label>
               <input id="setKeyGroq" type="password" autocomplete="off" placeholder="Paste key or leave blank if set" class="st-field">
               <span id="setKeyGroqStatus" class="text-[11px] text-slate-500">…</span>
+              <span class="jh-need-usedby">Used by Apply Start (Scout, Screen, Apply, Log), LinkedIn Lab, and as Gemini fallback.</span>
             </div>
-            <div class="st-field-wrap">
+            <div class="st-field-wrap" id="set-serp">
               <label class="st-field-label" for="setKeySerp">SerpAPI key</label>
               <input id="setKeySerp" type="password" autocomplete="off" placeholder="Optional Google Jobs + Market Pulse" class="st-field">
               <span id="setKeySerpStatus" class="text-[11px] text-slate-500">…</span>
+              <span class="jh-need-usedby">Used by Browse (Google Jobs, optional) and Knowledge Graph Market Pulse.</span>
             </div>
-            <div class="st-field-wrap">
+            <div class="st-field-wrap" id="set-sheet">
               <label class="st-field-label" for="setSheetId">Master Sheet ID</label>
               <input id="setSheetId" type="text" autocomplete="off" placeholder="Google Sheet ID" class="st-field">
+              <span class="jh-need-usedby">Used by Apply Log (and LinkedIn Lab Log) to write rows to Google Sheets.</span>
             </div>
-            <div class="st-field-wrap sm:col-span-2">
+            <div class="st-field-wrap sm:col-span-2" id="set-drive">
               <label class="st-field-label" for="setDriveId">Google Drive folder ID</label>
               <input id="setDriveId" type="text" autocomplete="off" placeholder="Drive folder ID" class="st-field">
+              <span class="jh-need-usedby">Used by Apply Compile to upload tailored resume PDFs.</span>
             </div>
           </div>
-          <div class="flex flex-wrap items-center gap-3 pt-1 text-[12px]">
+          <div class="pt-1 text-[12px]" id="set-oauth">
             <span id="setOauthStatus" class="text-slate-400">Google OAuth: …</span>
+            <span class="jh-need-usedby">Used by Drive PDF upload, Google Docs cover letters, Sheets Log, and Gmail. Place <code class="text-slate-400">google-oauth-client.json</code> (Desktop OAuth client) in the project folder, then Reload. Connect Gmail below for reply detection.</span>
           </div>
         </div>
 
         <!-- Gmail: the only thing that turns replies into pipeline status. -->
-        <div class="st-mist-card space-y-3">
+        <div class="st-mist-card space-y-3" id="set-gmail">
           <div class="flex items-start justify-between gap-3 flex-wrap">
             <div class="min-w-0">
               <div class="text-[13.5px] font-semibold text-slate-100">Gmail replies</div>
@@ -3602,6 +4570,7 @@ html.dark .jh-asst-send { background: var(--st-peach); color: var(--st-sienna); 
                 Lets Apply read recruiter replies and move a card from Applied to Replied on its own.
                 Interviews, offers, and rejections still wait for you to confirm them.
               </p>
+              <span class="jh-need-usedby">Used by Apply Check for replies. Optional. The board works without it.</span>
             </div>
             <span id="setGmailStatus" class="jh-gmail-pill is-unknown">Gmail: …</span>
           </div>
@@ -3685,13 +4654,14 @@ html.dark .jh-asst-send { background: var(--st-peach); color: var(--st-sienna); 
           </div>
         </div>
 
-        <div class="st-mist-card space-y-3">
+        <div class="st-mist-card space-y-3" id="set-browser">
           <div class="text-[13.5px] font-semibold text-slate-100">Browser / LinkedIn</div>
           <div class="st-field-wrap max-w-xs">
             <label class="st-field-label" for="setLoginWait">Login wait (seconds)</label>
             <input id="setLoginWait" type="number" min="60" max="3600" class="st-field" placeholder="600">
           </div>
           <div id="setBrowserHint" class="text-[12px] text-slate-500">browser-session/: …</div>
+          <span class="jh-need-usedby">Used by LinkedIn Lab and live Apply submits. Chrome stays open on a login wall so you can sign in.</span>
         </div>
 
       </div>
@@ -3838,7 +4808,7 @@ const SOURCE_LABELS = {
   himalayas:'Himalayas', themuse:'The Muse', freehire:'Freehire', rise:'Rise',
   fourdayweek:'4 Day Week', github:'GitHub', hn:'Hacker News', reddit:'Reddit',
 };
-const DEFAULT_SOURCES = ['greenhouse','lever','ashby','remoteok','remotive','jobicy','arbeitnow','himalayas','themuse','github','hn'];
+const DEFAULT_SOURCES = ['greenhouse','lever','ashby','workable','remoteok','remotive','jobicy','arbeitnow','himalayas','workingnomads','themuse','freehire','rise','fourdayweek','github','hn','serpapi'];
 const GROUP_LABELS = { ats:'Company ATS', open:'Open APIs', community:'Community' };
 let SOURCE_CATALOG_UI = [];
 
@@ -5304,7 +6274,19 @@ function nav(s, opts){
     refreshResumePreview();
   }
   if(screenId==='settings'){
-    loadSettings();
+    const loadP = loadSettings();
+    const focusId = options.focus;
+    if(focusId){
+      Promise.resolve(loadP).then(function(){
+        const el = document.getElementById(focusId);
+        if(!el) return;
+        el.scrollIntoView({ block:'center', behavior:'smooth' });
+        el.classList.add('jh-need-flash');
+        const field = el.querySelector('input, select, textarea, button.jh-apply-btn, button.st-btn-primary') || el;
+        try { if(field && field.focus) field.focus({ preventScroll:true }); } catch(_e){}
+        setTimeout(function(){ el.classList.remove('jh-need-flash'); }, 1600);
+      });
+    }
   }
   if(screenId==='browse'){
     refreshQueuedKeys().then(()=>{
@@ -5322,6 +6304,9 @@ function nav(s, opts){
   if(screenId==='apply' && window.__jhApply){
     window.__jhApply.load();
   }
+  if(screenId==='apply' && window.__jhApplyRun && typeof window.__jhApplyRun.refresh === 'function'){
+    window.__jhApplyRun.refresh();
+  }
   document.querySelectorAll('.nav-item[data-s]').forEach(b=>{
     const on=b.dataset.s===screenId;
     b.classList.toggle('nav-active',on);
@@ -5334,6 +6319,46 @@ function nav(s, opts){
   });
 }
 document.querySelectorAll('.nav-item[data-s]').forEach(b=>b.addEventListener('click',()=>nav(b.dataset.s)));
+
+function buildMainPlan(){
+  const order = (typeof PIPELINE_META !== 'undefined'
+    && PIPELINE_META.loops
+    && Array.isArray(PIPELINE_META.loops.main))
+    ? PIPELINE_META.loops.main.slice()
+    : [];
+  const byId = {};
+  const agents = (typeof AGENTS !== 'undefined' && Array.isArray(AGENTS)) ? AGENTS : [];
+  agents.forEach(a => { if(a && a.id) byId[a.id] = a; });
+  const ids = order.filter(id => byId[id] && !String(id).toLowerCase().startsWith('linkedin'));
+  const nodes = ids.map(id => {
+    const a = byId[id];
+    return {
+      id: a.id,
+      kind: 'pipeline',
+      short: a.short || a.id,
+      role: a.role || a.id,
+      goal: a.goal || '',
+      backstory: a.backstory || '',
+      description: a.description || '',
+      expected_output: a.expected_output || '',
+      llm: a.llm || 'groq/llama-3.1-8b-instant',
+      fallback_llm: a.fallback_llm || '',
+      max_iter: a.max_iter != null ? a.max_iter : 3,
+      max_rpm: a.max_rpm != null ? a.max_rpm : 2,
+      summary: a.summary || '',
+      pipeline_key: a.taskId || null,
+      taskId: a.taskId || null,
+    };
+  });
+  return {
+    trigger: null,
+    nodes,
+    order: ids,
+    inLoopIds: ids.slice(),
+    skipped: [],
+    triggers: [],
+  };
+}
 
 function buildLiPlan(){
   const agents = (typeof LI_AGENTS !== 'undefined' && Array.isArray(LI_AGENTS)) ? LI_AGENTS : [];
@@ -5521,20 +6546,315 @@ function saveLiUrlNote(){
   showT(v.trim() ? 'LinkedIn URL saved for lab notes' : 'Cleared');
 }
 
-// Onboarding
-document.getElementById('obUpCard').addEventListener('click',()=>{ document.getElementById('rfTrigger').classList.remove('hidden'); document.getElementById('rfInput').click(); });
-document.getElementById('rfInput').addEventListener('change',function(){
-  if(this.files&&this.files[0]){
-    pendingResumeFile = this.files[0];
-    document.getElementById('rfName').textContent=this.files[0].name;
-    document.getElementById('rfTrigger').classList.add('hidden');
-    document.getElementById('rfPreview').classList.remove('hidden');
-    document.getElementById('obContBtn').classList.remove('hidden');
-    document.getElementById('obUpCard').classList.add('border-indigo-500/60');
+// ── Onboarding: the front-door question flow ────────────────────────────
+// Runs the SAME questions as the Knowledge Graph typeform (pulled from
+// knowledge-graph.js via getOnboardingSpec, so there is only one copy), but
+// as the front door, under the branch hero — every answer grows the branch
+// via window.robinSetOnboardingProgress().
+(function(){
+  const flow    = document.getElementById('obFlow');
+  const elCount = document.getElementById('obStepCount');
+  const elQ     = document.getElementById('obQ');
+  const elWhy   = document.getElementById('obWhy');
+  const elChoices = document.getElementById('obChoices');
+  const elText  = document.getElementById('obText');
+  const elSkip  = document.getElementById('obSkip');
+  const elBack  = document.getElementById('obBack');
+  const elNext  = document.getElementById('obNext');
+  const elUpload= document.getElementById('obUpload');
+  const elDrop  = document.getElementById('obDrop');
+  const elFile  = document.getElementById('obFile');
+  const elFileName = document.getElementById('rfName');
+  const fileInput  = document.getElementById('rfInput');
+  const title   = document.getElementById('obTitle');
+  const subtitle= document.getElementById('obSubtitle');
+  if(!flow) return;
+
+  const KG = () => window.__jhKnowledgeGraph;
+  const answers = {};      // id -> value(s)
+  let steps = [];
+  let idx = 0;
+  let selected = null;     // current single selection
+  let multiSel = [];       // current multi selection
+
+  // Fallback if knowledge-graph.js failed to load — the flow still runs, it
+  // just asks the three routing questions rather than the full set.
+  const FALLBACK = {
+    personaChoices: [
+      { id:'climb', label:'Climb', sub:'Grow in my current path' },
+      { id:'pivot', label:'Pivot', sub:'Change direction' },
+      { id:'urgent', label:'Urgent', sub:'Job loss or income gap' },
+      { id:'explore', label:'Explore', sub:'Not sure yet' },
+    ],
+    urgencyChoices: [
+      { id:'now', label:'Now', sub:'Weeks matter' },
+      { id:'soon', label:'Soon', sub:'This quarter' },
+      { id:'later', label:'Later', sub:'Just exploring' },
+    ],
+    priorityChoices: [
+      { id:'pay', label:'More money' },
+      { id:'challenge', label:'A real stretch' },
+      { id:'stability', label:'Something stable' },
+      { id:'flexibility', label:'Control over where I work' },
+    ],
+    priorityTitle: 'Right now, what matters most?',
+    priorityWhy: 'Decides which read of your graph opens first.',
+    backbone: [],
+  };
+  function spec(persona){
+    try{
+      const kg = KG();
+      if(kg && kg.getOnboardingSpec) return kg.getOnboardingSpec(persona);
+    }catch(e){}
+    return FALLBACK;
   }
-});
-document.getElementById('obSkipCard').addEventListener('click',()=>enterApp(false));
-document.getElementById('obContBtn').addEventListener('click',()=>enterApp(true));
+
+  // Persona changes the ORDER and wording of the backbone, never which
+  // questions survive (that's decided by what the resume already answered).
+  // So the count is stable from step 1 if we build with a default persona up
+  // front — reserving fixed slots instead made the total jump 12 -> 5 the
+  // moment a resume was present.
+  function buildSteps(){
+    const s = spec(answers.persona || 'explore');
+    const list = [
+      { type:'upload', id:'resume',
+        q:'Start with your resume?',
+        why:"We read it and fill in what we can, so we ask you less." },
+      { type:'mcq', id:'persona', q:'What are you here to do?',
+        why:'This shapes which questions we ask first.', choices:s.personaChoices },
+      { type:'mcq', id:'urgency', q:'How soon does this matter?',
+        why:'Pacing only. You can still explore calmly.', choices:s.urgencyChoices },
+      { type:'mcq', id:'priority', q:s.priorityTitle, why:s.priorityWhy, choices:s.priorityChoices },
+    ];
+    const why = s.whyAsk || {};
+    (s.backbone || []).forEach(b => list.push({
+      type:'mcq', id:b.id, q:b.title,
+      // prefer the stable why-ask line: the doc-derived subtitle echoes parsed
+      // values ("From docs: about $500,000") that don't support the question
+      why: why[b.id] || b.sub,
+      choices:b.choices, multi:b.multi, allowText:b.allowText, required:b.required,
+    }));
+    // the old subtitle repeated the second option's own sub-label verbatim
+    list.push({ type:'mcq', id:'market', q:'Factor in live market signals?',
+      why:'Optional, and off by default.',
+      choices:[
+        { id:'off', label:'No thanks' },
+        { id:'on',  label:'Yes, include market pulse' },
+      ], last:true });
+    return list;
+  }
+
+  function setProgress(){
+    if(typeof window.robinSetOnboardingProgress === 'function'){
+      window.robinSetOnboardingProgress(steps.length ? idx / steps.length : 0);
+    }
+  }
+
+  function render(){
+    const st = steps[idx];
+    if(!st) return finish();
+
+    selected = answers[st.id] != null && !st.multi ? answers[st.id] : null;
+    multiSel = st.multi && Array.isArray(answers[st.id]) ? answers[st.id].slice() : [];
+
+    elCount.textContent = `Step ${idx + 1} of ${steps.length}`;
+    elQ.textContent = st.q;
+    elWhy.textContent = st.why || '';
+    elWhy.hidden = !st.why;
+
+    elUpload.hidden = st.type !== 'upload';
+    elChoices.innerHTML = '';
+    // 5+ options get two rows; anything shorter stays on one line
+    elChoices.classList.toggle('wrap2', (st.choices || []).length >= 5);
+    elText.hidden = true;
+    elText.value = '';
+
+    if(st.type === 'mcq'){
+      (st.choices || []).forEach(c => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'ob-choice';
+        b.innerHTML = c.sub
+          ? `${escapeHtml(c.label)}<span class="ob-choice-sub">${escapeHtml(c.sub)}</span>`
+          : escapeHtml(c.label);
+        const on = st.multi ? multiSel.includes(c.id) : selected === c.id;
+        if(on) b.classList.add('sel');
+        b.addEventListener('click', () => {
+          if(st.multi){
+            const i = multiSel.indexOf(c.id);
+            if(i >= 0) multiSel.splice(i,1); else multiSel.push(c.id);
+            b.classList.toggle('sel');
+          } else {
+            selected = c.id;
+            [...elChoices.children].forEach(n => n.classList.remove('sel'));
+            b.classList.add('sel');
+            // No auto-advance: the choice shows its selected state and
+            // Continue confirms it. Advancing on click would make the always
+            // -present Continue button meaningless and skip past the
+            // selection feedback.
+          }
+        });
+        elChoices.appendChild(b);
+      });
+      if(st.allowText){
+        elText.hidden = false;
+        elText.placeholder = 'Or type your own…';
+        if(typeof answers[st.id] === 'string' && !(st.choices||[]).some(c=>c.id===answers[st.id])){
+          elText.value = answers[st.id];
+        }
+      }
+    }
+
+    elSkip.hidden = !!st.required;
+    elBack.hidden = idx === 0;
+    // One primary label everywhere. "OK" vs "Continue" vs "Build my graph"
+    // read as three different commitments for the same action.
+    elNext.textContent = 'Continue';
+    elNext.hidden = false;
+    setProgress();
+  }
+
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, c => (
+      {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]
+    ));
+  }
+
+  function currentValue(){
+    const st = steps[idx];
+    if(!st) return null;
+    if(st.type === 'upload') return pendingResumeFile ? pendingResumeFile.name : null;
+    if(st.multi) return multiSel.length ? multiSel : null;
+    const typed = elText.hidden ? '' : elText.value.trim();
+    if(typed) return typed;
+    return selected;
+  }
+
+  function commit(){
+    const st = steps[idx];
+    if(!st) return;
+    const v = currentValue();
+    if(st.required && !v){
+      elText.hidden = false;
+      elText.focus();
+      return;
+    }
+    if(v != null) answers[st.id] = v;
+    advance();
+  }
+
+  function advance(){
+    const wasPersona = steps[idx] && steps[idx].id === 'persona';
+    idx++;
+    // once persona is known the real backbone replaces the reserved slots
+    if(wasPersona){
+      const keep = idx;
+      steps = buildSteps();
+      idx = keep;
+    }
+    if(idx >= steps.length) return finish();
+    render();
+  }
+
+  async function finish(){
+    setProgressComplete();
+    const hasResume = !!pendingResumeFile;
+    try{
+      const kg = KG();
+      if(kg && kg.saveOnboardingAnswers){
+        // pass the question text so stored answers stay readable, and so the
+        // KG "Analyze" prompt sees real questions rather than bare ids
+        const questions = {};
+        steps.forEach(s => { if(s.id && s.q) questions[s.id] = { question: s.q }; });
+        await kg.saveOnboardingAnswers(answers, { completed: true, questions });
+      }
+    }catch(e){ /* never block the user on a failed save */ }
+    // Let the branch finish growing, then the bird leaves before the screen
+    // does — it exits first, the room empties, and only then do we cross into
+    // the app. Cutting straight to the app would throw away the one moment
+    // the whole entrance was set up to pay off.
+    // Silence FIRST, before the exit animation. Doing it afterwards meant any
+    // path that failed to reach that line (or resolved late) left the ambient
+    // timer armed, and a chirp would arrive 14-40s into the app.
+    if(typeof window.robinQuiet === 'function') window.robinQuiet();
+    await new Promise(r => setTimeout(r, 950));
+    try{
+      if(typeof window.robinFlyAway === 'function') await window.robinFlyAway();
+    }catch(e){}
+    const ob = document.getElementById('ob');
+    ob.style.transition = 'opacity 900ms ease';
+    ob.style.opacity = '0';
+    await new Promise(r => setTimeout(r, 900));
+    enterApp(hasResume);
+    ob.style.opacity = '';           // reset so a re-show isn't invisible
+    ob.style.transition = '';
+  }
+  function setProgressComplete(){
+    if(typeof window.robinSetOnboardingProgress === 'function') window.robinSetOnboardingProgress(1);
+  }
+
+  // ── resume step ──
+  function acceptFile(f){
+    if(!f) return;
+    pendingResumeFile = f;
+    elFileName.textContent = f.name;
+    elFile.hidden = false;
+    elDrop.querySelector('.ob-drop-main').textContent = 'Choose a different file';
+    // Skip stays "Skip" — relabelling it to "Continue" put two Continues on
+    // screen and made the two CTAs indistinguishable.
+  }
+  elDrop.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', function(){
+    if(this.files && this.files[0]) acceptFile(this.files[0]);
+  });
+  ['dragenter','dragover'].forEach(ev => elDrop.addEventListener(ev, e => {
+    e.preventDefault(); elDrop.classList.add('drag');
+  }));
+  ['dragleave','drop'].forEach(ev => elDrop.addEventListener(ev, e => {
+    e.preventDefault(); elDrop.classList.remove('drag');
+  }));
+  elDrop.addEventListener('drop', e => {
+    const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+    if(f) acceptFile(f);
+  });
+
+  elSkip.addEventListener('click', () => {
+    const st = steps[idx];
+    if(st && st.type === 'upload' && pendingResumeFile){ commit(); return; }
+    advance();
+  });
+  elNext.addEventListener('click', commit);
+  elBack.addEventListener('click', () => { if(idx > 0){ idx--; render(); } });
+  elText.addEventListener('keydown', e => { if(e.key === 'Enter'){ e.preventDefault(); commit(); } });
+
+  // start — knowledge-graph.js is a classic script loaded near the end of the
+  // document, so window.__jhKnowledgeGraph does NOT exist when this inline
+  // script runs. Building immediately silently used the fallback set, which
+  // is what made the step count jump from 5 to 12 mid-flow. Wait for the
+  // module (briefly, then give up and use the fallback for real).
+  function whenKgReady(timeoutMs){
+    return new Promise(resolve => {
+      const t0 = Date.now();
+      (function poll(){
+        if(KG() && KG().getOnboardingSpec) return resolve(true);
+        if(Date.now() - t0 > timeoutMs) return resolve(false);
+        setTimeout(poll, 50);
+      })();
+    });
+  }
+  (async function init(){
+    await whenKgReady(4000);
+    try{
+      const kg = KG();
+      if(kg && kg.isOnboardingComplete) await kg.isOnboardingComplete();
+    }catch(e){}
+    steps = buildSteps();
+    title.textContent = 'Welcome to Robin';
+    subtitle.textContent = 'A few quick questions — the branch fills in as you go.';
+    flow.hidden = false;
+    render();
+  })();
+})();
 
 let PROFILE_SKILLS = [];
 let PROFILE_EXPERIENCE = [];
@@ -6513,10 +7833,32 @@ async function parseResumeFile(file, btn){
   }
 }
 
+function toKgResumeParsed(data){
+  // Knowledge Graph onboarding's skip-if-known logic (gatherDocIntel() in
+  // knowledge-graph.js) expects flat {skills, roles, companies, education,
+  // years} — Profile's parse response nests these inside experience[]/
+  // education[] objects instead, so adapt rather than assume the shapes match.
+  const experience = Array.isArray(data.experience) ? data.experience : [];
+  const education = Array.isArray(data.education) ? data.education : [];
+  return {
+    skills: Array.isArray(data.skills) ? data.skills : [],
+    roles: experience.map((e) => e && e.title).filter(Boolean),
+    companies: experience.map((e) => e && e.company).filter(Boolean),
+    education: education
+      .map((e) => {
+        if (typeof e === 'string') return e;
+        return [e && e.degree, e && e.school].filter(Boolean).join(' ');
+      })
+      .filter(Boolean),
+    years: 0,
+  };
+}
+
 async function applyResumeUpload(file, btn, toastPrefix){
   if(!file) return false;
   const data = await parseResumeFile(file, btn);
   if(!(data && parsedProfileHasFields(data))) return false;
+  window.__kgResumeData = { parsed: toKgResumeParsed(data) };
   const score = applyParsedProfile(data);
   if(_resumeFileIsPdf(file)){
     _resumePreviewServerOk = true;
@@ -6535,13 +7877,21 @@ async function applyResumeUpload(file, btn, toastPrefix){
 }
 
 async function enterApp(resume){
+  // Backstop: the bird belongs to the onboarding screen, so it must be silent
+  // by the time the app is up — whichever route got us here.
+  if(typeof window.robinQuiet === 'function') window.robinQuiet();
   document.getElementById('ob').style.display='none';
   const app=document.getElementById('app');
   app.classList.remove('hidden'); app.style.display='flex';
-  try{ localStorage.setItem('jh-onboarded', '1'); }catch(_e){}
 
-  // Land on the intended screen first; never force-nav after async job loads.
-  const landing = resume ? 'profile' : readStoredScreen();
+  // First-time users (career onboarding not completed yet) land on the
+  // Knowledge Graph tab, which opens its own question flow automatically
+  // via KnowledgeGraph.show() -> startOnboarding(). Returning users keep
+  // the existing landing logic untouched.
+  const onboarded = window.__jhKnowledgeGraph
+    ? await window.__jhKnowledgeGraph.isOnboardingComplete().catch(() => true)
+    : true;
+  const landing = !onboarded ? 'knowledge' : (resume ? 'profile' : readStoredScreen());
   nav(landing);
 
   // Parse + fill Profile before Browse job fetch (jobs can hang for minutes).
@@ -6576,10 +7926,7 @@ async function enterApp(resume){
 }
 
 function bootMockupApp(){
-  let onboarded = false;
-  try{ onboarded = localStorage.getItem('jh-onboarded') === '1'; }catch(_e){}
-  if(!onboarded) return;
-  enterApp(false);
+  // Onboarding shows on every fresh load — no skip-persistence across sessions.
 }
 
 bootMockupApp();
@@ -6726,6 +8073,9 @@ function applySettingsPayload(data){
     browser.textContent = b.session_present
       ? `browser-session/: present · login wait ${b.JH_LOGIN_WAIT_SECONDS||600}s`
       : `browser-session/: not created yet · login wait ${b.JH_LOGIN_WAIT_SECONDS||600}s`;
+  }
+  if(window.JhNeeds && typeof window.JhNeeds.setStatus === 'function'){
+    window.JhNeeds.setStatus(data);
   }
 }
 
@@ -7114,11 +8464,23 @@ async function initLiveRunSSE(){
     _sse = new EventSource(`${API}/events`);
   }catch(e){ return; }
 
+  function fanoutLive(etype, data){
+    document.dispatchEvent(new CustomEvent('jh-live-event', { detail: { type: etype, data: data } }));
+  }
   const onEv = (etype, handler) => {
     _sse.addEventListener(etype, (ev)=>{
-      try{ handler(JSON.parse(ev.data||'{}')); }catch(e){}
+      try{
+        const data = JSON.parse(ev.data||'{}');
+        handler(data);
+        fanoutLive(etype, data);
+      }catch(e){}
     });
   };
+  ['llm','tool','step','run'].forEach(t => {
+    _sse.addEventListener(t, (ev)=>{
+      try{ fanoutLive(t, JSON.parse(ev.data||'{}')); }catch(e){}
+    });
+  });
 
   onEv('needs_email_verify', (data)=>{
     const d = data.detail || data;
@@ -7217,9 +8579,18 @@ const STEEP_THEME_KEY = 'jh-steep-theme';
 function applySteepTheme(mode){
   const dark = mode === 'dark';
   document.documentElement.classList.toggle('dark', dark);
-  const icon = document.getElementById('themeIcon');
+  // The onboarding hero deliberately does not follow the theme — see the
+  // "Onboarding is always light" block in the stylesheet. Its plates stay
+  // the light ones in both modes.
+  const moon = document.getElementById('themeIconMoon');
+  const sun = document.getElementById('themeIconSun');
   const label = document.getElementById('themeLabel');
-  if(icon) icon.textContent = dark ? '☀' : '☾';
+  if(moon){
+    if(dark) moon.setAttribute('hidden',''); else moon.removeAttribute('hidden');
+  }
+  if(sun){
+    if(dark) sun.removeAttribute('hidden'); else sun.setAttribute('hidden','');
+  }
   if(label) label.textContent = dark ? 'Light' : 'Dark';
   try { localStorage.setItem(STEEP_THEME_KEY, dark ? 'dark' : 'light'); } catch(e){}
   const frame = document.getElementById('canvasFrame');
@@ -7252,7 +8623,9 @@ function toggleSteepTheme(){
   import * as THREE from "three";
   window.THREE = THREE;
 </script>
+<script src="keys-hint.js"></script>
 <script src="apply.js"></script>
+<script src="apply-run.js"></script>
 <script src="metrics.js"></script>
 <script src="knowledge-graph.js"></script>
 <script src="mockup-chat.js"></script>

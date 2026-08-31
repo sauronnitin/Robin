@@ -440,21 +440,25 @@
 
     const PERSONA_TONE = {
       climb: {
+        priority: "What would make the next step up actually worth it?",
         top_skills: "What are you already great at that you want more of?",
         current_pay: "Where are you on pay today, roughly?",
         target_pay: "What pay jump would make this climb feel real, and by when?",
       },
       pivot: {
+        priority: "What's the one thing the new direction has to deliver?",
         curiosity: "What's pulling you toward something different?",
         top_skills: "Which strengths travel with you into a new direction?",
         constraints: "What must stay true in the next chapter?",
       },
       urgent: {
+        priority: "What can't you compromise on right now?",
         target_pay: "What do you need to land, and by when?",
         constraints: "Any hard location or remote limits for the next role?",
         current_role: "What was your most recent role, and for how long?",
       },
       explore: {
+        priority: "If nothing else, what would matter?",
         curiosity: "No pressure. What's on your mind?",
         energy: "What work feels good even when it's hard?",
         top_skills: "What do people already come to you for?",
@@ -467,8 +471,9 @@
       energy: "Energy tells us what you will actually stick with.",
       current_pay: "Lets us compare your number to curated USA band estimates.",
       target_pay: "Sets the pay path we optimize toward.",
-      constraints: "Keeps suggestions inside your real location and work-mode limits.",
+      constraints: "This is the one thing Robin can't guess: it decides which jobs even reach your queue.",
       curiosity: "Surfaces adjacent roles and industries worth exploring.",
+      priority: "Decides which read of your graph: Fit, Stretch, or Pay, opens first.",
     };
 
     const PERSONA_CHOICES = [
@@ -484,10 +489,34 @@
       { id: "later", label: "Later", sub: "Just exploring" },
     ];
 
+    const PRIORITY_CHOICES = [
+      { id: "pay", label: "More money" },
+      { id: "challenge", label: "A real stretch" },
+      { id: "stability", label: "Something stable" },
+      { id: "flexibility", label: "Control over where I work" },
+    ];
+
+    const PRIORITY_TO_LENS = {
+      pay: "pay",
+      challenge: "stretch",
+      stability: "fit",
+      flexibility: "fit",
+    };
+
     let activeLens = "fit";
     let pickerTarget = null;
     let salaryBandsCache = null;
     let fitFramesLeft = 0;
+    let nodeCardId = null;
+    let graphFilters = {
+      types: {
+        skill: true, role: true, company: true, opp: true,
+        edu: true, gap: true, band: true, concept: true,
+      },
+      importance: { risk: true, potential: true, normal: true },
+      hideSmall: true,
+      query: "",
+    };
 
     const canvas = () => document.getElementById("kgCanvas");
     const wrap = () => document.getElementById("kgGraphWrap");
@@ -508,7 +537,12 @@
         transcript: [],
         persona: null,
         urgency: null,
+        priority: null,
       };
+    }
+
+    function lensFromPriority(priority) {
+      return PRIORITY_TO_LENS[priority] || null;
     }
 
     function emptyMarketPulse() {
@@ -538,9 +572,10 @@
           nodes: [],
           edges: [],
           documents: [],
-          insights: { summary: null, node_briefs: {}, last_analyze: null },
+          insights: { summary: null, node_briefs: {}, last_analyze: null, default_lens: null },
           onboarding: emptyOnboarding(),
           market_pulse: emptyMarketPulse(),
+          hidden_node_ids: [],
         };
       }
       const g = window.__kgStore;
@@ -558,15 +593,21 @@
       }
       if (!g.role_stats) g.role_stats = {};
       if (!g.insights || typeof g.insights !== "object") {
-        g.insights = { summary: null, node_briefs: {}, last_analyze: null };
+        g.insights = { summary: null, node_briefs: {}, last_analyze: null, default_lens: null };
+      } else if (!("default_lens" in g.insights)) {
+        g.insights.default_lens = lensFromPriority(g.onboarding && g.onboarding.priority);
       }
       if (!g.onboarding || typeof g.onboarding !== "object") {
         g.onboarding = emptyOnboarding();
       } else {
         if (!("persona" in g.onboarding)) g.onboarding.persona = null;
         if (!("urgency" in g.onboarding)) g.onboarding.urgency = null;
+        if (!("priority" in g.onboarding)) g.onboarding.priority = null;
         if (!Array.isArray(g.onboarding.answers)) g.onboarding.answers = [];
         if (!Array.isArray(g.onboarding.transcript)) g.onboarding.transcript = [];
+      }
+      if (!g.insights.default_lens && g.onboarding.priority) {
+        g.insights.default_lens = lensFromPriority(g.onboarding.priority);
       }
       if (!g.market_pulse || typeof g.market_pulse !== "object") {
         g.market_pulse = emptyMarketPulse();
@@ -575,6 +616,7 @@
         if (!Array.isArray(g.market_pulse.items)) g.market_pulse.items = [];
         if (!g.market_pulse.stale_after_hours) g.market_pulse.stale_after_hours = 72;
       }
+      if (!Array.isArray(g.hidden_node_ids)) g.hidden_node_ids = [];
       return g;
     }
 
@@ -597,6 +639,35 @@
     function secondaryId() {
       const t = (storeGraph() || {}).targets || {};
       return t.secondary_role_id || t.suggested_secondary_id || null;
+    }
+
+    function isVitalNode(node) {
+      if (!node || !node.id) return false;
+      if (node.id === primaryId() || node.id === secondaryId()) return true;
+      return (Number(node.weight) || 0) >= 4;
+    }
+
+    function hiddenIdSet() {
+      const g = ensureStoreShape();
+      return new Set((g.hidden_node_ids || []).filter(Boolean));
+    }
+
+    function filterGraphData(data) {
+      const hidden = hiddenIdSet();
+      const q = String(graphFilters.query || "").trim().toLowerCase();
+      const nodes = (data.nodes || []).filter((n) => {
+        if (!n || !n.id) return false;
+        if (hidden.has(n.id)) return false;
+        if (graphFilters.types[n.type] === false) return false;
+        const imp = n.importance || "normal";
+        if (graphFilters.importance[imp] === false) return false;
+        if (graphFilters.hideSmall && !isVitalNode(n) && (Number(n.weight) || 0) < 3) return false;
+        if (q && String(n.label || "").toLowerCase().indexOf(q) === -1) return false;
+        return true;
+      });
+      const keep = new Set(nodes.map((n) => n.id));
+      const edges = (data.edges || []).filter((e) => keep.has(e.source) && keep.has(e.target));
+      return { nodes, edges };
     }
 
     function lensMatchIds() {
@@ -876,10 +947,36 @@
       simNodes = [];
     }
 
-    function makeNodeLabel(text, inferred) {
+    function kgCssColor(n) {
+      return "#" + (Number(n) >>> 0).toString(16).padStart(6, "0");
+    }
+
+    function makeNodeLabel(node, inferred) {
       const el = document.createElement("div");
       el.className = "kg-node-label" + (inferred ? " is-inferred" : "");
-      el.textContent = String(text || "");
+      const type = node && node.type;
+      if (type) el.setAttribute("data-type", String(type));
+      el.style.setProperty(
+        "--kg-node-color",
+        kgCssColor(KG_COLORS[type] || KG_COLORS.concept)
+      );
+      const tag = document.createElement("span");
+      tag.className = "kg-node-tag";
+      tag.setAttribute("aria-hidden", "true");
+      const label = document.createElement("span");
+      label.className = "kg-node-text";
+      label.textContent = String((node && node.label) || "");
+      el.append(tag, label);
+      el.style.pointerEvents = "auto";
+      el.style.cursor = "pointer";
+      el.addEventListener("click", (ev) => {
+        ev.preventDefault();
+        ev.stopPropagation();
+        applyHighlight(node.id);
+        flyToNode(node.id);
+        nodeScopedBrief(node);
+        openNodeCard(node);
+      });
       return el;
     }
 
@@ -967,7 +1064,7 @@
         }
 
         if (CSS2DObject) {
-          const labelObj = new CSS2DObject(makeNodeLabel(node.label, inferred));
+          const labelObj = new CSS2DObject(makeNodeLabel(node, inferred));
           labelObj.position.set(0, radius + 0.9, 0);
           labelObj.userData.isNodeLabel = true;
           mesh.add(labelObj);
@@ -1200,7 +1297,7 @@
 
       let locationHint = "";
       const loc = text.match(
-        /\b((?:San Francisco|New York|Seattle|Austin|Chicago|Los Angeles|Boston|Denver|Portland|Remote|USA|United States)[^,\n]{0,40})/i
+        /\b(San Francisco|New York|Seattle|Austin|Chicago|Los Angeles|Boston|Denver|Portland|Remote|USA|United States)\b/i
       );
       if (loc) locationHint = loc[1].trim();
 
@@ -1278,7 +1375,15 @@
         covered,
         partial,
         prefills,
-        skip: covered,
+        skip: {
+          current_role: covered.current_role,
+          top_skills: covered.top_skills,
+          constraints: false,
+          current_pay: covered.current_pay,
+          energy: false,
+          target_pay: false,
+          curiosity: false,
+        },
       };
     }
 
@@ -1311,15 +1416,15 @@
       if (intel.skip.top_skills && intel.prefills.top_skills) {
         upsertInferredAnswer("top_skills", "Top skills (from docs)", intel.prefills.top_skills);
       }
-      if (intel.skip.constraints && intel.prefills.constraints) {
-        upsertInferredAnswer("constraints", "Constraints (from docs)", intel.prefills.constraints);
-      }
       if (intel.skip.current_pay && intel.prefills.current_pay) {
         upsertInferredAnswer("current_pay", "Current pay (from docs)", intel.prefills.current_pay);
         const g = ensureStoreShape();
         if (intel.salaryHint && (g.compensation.current == null || g.compensation.current === "")) {
           g.compensation.current = Math.round(intel.salaryHint);
         }
+      }
+      if (intel.prefills.constraints && !obDraft.constraints) {
+        obDraft.constraints = intel.prefills.constraints;
       }
       Object.keys(intel.prefills || {}).forEach((id) => {
         if (!obDraft[id] && intel.partial[id] && !intel.skip[id]) {
@@ -1366,8 +1471,8 @@
         constraints: {
           title: "Any location or work-mode limits we should respect?",
           sub: known
-            ? known + ". Add visa, city, or travel constraints if needed."
-            : "Keeps suggestions inside real constraints.",
+            ? known + ". " + WHY_ASK.constraints
+            : WHY_ASK.constraints,
         },
         curiosity: {
           title: "What else should we explore beyond your docs?",
@@ -1400,6 +1505,7 @@
             multi: !!base.multi,
             allowText: true,
             okLabel: "OK",
+            required: id === "constraints",
             fromDocs: !!(intel.partial[id] || intel.prefills[id]),
           };
         })
@@ -1448,6 +1554,14 @@
           title: "How soon does this matter?",
           sub: "Pacing only. You can still explore calmly.",
           choices: URGENCY_CHOICES,
+          okLabel: "OK",
+        },
+        {
+          type: "mcq",
+          id: "priority",
+          title: (PERSONA_TONE[persona] && PERSONA_TONE[persona].priority) || "Right now, what matters most?",
+          sub: WHY_ASK.priority,
+          choices: PRIORITY_CHOICES,
           okLabel: "OK",
         },
         ...buildBackboneForPersona(persona),
@@ -1587,6 +1701,11 @@
       }
       if (slide.id === "urgency" && obSelected.urgency) {
         g.onboarding.urgency = obSelected.urgency;
+      }
+      if (slide.id === "priority" && obSelected.priority) {
+        g.onboarding.priority = obSelected.priority;
+        g.insights = g.insights || {};
+        g.insights.default_lens = lensFromPriority(obSelected.priority);
       }
       if (slide.type === "question") {
         const answer = composeAnswer(slide);
@@ -1821,10 +1940,22 @@
         renderDocSummaryBody(body, slide.intel || gatherDocIntel());
       } else if (slide.type === "market") {
         if (!obKeySet) {
+          const row = document.createElement("div");
+          row.className = "jh-need-row";
           const note = document.createElement("p");
           note.className = "kg-tf-note";
           note.textContent = "Connect a SerpAPI key in Settings to enable live signals.";
-          body.appendChild(note);
+          const needBtn = document.createElement("button");
+          needBtn.type = "button";
+          needBtn.className = "jh-need";
+          needBtn.setAttribute("data-jh-need", "kg_pulse");
+          needBtn.setAttribute("aria-label", "What Market Pulse needs");
+          row.appendChild(note);
+          row.appendChild(needBtn);
+          body.appendChild(row);
+          if (window.JhNeeds && typeof window.JhNeeds.hydrate === "function") {
+            window.JhNeeds.hydrate(row);
+          }
         }
         renderChoices(body, {
           ...slide,
@@ -1841,6 +1972,11 @@
       if (ok) {
         ok.textContent = slide.okLabel || "OK";
         ok.disabled = !canAdvanceCurrent();
+      }
+      const skip = document.getElementById("kgTfSkip");
+      if (skip) {
+        const showSkip = slide.type === "question" && !slide.required;
+        skip.hidden = !showSkip;
       }
       if (hint) hint.hidden = false;
       updateTfProgress();
@@ -1884,6 +2020,20 @@
         const urgencyIdx = obSlides.findIndex((s) => s.id === "urgency");
         obSlideIndex = urgencyIdx >= 0 ? urgencyIdx : obSlideIndex + 1;
         renderTfSlide(true);
+        return;
+      }
+      obSlideIndex += 1;
+      if (obSlides[obSlideIndex] && obSlides[obSlideIndex].type === "market") {
+        await ensureMarketKeyStatus();
+      }
+      renderTfSlide(true);
+    }
+
+    async function skipTf() {
+      const slide = obSlides[obSlideIndex];
+      if (!slide || slide.required || slide.type !== "question") return;
+      if (obSlideIndex >= obSlides.length - 1) {
+        await finishOnboarding();
         return;
       }
       obSlideIndex += 1;
@@ -1962,6 +2112,14 @@
       g.market_pulse.enabled = obSelected.market === "on" && obKeySet;
       g.onboarding.completed = true;
       g.onboarding.completed_at = new Date().toISOString();
+      if (obSelected.priority) {
+        g.onboarding.priority = obSelected.priority;
+      }
+      if (g.onboarding.priority) {
+        g.insights = g.insights || {};
+        g.insights.default_lens = lensFromPriority(g.onboarding.priority);
+      }
+      applyStoredLens();
       await persistIndividualStore();
       setBackgroundDimmed(false);
       setDocDropVisible(true);
@@ -1973,10 +2131,12 @@
       if (obWired) return;
       obWired = true;
       const ok = document.getElementById("kgTfOk");
+      const skip = document.getElementById("kgTfSkip");
       const prev = document.getElementById("kgTfPrev");
       const next = document.getElementById("kgTfNext");
       const close = document.getElementById("kgTfClose");
       if (ok) ok.addEventListener("click", () => advanceTf());
+      if (skip) skip.addEventListener("click", () => skipTf());
       if (prev) prev.addEventListener("click", () => goTf(obSlideIndex - 1));
       if (next) next.addEventListener("click", () => advanceTf());
       if (close) {
@@ -2026,8 +2186,10 @@
         g.onboarding.transcript = [];
         g.onboarding.persona = null;
         g.onboarding.urgency = null;
+        g.onboarding.priority = null;
         g.onboarding.started_at = new Date().toISOString();
         g.market_pulse.enabled = false;
+        if (g.insights) g.insights.default_lens = null;
       } else if (!g.onboarding.started_at) {
         g.onboarding.started_at = new Date().toISOString();
       }
@@ -2125,9 +2287,126 @@
 
     function rebuildGraph() {
       syncGlobals();
-      const data = extractGraphData(sourcesState());
+      const data = filterGraphData(extractGraphData(sourcesState()));
       buildGraph(data);
       fitFramesLeft = 90;
+      syncGraphChrome(data);
+      if (nodeCardId && !(data.nodes || []).some((n) => n.id === nodeCardId)) {
+        hideNodeCard();
+      }
+    }
+
+    function nodeCardEl() {
+      return document.getElementById("kgNodeCard");
+    }
+
+    function hideNodeCard() {
+      nodeCardId = null;
+      const el = nodeCardEl();
+      if (el) el.hidden = true;
+    }
+
+    function openNodeCard(node) {
+      const el = nodeCardEl();
+      if (!el || !node) return;
+      nodeCardId = node.id;
+      hideTooltip();
+      const title = document.getElementById("kgNodeCardTitle");
+      const meta = document.getElementById("kgNodeCardMeta");
+      const note = document.getElementById("kgNodeCardNote");
+      const tag = document.getElementById("kgNodeCardTag");
+      const hideBtn = document.getElementById("kgNodeCardHide");
+      if (title) title.textContent = node.label || node.id;
+      if (tag) {
+        tag.style.setProperty(
+          "--kg-node-color",
+          kgCssColor(KG_COLORS[node.type] || KG_COLORS.concept)
+        );
+      }
+      const bits = [
+        node.type || "node",
+        edgeCount(node.id) + " links",
+        node.provenance === "inferred" ? "inferred" : "stated",
+      ];
+      if (node.importance && node.importance !== "normal") bits.push(node.importance);
+      if (node.id === primaryId()) bits.push("Primary");
+      if (node.id === secondaryId()) bits.push("Secondary");
+      if (meta) meta.textContent = bits.join(" · ");
+      const locked = node.id === primaryId() || node.id === secondaryId();
+      if (note) {
+        note.textContent = locked
+          ? "Primary and Secondary stay on the graph. Change the target first if you want this hidden."
+          : "Hiding keeps it out of the network. Restore it anytime from Hidden.";
+      }
+      if (hideBtn) {
+        hideBtn.disabled = locked;
+        hideBtn.hidden = false;
+      }
+      el.hidden = false;
+    }
+
+    function hideNodeFromGraph(id) {
+      if (!id) return;
+      if (id === primaryId() || id === secondaryId()) return;
+      const g = ensureStoreShape();
+      if (!Array.isArray(g.hidden_node_ids)) g.hidden_node_ids = [];
+      if (!g.hidden_node_ids.includes(id)) g.hidden_node_ids.push(id);
+      hideNodeCard();
+      persistIndividualStore().then(() => {
+        if (initialized) rebuildGraph();
+      });
+    }
+
+    function restoreHiddenNode(id) {
+      if (!id) return;
+      const g = ensureStoreShape();
+      g.hidden_node_ids = (g.hidden_node_ids || []).filter((x) => x !== id);
+      persistIndividualStore().then(() => {
+        if (initialized) rebuildGraph();
+      });
+    }
+
+    function syncGraphChrome(data) {
+      const empty = document.getElementById("kgGraphEmpty");
+      if (empty) empty.hidden = !!(data && data.nodes && data.nodes.length);
+      const btn = document.getElementById("kgHiddenBtn");
+      const ids = (ensureStoreShape().hidden_node_ids || []);
+      if (btn) {
+        btn.hidden = ids.length === 0;
+        btn.textContent = ids.length ? ("Hidden " + ids.length) : "Hidden";
+      }
+      renderHiddenList();
+    }
+
+    function renderHiddenList() {
+      const list = document.getElementById("kgHiddenList");
+      if (!list) return;
+      const g = ensureStoreShape();
+      const ids = g.hidden_node_ids || [];
+      if (!ids.length) {
+        list.innerHTML = '<p class="kg-hidden-empty">Nothing hidden.</p>';
+        return;
+      }
+      const lookup = new Map((g.nodes || []).map((n) => [n.id, n]));
+      list.innerHTML = ids.map((id) => {
+        const n = lookup.get(id) || {};
+        const label = n.label || id;
+        return (
+          '<div class="kg-hidden-row">' +
+          '<span title="' + escapeHtml(label) + '">' + escapeHtml(label) + "</span>" +
+          '<button type="button" class="st-btn-ghost text-[12px]" data-kg-restore="' +
+          escapeHtml(id) + '">Restore</button></div>'
+        );
+      }).join("");
+    }
+
+    function setHiddenPanelOpen(open) {
+      const panel = document.getElementById("kgHiddenPanel");
+      if (panel) panel.hidden = !open;
+      if (open) {
+        hideNodeCard();
+        renderHiddenList();
+      }
     }
 
     async function ensureScene() {
@@ -2174,7 +2453,8 @@
         const hit = pickNode(e);
         if (hit) {
           hoveredId = hit.userData.node.id;
-          showTooltip(hit.userData.node, e.clientX, e.clientY);
+          if (isVitalNode(hit.userData.node)) hideTooltip();
+          else showTooltip(hit.userData.node, e.clientX, e.clientY);
           c.style.cursor = "pointer";
         } else {
           hoveredId = null;
@@ -2189,9 +2469,11 @@
           applyHighlight(node.id);
           flyToNode(node.id);
           nodeScopedBrief(node);
+          openNodeCard(node);
         } else {
           applyHighlight(null);
           renderDefaultIntelligence();
+          hideNodeCard();
         }
       });
       c.addEventListener("pointerleave", hideTooltip);
@@ -2222,6 +2504,7 @@
       await loadSalaryBands();
       await loadIndividualStore();
       ensureStoreShape();
+      applyStoredLens();
       startOnboarding(false);
       if (Array.isArray(window.__kgDocs) && window.__kgDocs.length) {
         rebuildDocDerivedNodes();
@@ -2333,8 +2616,10 @@
       if (window.__kgDocs) graph.documents = window.__kgDocs;
       if (lastBrief && typeof lastBrief === "object") {
         const insights = graph.insights && typeof graph.insights === "object" ? graph.insights : {};
+        const keptLens = insights.default_lens;
         Object.assign(insights, lastBrief);
         if (lastBrief.summary) insights.summary = lastBrief.summary;
+        if (keptLens && !insights.default_lens) insights.default_lens = keptLens;
         graph.insights = insights;
       }
       try {
@@ -2345,7 +2630,12 @@
         });
         const data = await res.json().catch(() => ({}));
         if (res.ok && data.ok && data.graph) {
+          const keptHidden = Array.isArray(graph.hidden_node_ids) ? graph.hidden_node_ids.slice() : [];
           window.__kgStore = data.graph;
+          if (!Array.isArray(window.__kgStore.hidden_node_ids) ||
+              (keptHidden.length && !window.__kgStore.hidden_node_ids.length)) {
+            window.__kgStore.hidden_node_ids = keptHidden;
+          }
         }
       } catch (_) {
         /* offline / server down: keep in-memory only */
@@ -2473,6 +2763,11 @@
         btn.setAttribute("aria-selected", on ? "true" : "false");
       });
       applyHighlight(selectedId);
+    }
+
+    function applyStoredLens() {
+      const lens = ((ensureStoreShape().insights) || {}).default_lens;
+      if (lens) setLens(lens);
     }
 
     function roleOptions() {
@@ -3032,6 +3327,7 @@
         "== ONBOARDING ==",
         `Persona: ${onboarding.persona || "n/a"}`,
         `Urgency: ${onboarding.urgency || "n/a"}`,
+        `Priority: ${onboarding.priority || "n/a"}`,
         obBlock,
         "",
         "== MARKET PULSE ==",
@@ -3221,6 +3517,73 @@
       document.querySelectorAll(".kg-lens-btn").forEach((btn) => {
         btn.addEventListener("click", () => setLens(btn.getAttribute("data-lens")));
       });
+
+      const typeFilters = document.getElementById("kgTypeFilters");
+      if (typeFilters) {
+        typeFilters.addEventListener("click", (e) => {
+          const btn = e.target.closest("[data-kg-type]");
+          if (!btn) return;
+          const t = btn.getAttribute("data-kg-type");
+          graphFilters.types[t] = !graphFilters.types[t];
+          btn.classList.toggle("is-on", !!graphFilters.types[t]);
+          btn.classList.toggle("is-off", !graphFilters.types[t]);
+          if (initialized) rebuildGraph();
+        });
+      }
+      document.querySelectorAll(".kg-imp-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const key = btn.getAttribute("data-imp");
+          if (!key) return;
+          graphFilters.importance[key] = !graphFilters.importance[key];
+          btn.classList.toggle("is-on", !!graphFilters.importance[key]);
+          if (initialized) rebuildGraph();
+        });
+      });
+      const hideSmallBtn = document.getElementById("kgHideSmall");
+      if (hideSmallBtn) {
+        hideSmallBtn.addEventListener("click", () => {
+          graphFilters.hideSmall = !graphFilters.hideSmall;
+          hideSmallBtn.classList.toggle("is-on", graphFilters.hideSmall);
+          hideSmallBtn.setAttribute("aria-pressed", graphFilters.hideSmall ? "true" : "false");
+          if (initialized) rebuildGraph();
+        });
+      }
+      const searchEl = document.getElementById("kgNodeSearch");
+      if (searchEl) {
+        let searchTimer = 0;
+        searchEl.addEventListener("input", () => {
+          window.clearTimeout(searchTimer);
+          searchTimer = window.setTimeout(() => {
+            graphFilters.query = searchEl.value || "";
+            if (initialized) rebuildGraph();
+          }, 120);
+        });
+      }
+      const hiddenBtn = document.getElementById("kgHiddenBtn");
+      if (hiddenBtn) {
+        hiddenBtn.addEventListener("click", () => {
+          const panel = document.getElementById("kgHiddenPanel");
+          setHiddenPanelOpen(!!(panel && panel.hidden));
+        });
+      }
+      const hiddenClose = document.getElementById("kgHiddenPanelClose");
+      if (hiddenClose) hiddenClose.addEventListener("click", () => setHiddenPanelOpen(false));
+      const hiddenList = document.getElementById("kgHiddenList");
+      if (hiddenList) {
+        hiddenList.addEventListener("click", (e) => {
+          const btn = e.target.closest("[data-kg-restore]");
+          if (!btn) return;
+          restoreHiddenNode(btn.getAttribute("data-kg-restore"));
+        });
+      }
+      const cardClose = document.getElementById("kgNodeCardClose");
+      if (cardClose) cardClose.addEventListener("click", () => hideNodeCard());
+      const cardHide = document.getElementById("kgNodeCardHide");
+      if (cardHide) {
+        cardHide.addEventListener("click", () => {
+          if (nodeCardId) hideNodeFromGraph(nodeCardId);
+        });
+      }
       const saveComp = () => {
         readCompInputsIntoStore();
         persistIndividualStore().then(() => {
@@ -3253,6 +3616,99 @@
     wireUi();
     updateAnalyzeButton();
 
+    async function isOnboardingComplete() {
+      await loadIndividualStore();
+      const g = ensureStoreShape();
+      return !!(g.onboarding && g.onboarding.completed);
+    }
+
+    // The onboarding question set, exposed so the front door (#ob in
+    // mockup.html) can run the SAME questions instead of keeping a second
+    // copy that drifts. Persona ordering, per-persona tone, why-ask copy and
+    // the required flag all come from here — this module stays the single
+    // source of truth for what gets asked.
+    function getOnboardingSpec(persona) {
+      const p = persona || "explore";
+      return {
+        personaChoices: PERSONA_CHOICES,
+        urgencyChoices: URGENCY_CHOICES,
+        priorityChoices: PRIORITY_CHOICES,
+        priorityTitle:
+          (PERSONA_TONE[p] && PERSONA_TONE[p].priority) || "Right now, what matters most?",
+        priorityWhy: WHY_ASK.priority,
+        backbone: buildBackboneForPersona(p),
+        // the stable "why we ask" line per question. The front door prefers
+        // this over the doc-derived subtitle, which echoes parsed values
+        // (e.g. "From docs: about $500,000") that read as noise under a title.
+        whyAsk: WHY_ASK,
+        priorityToLens: PRIORITY_TO_LENS,
+      };
+    }
+
+    // Lets the front door persist what it collected, using this module's own
+    // store shape + endpoint, so the Knowledge Graph opens already knowing
+    // the answers and never re-asks them.
+    //
+    // IMPORTANT: `_normalize_onboarding` in kg_store.py is an ALLOWLIST — it
+    // keeps only completed/started_at/completed_at/answers/transcript/
+    // persona/urgency/priority and silently drops any other top-level key.
+    // So routing answers go in as flat fields, and every other question has
+    // to be written into `answers[]` in the same shape the typeform uses, or
+    // it is thrown away server-side without an error.
+    const ROUTING_KEYS = ["persona", "urgency", "priority"];
+    async function saveOnboardingAnswers(answers, opts) {
+      await loadIndividualStore();
+      const g = ensureStoreShape();
+      const src = answers || {};
+      if (!Array.isArray(g.onboarding.answers)) g.onboarding.answers = [];
+      if (!Array.isArray(g.onboarding.transcript)) g.onboarding.transcript = [];
+      if (!g.onboarding.started_at) g.onboarding.started_at = new Date().toISOString();
+
+      Object.keys(src).forEach((id) => {
+        const raw = src[id];
+        if (raw == null || raw === "") return;
+        if (ROUTING_KEYS.indexOf(id) >= 0) {
+          g.onboarding[id] = raw;
+          return;
+        }
+        const choices = Array.isArray(raw) ? raw : [raw];
+        const text = choices.join(", ");
+        const meta = (opts && opts.questions && opts.questions[id]) || {};
+        const existing = g.onboarding.answers.find((a) => a.id === id);
+        if (existing) {
+          existing.question = meta.question || existing.question || id;
+          existing.answer = text;
+          existing.choices = choices;
+        } else {
+          g.onboarding.answers.push({
+            id,
+            question: meta.question || id,
+            answer: text,
+            choices,
+            followups: [],
+          });
+        }
+        g.onboarding.transcript.push({
+          role: "user",
+          content: text,
+          ts: new Date().toISOString(),
+          question_id: id,
+        });
+      });
+
+      if (opts && opts.completed) {
+        g.onboarding.completed = true;
+        g.onboarding.completed_at = new Date().toISOString();
+      }
+      const pri = g.onboarding.priority;
+      if (pri && PRIORITY_TO_LENS[pri]) {
+        g.insights = g.insights || {};
+        g.insights.default_lens = PRIORITY_TO_LENS[pri];
+      }
+      await persistIndividualStore();
+      return g.onboarding;
+    }
+
     return {
       show,
       pause,
@@ -3260,6 +3716,9 @@
       flyToNode,
       parseResume,
       extractGraphData,
+      isOnboardingComplete,
+      getOnboardingSpec,
+      saveOnboardingAnswers,
     };
   })();
 

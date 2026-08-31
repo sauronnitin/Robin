@@ -145,10 +145,12 @@ def empty_individual() -> dict[str, Any]:
         "nodes": [],
         "edges": [],
         "documents": [],
+        "hidden_node_ids": [],
         "insights": {
             "summary": None,
             "node_briefs": {},
             "last_analyze": None,
+            "default_lens": None,
         },
         "onboarding": {
             "completed": False,
@@ -158,6 +160,7 @@ def empty_individual() -> dict[str, Any]:
             "transcript": [],
             "persona": None,
             "urgency": None,
+            "priority": None,
         },
         "market_pulse": {
             "enabled": False,
@@ -251,6 +254,7 @@ def _normalize_insights(raw: Any) -> dict[str, Any]:
         "summary": None,
         "node_briefs": {},
         "last_analyze": None,
+        "default_lens": None,
     }
     if raw is None:
         return base
@@ -269,6 +273,9 @@ def _normalize_insights(raw: Any) -> dict[str, Any]:
         }
     if raw.get("last_analyze") is not None:
         base["last_analyze"] = raw.get("last_analyze")
+    lens = str(raw.get("default_lens") or "").strip().lower()
+    if lens in _LENS_VALUES:
+        base["default_lens"] = lens
     # Preserve extra Analyze sections (gaps, adjacent_roles, etc.) without forcing schema
     for key, val in raw.items():
         if key not in base:
@@ -278,6 +285,21 @@ def _normalize_insights(raw: Any) -> dict[str, Any]:
 
 _PERSONA_VALUES = frozenset({"climb", "pivot", "urgent", "explore"})
 _URGENCY_VALUES = frozenset({"now", "soon", "later"})
+_PRIORITY_VALUES = frozenset({"pay", "challenge", "stability", "flexibility"})
+_LENS_VALUES = frozenset({"fit", "stretch", "pay"})
+_PRIORITY_TO_LENS = {
+    "pay": "pay",
+    "challenge": "stretch",
+    "stability": "fit",
+    "flexibility": "fit",
+}
+
+
+def default_lens_from_priority(priority: str | None) -> str | None:
+    """Map onboarding.priority to insights.default_lens (Fit / Stretch / Pay)."""
+    if not priority:
+        return None
+    return _PRIORITY_TO_LENS.get(str(priority).strip().lower())
 
 
 def _normalize_onboarding(raw: Any) -> dict[str, Any]:
@@ -289,6 +311,7 @@ def _normalize_onboarding(raw: Any) -> dict[str, Any]:
         "transcript": [],
         "persona": None,
         "urgency": None,
+        "priority": None,
     }
     if not isinstance(raw, dict):
         return base
@@ -309,6 +332,9 @@ def _normalize_onboarding(raw: Any) -> dict[str, Any]:
     urgency = str(raw.get("urgency") or "").strip().lower()
     if urgency in _URGENCY_VALUES:
         base["urgency"] = urgency
+    priority = str(raw.get("priority") or "").strip().lower()
+    if priority in _PRIORITY_VALUES:
+        base["priority"] = priority
     return base
 
 
@@ -346,6 +372,27 @@ def _normalize_market_pulse(raw: Any) -> dict[str, Any]:
             })
         base["items"] = [i for i in cleaned if i["title"]]
     return base
+
+
+_HIDDEN_NODE_IDS_CAP = 500
+
+
+def _normalize_hidden_node_ids(raw: Any) -> list[str]:
+    if not isinstance(raw, list):
+        return []
+    seen: set[str] = set()
+    out: list[str] = []
+    for item in raw:
+        if not isinstance(item, str):
+            continue
+        nid = item.strip()
+        if not nid or nid in seen:
+            continue
+        seen.add(nid)
+        out.append(nid)
+        if len(out) >= _HIDDEN_NODE_IDS_CAP:
+            break
+    return out
 
 
 def normalize_graph(raw: dict[str, Any] | None, *, kind: str) -> dict[str, Any]:
@@ -387,7 +434,12 @@ def normalize_graph(raw: dict[str, Any] | None, *, kind: str) -> dict[str, Any]:
         out["compensation"] = _normalize_compensation(raw.get("compensation"))
         out["insights"] = _normalize_insights(raw.get("insights"))
         out["onboarding"] = _normalize_onboarding(raw.get("onboarding"))
+        if not out["insights"].get("default_lens"):
+            derived = default_lens_from_priority(out["onboarding"].get("priority"))
+            if derived:
+                out["insights"]["default_lens"] = derived
         out["market_pulse"] = _normalize_market_pulse(raw.get("market_pulse"))
+        out["hidden_node_ids"] = _normalize_hidden_node_ids(raw.get("hidden_node_ids"))
         stats = raw.get("role_stats")
         out["role_stats"] = stats if isinstance(stats, dict) else {}
         out = compute_role_stats(out)
