@@ -12,7 +12,7 @@
     "parse": "node parse.mjs"
   },
   "dependencies": {
-    "pdfjs-dist": "3.11.174",
+    "pdfjs-dist": "6.2.108",
     "tsx": "^4.19.2"
   }
 }
