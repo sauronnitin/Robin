@@ -4,6 +4,7 @@
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](pyproject.toml)
 [![Dependabot](https://img.shields.io/badge/Dependabot-enabled-025E8C?logo=dependabot)](https://github.com/sauronnitin/Robin/security/dependabot)
 [![CodeQL](https://github.com/sauronnitin/Robin/actions/workflows/codeql.yml/badge.svg)](https://github.com/sauronnitin/Robin/actions/workflows/codeql.yml)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/sauronnitin/Robin/badge)](https://scorecard.dev/viewer/?uri=github.com/sauronnitin/Robin)
 
 Local-first AI **job application swarm**. Answer a few questions about the roles you want, drop in your resume and API keys, and run scout → fit → tailor → cover → apply agents from a visual canvas.
 
@@ -112,6 +113,9 @@ Open [http://localhost:5959](http://localhost:5959).
 | `DRY_RUN=False` | Real Easy Apply / external Apply. You are responsible for what gets sent. |
 
 Never commit `.env`, OAuth tokens, `browser-session/`, or `user/` uploads.
+
+Found a vulnerability? See [`SECURITY.md`](SECURITY.md) — please don't file
+it as a public issue.
 
 ---
 
