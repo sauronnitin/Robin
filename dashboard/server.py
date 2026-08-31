@@ -368,7 +368,7 @@ def ensure_schedule_ticker() -> None:
     if saved:
         with _schedule_lock:
             _schedule_state.update(saved)
-    threading.Thread(target=_schedule_ticker, daemon=True, name="jh-schedule").start()
+    threading.Thread(target=_schedule_ticker, daemon=True, name="rb-schedule").start()
 
 
 def _autofix_ticker() -> None:
@@ -393,7 +393,7 @@ def ensure_autofix_ticker() -> None:
         auto_fix.ensure_always_on()
     except Exception as exc:
         print(f"[dashboard] autofix state init failed: {exc!r}")
-    threading.Thread(target=_autofix_ticker, daemon=True, name="jh-autofix").start()
+    threading.Thread(target=_autofix_ticker, daemon=True, name="rb-autofix").start()
 
 
 def _write_json(path: Path, payload: dict) -> None:

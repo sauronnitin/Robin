@@ -184,7 +184,7 @@
 
   function statusPill(status) {
     var m = meta(status);
-    return '<span class="jh-apply-pill" style="--apply-color:' + m.color + '">'
+    return '<span class="rb-apply-pill" style="--apply-color:' + m.color + '">'
       + '<span aria-hidden="true">' + m.icon + '</span>' + esc(m.label) + '</span>';
   }
 
@@ -202,16 +202,16 @@
     var current = (after === null || after === undefined) ? before : after;
     var tone = current >= ATS_FLOOR ? 'is-good' : 'is-low';
     var arrow = (after !== null && after !== undefined && before !== null && before !== undefined)
-      ? '<span class="jh-apply-ats-from">' + Math.round(before) + ' →</span> '
+      ? '<span class="rb-apply-ats-from">' + Math.round(before) + ' →</span> '
       : '';
     var label = (after !== null && after !== undefined) ? 'after tailoring' : 'base resume';
     return ''
-      + '<div class="jh-apply-ats ' + tone + '" title="Keyword match against this posting ('
+      + '<div class="rb-apply-ats ' + tone + '" title="Keyword match against this posting ('
       + esc(label) + ')">'
-      + '  <span class="jh-apply-ats-label">ATS</span>'
+      + '  <span class="rb-apply-ats-label">ATS</span>'
       + arrow
-      + '  <span class="jh-apply-ats-value">' + Math.round(current) + '</span>'
-      + '  <span class="jh-apply-ats-track"><span style="width:'
+      + '  <span class="rb-apply-ats-value">' + Math.round(current) + '</span>'
+      + '  <span class="rb-apply-ats-track"><span style="width:'
       + Math.max(2, Math.min(100, current)) + '%"></span></span>'
       + '</div>';
   }
@@ -221,16 +221,16 @@
   function metricsHtml(app) {
     function cell(label, value, title) {
       var text = (value === null || value === undefined || value === '')
-        ? '<span class="jh-apply-metric-none">-</span>'
+        ? '<span class="rb-apply-metric-none">-</span>'
         : esc(String(value));
-      return '<div class="jh-apply-metric" title="' + esc(title) + '">'
-        + '<span class="jh-apply-metric-label">' + esc(label) + '</span>'
-        + '<span class="jh-apply-metric-value">' + text + '</span></div>';
+      return '<div class="rb-apply-metric" title="' + esc(title) + '">'
+        + '<span class="rb-apply-metric-label">' + esc(label) + '</span>'
+        + '<span class="rb-apply-metric-value">' + text + '</span></div>';
     }
     var lift = (app.ats_before != null && app.ats_after != null)
       ? (app.ats_after - app.ats_before >= 0 ? '+' : '') + Math.round(app.ats_after - app.ats_before)
       : null;
-    return '<div class="jh-apply-metrics">'
+    return '<div class="rb-apply-metrics">'
       + cell('Fit', app.fit_score == null ? null : Math.round(app.fit_score),
              'Is this job worth applying to (0-100)')
       + cell('ATS', app.ats_before == null ? null : Math.round(app.ats_before),
@@ -250,11 +250,11 @@
     var band = app.location_band;
     if (!band) return '';
     var where = app.location || app.location_label || '';
-    return '<div class="jh-apply-loc is-' + esc(band) + '" title="'
+    return '<div class="rb-apply-loc is-' + esc(band) + '" title="'
       + esc((app.location_label || band) + (state.home ? ' · you are in ' + state.home : ''))
       + '">'
-      + '<span class="jh-apply-loc-icon" aria-hidden="true">' + (LOCATION_ICONS[band] || '·') + '</span>'
-      + '<span class="jh-apply-loc-text">' + esc(where || app.location_label || band) + '</span>'
+      + '<span class="rb-apply-loc-icon" aria-hidden="true">' + (LOCATION_ICONS[band] || '·') + '</span>'
+      + '<span class="rb-apply-loc-text">' + esc(where || app.location_label || band) + '</span>'
       + '</div>';
   }
 
@@ -262,30 +262,30 @@
     var stage = app.board_stage || app.status;
     var m = meta(stage);
     var score = (app.fit_score === null || app.fit_score === undefined)
-      ? '' : '<span class="jh-apply-score" title="Fit: is this job worth applying to">'
+      ? '' : '<span class="rb-apply-score" title="Fit: is this job worth applying to">'
              + Math.round(app.fit_score) + '</span>';
     var when = app.applied_at || app.updated_at;
     return ''
-      + '<article class="jh-apply-card" draggable="true" data-app="' + app.id
+      + '<article class="rb-apply-card" draggable="true" data-app="' + app.id
       + '" style="--apply-color:' + m.color + '" tabindex="0">'
-      + '  <div class="jh-apply-card-top">'
-      + '    <span class="jh-apply-company">' + esc(app.company || 'Unknown') + '</span>'
+      + '  <div class="rb-apply-card-top">'
+      + '    <span class="rb-apply-company">' + esc(app.company || 'Unknown') + '</span>'
       + score
       + '  </div>'
-      + '  <div class="jh-apply-title">' + esc(app.title || '') + '</div>'
+      + '  <div class="rb-apply-title">' + esc(app.title || '') + '</div>'
       + locationHtml(app)
       + metricsHtml(app)
-      + '  <div class="jh-apply-meta">' + statusPill(stage)
-      + (state.sample ? '<span class="jh-apply-sample-tag">Sample</span>' : '')
+      + '  <div class="rb-apply-meta">' + statusPill(stage)
+      + (state.sample ? '<span class="rb-apply-sample-tag">Sample</span>' : '')
       // A rehearsal must never read as a sent application.
-      + (app.dry_run ? '<span class="jh-apply-dry-tag" title="DRY_RUN: nothing was submitted">Dry run</span>' : '')
-      + '    <span class="jh-apply-when">' + esc(humanDate(when)) + '</span>'
+      + (app.dry_run ? '<span class="rb-apply-dry-tag" title="DRY_RUN: nothing was submitted">Dry run</span>' : '')
+      + '    <span class="rb-apply-when">' + esc(humanDate(when)) + '</span>'
       + '  </div>'
       + '</article>';
   }
 
   // Which columns the user opened. Empty key = all closed (the default).
-  var EXPAND_KEY = 'jh-apply-expanded';
+  var EXPAND_KEY = 'rb-apply-expanded';
 
   function expandedColumns() {
     try {
@@ -303,8 +303,8 @@
   }
 
   function runningStageKey() {
-    return (window.__jhApplyRun && typeof window.__jhApplyRun.runningStage === 'function')
-      ? (window.__jhApplyRun.runningStage() || '')
+    return (window.__rbApplyRun && typeof window.__rbApplyRun.runningStage === 'function')
+      ? (window.__rbApplyRun.runningStage() || '')
       : '';
   }
 
@@ -318,14 +318,14 @@
     var sub = empty ? 'nothing yet' : col.next;
     var live = runClass(col.key);
     return ''
-      + '<button type="button" class="jh-bento-card jh-bento-small'
-      + (empty ? ' jh-bento-locked' : '') + live + '"'
+      + '<button type="button" class="rb-bento-card rb-bento-small'
+      + (empty ? ' rb-bento-locked' : '') + live + '"'
       + ' data-expand-col="' + col.key + '" data-stage="' + col.key + '"'
       + ' aria-expanded="false"'
       + (live ? ' aria-busy="true"' : '') + '>'
-      + '  <div class="jh-bento-label">' + esc(col.label) + '</div>'
-      + '  <div class="jh-bento-figure"><span class="jh-bento-num">' + items.length + '</span></div>'
-      + '  <div class="jh-bento-subline">' + esc(sub) + '</div>'
+      + '  <div class="rb-bento-label">' + esc(col.label) + '</div>'
+      + '  <div class="rb-bento-figure"><span class="rb-bento-num">' + items.length + '</span></div>'
+      + '  <div class="rb-bento-subline">' + esc(sub) + '</div>'
       + '</button>';
   }
 
@@ -333,18 +333,18 @@
     var items = stageItems(col.key);
     var live = runClass(col.key);
     return ''
-      + '<section class="jh-apply-col' + live + '" data-col="' + col.key
+      + '<section class="rb-apply-col' + live + '" data-col="' + col.key
       + '" data-stage="' + col.key + '"' + (live ? ' aria-busy="true"' : '') + '>'
-      + '  <button class="jh-apply-col-head" type="button" data-toggle-col="' + col.key + '"'
+      + '  <button class="rb-apply-col-head" type="button" data-toggle-col="' + col.key + '"'
       + '    style="--apply-color:' + col.color + '" aria-expanded="true" title="Collapse to tile">'
-      + '    <span class="jh-apply-col-icon" aria-hidden="true">' + col.icon + '</span>'
-      + '    <span class="jh-apply-col-label">' + esc(col.label) + '</span>'
-      + '    <span class="jh-apply-col-count">' + items.length + '</span>'
-      + '    <span class="jh-apply-col-caret" aria-hidden="true">▴</span>'
+      + '    <span class="rb-apply-col-icon" aria-hidden="true">' + col.icon + '</span>'
+      + '    <span class="rb-apply-col-label">' + esc(col.label) + '</span>'
+      + '    <span class="rb-apply-col-count">' + items.length + '</span>'
+      + '    <span class="rb-apply-col-caret" aria-hidden="true">▴</span>'
       + '  </button>'
-      + '  <div class="jh-apply-col-body" data-stage="' + col.key + '">'
+      + '  <div class="rb-apply-col-body" data-stage="' + col.key + '">'
       + (items.length ? items.map(cardHtml).join('')
-          : '<div class="jh-apply-empty">Nothing here yet</div>')
+          : '<div class="rb-apply-empty">Nothing here yet</div>')
       + '  </div>'
       + '</section>';
   }
@@ -355,9 +355,9 @@
       return expanded.indexOf(col.key) === -1 ? tileHtml(col) : columnHtml(col);
     }).join('');
     return ''
-      + '<section class="jh-apply-band" data-band="' + band.key + '">'
-      + '  <div class="jh-apply-band-label">' + esc(band.label) + '</div>'
-      + '  <div class="jh-apply-band-row">' + cells + '</div>'
+      + '<section class="rb-apply-band" data-band="' + band.key + '">'
+      + '  <div class="rb-apply-band-label">' + esc(band.label) + '</div>'
+      + '  <div class="rb-apply-band-row">' + cells + '</div>'
       + '</section>';
   }
 
@@ -365,25 +365,25 @@
     if (!state.pending.length) return '';
     var rows = state.pending.map(function (msg) {
       return ''
-        + '<div class="jh-apply-pending" data-msg="' + msg.id + '">'
-        + '  <div class="jh-apply-pending-copy">'
-        + '    <div class="jh-apply-pending-subject">' + esc(msg.subject || '(no subject)') + '</div>'
-        + '    <div class="jh-apply-pending-meta">'
+        + '<div class="rb-apply-pending" data-msg="' + msg.id + '">'
+        + '  <div class="rb-apply-pending-copy">'
+        + '    <div class="rb-apply-pending-subject">' + esc(msg.subject || '(no subject)') + '</div>'
+        + '    <div class="rb-apply-pending-meta">'
         + esc(msg.company || 'Unmatched') + ' · reads as ' + statusPill(
             msg.classification === 'rejection' ? 'rejected' : msg.classification)
         + ' · ' + esc(humanDate(msg.received_at)) + '</div>'
         + '  </div>'
-        + '  <div class="jh-apply-pending-actions">'
-        + '    <button class="jh-apply-btn is-primary" data-confirm="' + msg.id + '" data-as="'
+        + '  <div class="rb-apply-pending-actions">'
+        + '    <button class="rb-apply-btn is-primary" data-confirm="' + msg.id + '" data-as="'
         + esc(msg.classification) + '">Confirm</button>'
-        + '    <button class="jh-apply-btn" data-dismiss="' + msg.id + '">Dismiss</button>'
+        + '    <button class="rb-apply-btn" data-dismiss="' + msg.id + '">Dismiss</button>'
         + '  </div>'
         + '</div>';
     }).join('');
     return ''
-      + '<div class="jh-apply-pending-wrap">'
-      + '  <div class="jh-apply-pending-title">Needs your confirmation</div>'
-      + '  <div class="jh-apply-pending-note">Interviews, offers, and rejections are never applied automatically.</div>'
+      + '<div class="rb-apply-pending-wrap">'
+      + '  <div class="rb-apply-pending-title">Needs your confirmation</div>'
+      + '  <div class="rb-apply-pending-note">Interviews, offers, and rejections are never applied automatically.</div>'
       + rows
       + '</div>';
   }
@@ -397,19 +397,19 @@
 
     board.innerHTML = pendingHtml()
       + (total ? '' : ''
-        + '<div class="jh-apply-blank is-compact">'
-        + '  <div class="jh-apply-blank-title">Nothing on the board yet</div>'
-        + '  <div class="jh-apply-blank-copy">Start finds jobs and works the queue. Queue extras from Browse if you want those first. Closed tiles are stages. Click one to open it.</div>'
-        + '  <div class="jh-apply-blank-actions">'
-        + '    <button class="jh-apply-btn" id="applyGoBrowse" type="button">Browse jobs</button>'
-        + '    <button class="jh-apply-btn" id="applySampleStart" type="button">See a sample queue</button>'
+        + '<div class="rb-apply-blank is-compact">'
+        + '  <div class="rb-apply-blank-title">Nothing on the board yet</div>'
+        + '  <div class="rb-apply-blank-copy">Start finds jobs and works the queue. Queue extras from Browse if you want those first. Closed tiles are stages. Click one to open it.</div>'
+        + '  <div class="rb-apply-blank-actions">'
+        + '    <button class="rb-apply-btn" id="applyGoBrowse" type="button">Browse jobs</button>'
+        + '    <button class="rb-apply-btn" id="applySampleStart" type="button">See a sample queue</button>'
         + '  </div>'
         + '</div>')
-      + '<div class="jh-apply-stagegrid">'
+      + '<div class="rb-apply-stagegrid">'
       + BANDS.map(bandHtml).join('')
       + '</div>';
-    if (window.__jhApplyRun && typeof window.__jhApplyRun.highlight === 'function') {
-      window.__jhApplyRun.highlight();
+    if (window.__rbApplyRun && typeof window.__rbApplyRun.highlight === 'function') {
+      window.__rbApplyRun.highlight();
     }
   }
 
@@ -481,21 +481,21 @@
     var doneCount = phases.filter(function (p) { return p.done; }).length;
     var rows = phases.map(function (p) {
       return '<li class="' + (p.done ? 'is-done' : 'is-pending') + '">'
-        + '<span class="jh-apply-phase-dot" aria-hidden="true">' + (p.done ? '✓' : '·') + '</span>'
-        + '<span class="jh-apply-phase-label">' + esc(p.label) + '</span>'
-        + (p.note ? '<span class="jh-apply-phase-note">' + esc(p.note) + '</span>' : '')
-        + (p.at ? '<span class="jh-apply-phase-when">' + esc(humanDate(p.at)) + '</span>' : '')
+        + '<span class="rb-apply-phase-dot" aria-hidden="true">' + (p.done ? '✓' : '·') + '</span>'
+        + '<span class="rb-apply-phase-label">' + esc(p.label) + '</span>'
+        + (p.note ? '<span class="rb-apply-phase-note">' + esc(p.note) + '</span>' : '')
+        + (p.at ? '<span class="rb-apply-phase-when">' + esc(humanDate(p.at)) + '</span>' : '')
         + '</li>';
     }).join('');
 
     return ''
-      + '<div class="jh-apply-detail-label">Run phases'
-      + '  <span class="jh-apply-phase-count">' + doneCount + '/' + phases.length + '</span>'
+      + '<div class="rb-apply-detail-label">Run phases'
+      + '  <span class="rb-apply-phase-count">' + doneCount + '/' + phases.length + '</span>'
       + '</div>'
       + (app.run_id
-          ? '<div class="jh-apply-phase-run">run ' + esc(String(app.run_id).slice(0, 12)) + '</div>'
-          : '<div class="jh-apply-phase-run">no Robin run yet, queued only</div>')
-      + '<ol class="jh-apply-phases">' + rows + '</ol>';
+          ? '<div class="rb-apply-phase-run">run ' + esc(String(app.run_id).slice(0, 12)) + '</div>'
+          : '<div class="rb-apply-phase-run">no Robin run yet, queued only</div>')
+      + '<ol class="rb-apply-phases">' + rows + '</ol>';
   }
 
   function detailHtml(app) {
@@ -511,44 +511,44 @@
     }).join('');
 
     var events = (app.events || []).map(function (e) {
-      return '<li><span class="jh-apply-ev-when">' + esc(humanDate(e.created_at)) + '</span>'
+      return '<li><span class="rb-apply-ev-when">' + esc(humanDate(e.created_at)) + '</span>'
         + statusPill(e.to_status)
-        + '<span class="jh-apply-ev-src">via ' + esc(e.source) + '</span>'
-        + (e.detail ? '<span class="jh-apply-ev-detail">' + esc(e.detail) + '</span>' : '')
+        + '<span class="rb-apply-ev-src">via ' + esc(e.source) + '</span>'
+        + (e.detail ? '<span class="rb-apply-ev-detail">' + esc(e.detail) + '</span>' : '')
         + '</li>';
     }).join('');
 
     var messages = (app.messages || []).map(function (m) {
-      return '<li><span class="jh-apply-ev-when">' + esc(humanDate(m.received_at)) + '</span>'
-        + '<span class="jh-apply-ev-detail">' + esc(m.subject || '(no subject)') + '</span>'
-        + '<span class="jh-apply-ev-src">' + esc(m.classification)
+      return '<li><span class="rb-apply-ev-when">' + esc(humanDate(m.received_at)) + '</span>'
+        + '<span class="rb-apply-ev-detail">' + esc(m.subject || '(no subject)') + '</span>'
+        + '<span class="rb-apply-ev-src">' + esc(m.classification)
         + (m.confirmed_by ? ' · confirmed' : ' · unconfirmed') + '</span></li>';
     }).join('');
 
     return ''
-      + '<div class="jh-apply-detail-head">'
-      + '  <div><div class="jh-apply-detail-company">' + esc(app.company || '') + '</div>'
-      + '    <div class="jh-apply-detail-title">' + esc(app.title || '') + '</div></div>'
-      + '  <button class="jh-apply-btn" id="applyDetailClose" aria-label="Close">✕</button>'
+      + '<div class="rb-apply-detail-head">'
+      + '  <div><div class="rb-apply-detail-company">' + esc(app.company || '') + '</div>'
+      + '    <div class="rb-apply-detail-title">' + esc(app.title || '') + '</div></div>'
+      + '  <button class="rb-apply-btn" id="applyDetailClose" aria-label="Close">✕</button>'
       + '</div>'
-      + '<div class="jh-apply-detail-row">' + statusPill(app.status)
+      + '<div class="rb-apply-detail-row">' + statusPill(app.status)
       + locationHtml(app)
       + atsBar(app)
-      + (app.dry_run ? '<span class="jh-apply-dry-tag">Dry run, not submitted</span>' : '')
-      + (app.fit_score != null ? '<span class="jh-apply-score">' + Math.round(app.fit_score) + '</span>' : '')
+      + (app.dry_run ? '<span class="rb-apply-dry-tag">Dry run, not submitted</span>' : '')
+      + (app.fit_score != null ? '<span class="rb-apply-score">' + Math.round(app.fit_score) + '</span>' : '')
       + '</div>'
-      + (links.length ? '<div class="jh-apply-detail-links">' + links.join('') + '</div>' : '')
+      + (links.length ? '<div class="rb-apply-detail-links">' + links.join('') + '</div>' : '')
       + phasesHtml(app)
-      + '<label class="jh-apply-detail-label" for="applyStatusSelect">Change status</label>'
-      + '<select id="applyStatusSelect" class="jh-apply-select" data-app="' + app.id + '">' + options + '</select>'
+      + '<label class="rb-apply-detail-label" for="applyStatusSelect">Change status</label>'
+      + '<select id="applyStatusSelect" class="rb-apply-select" data-app="' + app.id + '">' + options + '</select>'
       + (app.status === 'discovered' && !state.sample
-          ? '<button class="jh-apply-btn" type="button" data-unqueue="' + app.id + '">Unqueue</button>'
-            + '<p class="jh-apply-unqueue-hint">Removes this job before Robin spends tokens on it. After scoring, skip it instead.</p>'
+          ? '<button class="rb-apply-btn" type="button" data-unqueue="' + app.id + '">Unqueue</button>'
+            + '<p class="rb-apply-unqueue-hint">Removes this job before Robin spends tokens on it. After scoring, skip it instead.</p>'
           : '')
-      + '<div class="jh-apply-detail-label">History</div>'
-      + '<ul class="jh-apply-events">' + (events || '<li class="jh-apply-empty">No events</li>') + '</ul>'
-      + '<div class="jh-apply-detail-label">Replies</div>'
-      + '<ul class="jh-apply-events">' + (messages || '<li class="jh-apply-empty">No matched email</li>') + '</ul>';
+      + '<div class="rb-apply-detail-label">History</div>'
+      + '<ul class="rb-apply-events">' + (events || '<li class="rb-apply-empty">No events</li>') + '</ul>'
+      + '<div class="rb-apply-detail-label">Replies</div>'
+      + '<ul class="rb-apply-events">' + (messages || '<li class="rb-apply-empty">No matched email</li>') + '</ul>';
   }
 
   async function openDetail(applicationId) {
@@ -561,14 +561,14 @@
       state.selected = local;
       panel.innerHTML = local
         ? detailHtml(local)
-        : '<div class="jh-apply-empty">Sample card</div>';
+        : '<div class="rb-apply-empty">Sample card</div>';
       return;
     }
 
-    panel.innerHTML = '<div class="jh-apply-empty">Loading…</div>';
+    panel.innerHTML = '<div class="rb-apply-empty">Loading…</div>';
     var data = await api('/api/pipeline/detail?id=' + encodeURIComponent(applicationId));
     if (!data.ok) {
-      panel.innerHTML = '<div class="jh-apply-empty">' + esc(data.error || 'Not found') + '</div>';
+      panel.innerHTML = '<div class="rb-apply-empty">' + esc(data.error || 'Not found') + '</div>';
       return;
     }
     state.selected = data.application;
@@ -805,7 +805,7 @@
     var refresh = event.target.closest('#applyRefreshBtn');
     if (refresh) { load(); return; }
 
-    var colToggle = event.target.closest('.jh-apply-col-head, [data-toggle-col], [data-expand-col]');
+    var colToggle = event.target.closest('.rb-apply-col-head, [data-toggle-col], [data-expand-col]');
     if (colToggle) {
       state.dragging = false;
       event.preventDefault();
@@ -838,7 +838,7 @@
     var unqueueBtn = event.target.closest('[data-unqueue]');
     if (unqueueBtn) { unqueue(unqueueBtn.getAttribute('data-unqueue')); return; }
 
-    var card = event.target.closest('.jh-apply-card');
+    var card = event.target.closest('.rb-apply-card');
     if (card) {
       if (state.dragging) return;
       openDetail(card.getAttribute('data-app'));
@@ -846,7 +846,7 @@
   });
 
   document.addEventListener('dragstart', function (event) {
-    var card = event.target.closest && event.target.closest('.jh-apply-card');
+    var card = event.target.closest && event.target.closest('.rb-apply-card');
     if (!card) return;
     state.dragging = true;
     event.dataTransfer.setData('text/plain', card.getAttribute('data-app'));
@@ -885,7 +885,7 @@
 
   document.addEventListener('keydown', function (event) {
     if (event.key !== 'Enter' && event.key !== ' ') return;
-    var card = event.target.closest && event.target.closest('.jh-apply-card');
+    var card = event.target.closest && event.target.closest('.rb-apply-card');
     if (card) { event.preventDefault(); openDetail(card.getAttribute('data-app')); }
   });
 
@@ -894,7 +894,7 @@
     if (select) setStatus(select.getAttribute('data-app'), select.value);
   });
 
-  window.__jhApply = { load: load, show: load, closeDetail: closeDetail };
+  window.__rbApply = { load: load, show: load, closeDetail: closeDetail };
 
   // This file loads after the inline script has already restored the last
   // screen from localStorage, so nav()'s hook has nothing to call yet. Pick up

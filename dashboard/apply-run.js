@@ -131,8 +131,8 @@
 
   function refreshKanban() {
     if (!applyOnScreen()) return;
-    if (window.__jhApply && typeof window.__jhApply.load === 'function') {
-      window.__jhApply.load();
+    if (window.__rbApply && typeof window.__rbApply.load === 'function') {
+      window.__rbApply.load();
     }
   }
 
@@ -208,13 +208,13 @@
   function highlightRunning() {
     var stage = runningStage();
     var agent = runningAgentId();
-    document.querySelectorAll('#s-apply .jh-bento-card[data-stage], #s-apply .jh-apply-col[data-stage]').forEach(function (el) {
+    document.querySelectorAll('#s-apply .rb-bento-card[data-stage], #s-apply .rb-apply-col[data-stage]').forEach(function (el) {
       var on = !!(stage && el.getAttribute('data-stage') === stage);
       el.classList.toggle('is-running', on);
       if (on) el.setAttribute('aria-busy', 'true');
       else el.removeAttribute('aria-busy');
     });
-    document.querySelectorAll('#applyRunDots .jh-apply-dot').forEach(function (el) {
+    document.querySelectorAll('#applyRunDots .rb-apply-dot').forEach(function (el) {
       el.classList.toggle('is-running', !!(agent && el.getAttribute('data-agent') === agent));
     });
   }
@@ -240,12 +240,12 @@
         ? 'var(--st-ash)'
         : 'color-mix(in srgb, var(--st-ink) ' + mix + '%, var(--st-ash))';
       var live = liveId === id ? ' is-running' : '';
-      return '<div class="jh-apply-dot' + live + '" data-agent="' + escDot(id)
+      return '<div class="rb-apply-dot' + live + '" data-agent="' + escDot(id)
         + '" title="' + short + ': '
         + (n ? n.toLocaleString() + ' tokens' : 'no tokens this run') + '">'
-        + '<span class="jh-apply-dot-sq" style="background:' + bg + '"></span>'
-        + '<span class="jh-apply-dot-name">' + escDot(short) + '</span>'
-        + '<span class="jh-apply-dot-n">' + label + '</span>'
+        + '<span class="rb-apply-dot-sq" style="background:' + bg + '"></span>'
+        + '<span class="rb-apply-dot-name">' + escDot(short) + '</span>'
+        + '<span class="rb-apply-dot-n">' + label + '</span>'
         + '</div>';
     }).join('');
   }
@@ -511,7 +511,7 @@
     if (stopBtn) stopBtn.addEventListener('click', function () {
       postControl('/api/abort', 'Stop failed');
     });
-    document.addEventListener('jh-live-event', onLiveEvent);
+    document.addEventListener('rb-live-event', onLiveEvent);
   }
 
   async function init() {
@@ -524,7 +524,7 @@
     render();
   }
 
-  window.__jhApplyRun = {
+  window.__rbApplyRun = {
     start: startOrResume,
     refresh: poll,
     attach: attachLive,

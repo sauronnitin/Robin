@@ -1,6 +1,6 @@
 """Background Auto Error Fix: watch error bus, heal, patch, then retry.
 
-Runs inside dashboard/server.py (jh-autofix ticker). No canvas pipeline card.
+Runs inside dashboard/server.py (rb-autofix ticker). No canvas pipeline card.
 Uses deterministic healers first; Gemini Flash for allowlisted diagnose-and-patch.
 Never uses Gemini Pro. Never edits secrets or flips DRY_RUN to false.
 """

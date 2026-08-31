@@ -8,7 +8,7 @@
   const API = "";
 
   // Funnel ramp and the histogram's threshold colour now live in the
-  // stylesheet (`.jh-bento-funnel-seg:nth-child(n)`, `.jh-bento-hist-bar
+  // stylesheet (`.rb-bento-funnel-seg:nth-child(n)`, `.rb-bento-hist-bar
   // .is-above/.is-below`) so charts are themeable. The old FUNNEL_RAMP and
   // BLUE constants were removed rather than left dangling.
   const STATUS = {
@@ -108,19 +108,19 @@
       subline: "13% of applications drew a reply",
       wide: true,
       viz: () => `<div style="width:100%">
-      <div class="jh-bento-funnel-row">
-        <div class="jh-bento-funnel-seg" style="width:42%" data-tip="discovered: 52">52</div>
-        <div class="jh-bento-funnel-seg" style="width:24%" data-tip="applied: 31">31</div>
-        <div class="jh-bento-funnel-seg" style="width:12%" data-tip="replied: 7">7</div>
-        <div class="jh-bento-funnel-seg" style="width:11%" data-tip="interview: 3">3</div>
-        <div class="jh-bento-funnel-seg" style="width:11%" data-tip="offer: 1">1</div>
+      <div class="rb-bento-funnel-row">
+        <div class="rb-bento-funnel-seg" style="width:42%" data-tip="discovered: 52">52</div>
+        <div class="rb-bento-funnel-seg" style="width:24%" data-tip="applied: 31">31</div>
+        <div class="rb-bento-funnel-seg" style="width:12%" data-tip="replied: 7">7</div>
+        <div class="rb-bento-funnel-seg" style="width:11%" data-tip="interview: 3">3</div>
+        <div class="rb-bento-funnel-seg" style="width:11%" data-tip="offer: 1">1</div>
       </div>
-      <div class="jh-bento-funnel-legend">
-        <span class="jh-bento-funnel-key"><i class="jh-bento-funnel-dot" data-step="1"></i>discovered</span>
-        <span class="jh-bento-funnel-key"><i class="jh-bento-funnel-dot" data-step="2"></i>applied</span>
-        <span class="jh-bento-funnel-key"><i class="jh-bento-funnel-dot" data-step="3"></i>replied</span>
-        <span class="jh-bento-funnel-key"><i class="jh-bento-funnel-dot" data-step="4"></i>interview</span>
-        <span class="jh-bento-funnel-key"><i class="jh-bento-funnel-dot" data-step="5"></i>offer</span>
+      <div class="rb-bento-funnel-legend">
+        <span class="rb-bento-funnel-key"><i class="rb-bento-funnel-dot" data-step="1"></i>discovered</span>
+        <span class="rb-bento-funnel-key"><i class="rb-bento-funnel-dot" data-step="2"></i>applied</span>
+        <span class="rb-bento-funnel-key"><i class="rb-bento-funnel-dot" data-step="3"></i>replied</span>
+        <span class="rb-bento-funnel-key"><i class="rb-bento-funnel-dot" data-step="4"></i>interview</span>
+        <span class="rb-bento-funnel-key"><i class="rb-bento-funnel-dot" data-step="5"></i>offer</span>
       </div></div>`,
     },
     "Cadence": {
@@ -175,7 +175,7 @@
     },
     "Targeting accuracy": {
       figure: "61%", unit: "on target",
-      subline: '<i class="jh-key-dot" data-slot="1"></i>39 core &middot; <i class="jh-key-dot" data-slot="2"></i>5 adjacent &middot; <i class="jh-key-dot" data-slot="3"></i>20 dropped',
+      subline: '<i class="rb-key-dot" data-slot="1"></i>39 core &middot; <i class="rb-key-dot" data-slot="2"></i>5 adjacent &middot; <i class="rb-key-dot" data-slot="3"></i>20 dropped',
       aside: true,
       viz: () => vizSplit([
         { label: "core", value: 39 },
@@ -202,12 +202,12 @@
    * (funnel, distribution) still run beneath.
    */
   function figureBlock(s) {
-    const fig = `<div class="jh-bento-figure">${s.figure}${s.unit ? `<span class="jh-bento-figure-unit">${s.unit}</span>` : ""}</div>`;
-    const sub = s.subline ? `<div class="jh-bento-subline">${s.subline}</div>` : "";
+    const fig = `<div class="rb-bento-figure">${s.figure}${s.unit ? `<span class="rb-bento-figure-unit">${s.unit}</span>` : ""}</div>`;
+    const sub = s.subline ? `<div class="rb-bento-subline">${s.subline}</div>` : "";
     if (s.aside) {
-      return `<div class="jh-bento-head"><div>${fig}${sub}</div><div class="jh-bento-aside">${s.viz()}</div></div>`;
+      return `<div class="rb-bento-head"><div>${fig}${sub}</div><div class="rb-bento-aside">${s.viz()}</div></div>`;
     }
-    return `${fig}${sub}<div class="jh-bento-viz${s.wide ? " is-wide" : ""}">${s.viz()}</div>`;
+    return `${fig}${sub}<div class="rb-bento-viz${s.wide ? " is-wide" : ""}">${s.viz()}</div>`;
   }
 
   function lockedTile(label, unlock, area, size) {
@@ -215,15 +215,15 @@
     if (s) {
       // Sample content is authored above and never user input, so the small
       // amount of inline markup it carries is intentional.
-      return `<article class="jh-bento-card jh-bento-sample ${size || "jh-bento-medium"} ${area}" data-sample="1">
-        <div class="jh-bento-label">${esc(label)}<span class="jh-bento-sample-chip" title="${esc(unlock)}">Sample</span></div>
+      return `<article class="rb-bento-card rb-bento-sample ${size || "rb-bento-medium"} ${area}" data-sample="1">
+        <div class="rb-bento-label">${esc(label)}<span class="rb-bento-sample-chip" title="${esc(unlock)}">Sample</span></div>
         ${figureBlock(s)}
-        ${s.detail ? `<div class="jh-bento-caption">${s.detail}</div>` : ""}
+        ${s.detail ? `<div class="rb-bento-caption">${s.detail}</div>` : ""}
       </article>`;
     }
-    return `<article class="jh-bento-card jh-bento-locked ${size || "jh-bento-medium"} ${area}">
-      <div class="jh-bento-label">${esc(label)}</div>
-      <div class="jh-bento-lock">${esc(unlock)}</div>
+    return `<article class="rb-bento-card rb-bento-locked ${size || "rb-bento-medium"} ${area}">
+      <div class="rb-bento-label">${esc(label)}</div>
+      <div class="rb-bento-lock">${esc(unlock)}</div>
     </article>`;
   }
 
@@ -268,17 +268,17 @@
    * This also covers locked and sample tiles for free.
    */
   function applyStageTabs(root) {
-    root.querySelectorAll(".jh-bento-card").forEach((card) => {
+    root.querySelectorAll(".rb-bento-card").forEach((card) => {
       const area = Array.from(card.classList)
-        .map((c) => (c.startsWith("jh-bento-area-") ? c.slice("jh-bento-area-".length) : null))
+        .map((c) => (c.startsWith("rb-bento-area-") ? c.slice("rb-bento-area-".length) : null))
         .find(Boolean);
       const stage = area && STAGE_BY_AREA[area];
-      const label = card.querySelector(".jh-bento-label");
+      const label = card.querySelector(".rb-bento-label");
       // No label means no row to sit in — a tab hung off the card on its own
       // would float above the content instead of aligning to anything.
-      if (!stage || !label || label.querySelector(":scope > .jh-bento-tab")) return;
+      if (!stage || !label || label.querySelector(":scope > .rb-bento-tab")) return;
       const tab = document.createElement("div");
-      tab.className = `jh-bento-tab${RUBRIC_TAB_AREAS.has(area) ? " is-mark" : ""}`;
+      tab.className = `rb-bento-tab${RUBRIC_TAB_AREAS.has(area) ? " is-mark" : ""}`;
       tab.textContent = stage;
       card.classList.add("is-tabbed");
       // First cell of the label row, so the row aligns and spaces it. Hanging
@@ -291,7 +291,7 @@
   function ensureTip() {
     if (tipEl) return tipEl;
     tipEl = document.createElement("div");
-    tipEl.className = "jh-metrics-tooltip";
+    tipEl.className = "rb-metrics-tooltip";
     tipEl.hidden = true;
     document.body.appendChild(tipEl);
     return tipEl;
@@ -317,7 +317,7 @@
   }
 
   function bench(text, source) {
-    return `<div class="jh-bento-bench">${esc(text)}${source ? ` · <span>${esc(source)}</span>` : ""}</div>`;
+    return `<div class="rb-bento-bench">${esc(text)}${source ? ` · <span>${esc(source)}</span>` : ""}</div>`;
   }
 
   // ── Micro-viz primitives ──────────────────────────────────────────────
@@ -337,18 +337,18 @@
     const o = opts || {};
     const p = ratioPct(value, total);
     const mark = o.markPct != null
-      ? `<div class="jh-viz-meter-mark" style="left:${Math.max(0, Math.min(100, o.markPct)).toFixed(1)}%" data-tip="${esc(o.markTip || "")}"></div>`
+      ? `<div class="rb-viz-meter-mark" style="left:${Math.max(0, Math.min(100, o.markPct)).toFixed(1)}%" data-tip="${esc(o.markTip || "")}"></div>`
       : "";
     const legend = (o.left || o.right)
-      ? `<div class="jh-viz-meter-legend"><span>${esc(o.left || "")}</span><span>${esc(o.right || "")}</span></div>`
+      ? `<div class="rb-viz-meter-legend"><span>${esc(o.left || "")}</span><span>${esc(o.right || "")}</span></div>`
       : "";
     // A true zero draws no fill at all. The fill carries a min-width so small
     // non-zero values stay visible, which would otherwise render "0 of 9" as a
     // sliver that looks like progress.
     const fill = p > 0
-      ? `<div class="jh-viz-meter-fill${o.tone ? ` is-${o.tone}` : ""}" style="width:${p.toFixed(1)}%"></div>`
+      ? `<div class="rb-viz-meter-fill${o.tone ? ` is-${o.tone}` : ""}" style="width:${p.toFixed(1)}%"></div>`
       : "";
-    return `<div class="jh-viz-meter" data-tip="${esc(o.tip || "")}">${fill}${mark}</div>${legend}`;
+    return `<div class="rb-viz-meter" data-tip="${esc(o.tip || "")}">${fill}${mark}</div>${legend}`;
   }
 
   /** A stacked proportion. Labels ride inside only where they actually fit. */
@@ -364,24 +364,24 @@
       // sit beside the key dot that says which segment they belong to. Only the
       // wide segments could hold a number anyway, so the duplication was also
       // partial: two of the three categories restated, one silent.
-      return `<div class="jh-viz-split-seg" data-slot="${i + 1}" style="width:${w.toFixed(1)}%" data-tip="${esc(p.label)}: ${v}"></div>`;
+      return `<div class="rb-viz-split-seg" data-slot="${i + 1}" style="width:${w.toFixed(1)}%" data-tip="${esc(p.label)}: ${v}"></div>`;
     }).join("");
     const keys = parts.map((p, i) => {
       const v = Number(p.value) || 0;
       if (v <= 0) return "";
-      return `<span class="jh-viz-key" data-slot="${i + 1}"><i></i>${esc(p.label)} ${esc(String(v))}</span>`;
+      return `<span class="rb-viz-key" data-slot="${i + 1}"><i></i>${esc(p.label)} ${esc(String(v))}</span>`;
     }).join("");
-    return `<div class="jh-viz-split">${segs}</div><div class="jh-viz-keys">${keys}</div>`;
+    return `<div class="rb-viz-split">${segs}</div><div class="rb-viz-keys">${keys}</div>`;
   }
 
   /** Labelled horizontal bars. Pass `max` to compare rows against a whole. */
   function vizRows(rows, max) {
     const top = Number(max) || Math.max(1, ...rows.map((r) => Number(r.value) || 0));
-    return `<div class="jh-viz-rows">${rows.map((r) => `
-      <div class="jh-viz-row" data-tip="${esc(r.tip || `${r.label}: ${r.value}`)}">
-        <span class="jh-viz-row-label">${esc(r.label)}</span>
-        <div class="jh-viz-row-track"><div class="jh-viz-row-fill${r.tone ? ` is-${r.tone}` : ""}" style="width:${ratioPct(r.value, top).toFixed(1)}%"></div></div>
-        <span class="jh-viz-row-val">${esc(fmtInt(r.value))}</span>
+    return `<div class="rb-viz-rows">${rows.map((r) => `
+      <div class="rb-viz-row" data-tip="${esc(r.tip || `${r.label}: ${r.value}`)}">
+        <span class="rb-viz-row-label">${esc(r.label)}</span>
+        <div class="rb-viz-row-track"><div class="rb-viz-row-fill${r.tone ? ` is-${r.tone}` : ""}" style="width:${ratioPct(r.value, top).toFixed(1)}%"></div></div>
+        <span class="rb-viz-row-val">${esc(fmtInt(r.value))}</span>
       </div>`).join("")}</div>`;
   }
 
@@ -390,14 +390,14 @@
     const span = (hi - lo) || 1;
     const a = Math.max(0, Math.min(100, ((before - lo) / span) * 100));
     const b = Math.max(0, Math.min(100, ((after - lo) / span) * 100));
-    return `<div class="jh-viz-slope">
-      <div class="jh-viz-slope-track">
-        <div class="jh-viz-slope-bar" style="left:${Math.min(a, b).toFixed(1)}%;width:${Math.abs(b - a).toFixed(1)}%"></div>
-        <span class="jh-viz-slope-dot is-before" style="left:${a.toFixed(1)}%" data-tip="Before tailoring: ${esc(String(before))}"></span>
-        <span class="jh-viz-slope-dot is-after" style="left:${b.toFixed(1)}%" data-tip="After tailoring: ${esc(String(after))}"></span>
+    return `<div class="rb-viz-slope">
+      <div class="rb-viz-slope-track">
+        <div class="rb-viz-slope-bar" style="left:${Math.min(a, b).toFixed(1)}%;width:${Math.abs(b - a).toFixed(1)}%"></div>
+        <span class="rb-viz-slope-dot is-before" style="left:${a.toFixed(1)}%" data-tip="Before tailoring: ${esc(String(before))}"></span>
+        <span class="rb-viz-slope-dot is-after" style="left:${b.toFixed(1)}%" data-tip="After tailoring: ${esc(String(after))}"></span>
       </div>
     </div>
-    <div class="jh-viz-slope-scale"><span>${esc(String(lo))}</span><span>${esc(String(hi))}</span></div>`;
+    <div class="rb-viz-slope-scale"><span>${esc(String(lo))}</span><span>${esc(String(hi))}</span></div>`;
   }
 
   /** A proportion as a ring. Compact and round — the antidote to a board where
@@ -411,10 +411,10 @@
     const circ = 2 * Math.PI * r;
     const dash = (p / 100) * circ;
     const mid = size / 2;
-    return `<svg class="jh-viz-ring" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}"
+    return `<svg class="rb-viz-ring" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}"
       role="img" aria-label="${esc(o.label || `${Math.round(p)} percent`)}" data-tip="${esc(o.tip || "")}">
-      <circle class="jh-viz-ring-track" cx="${mid}" cy="${mid}" r="${r}" fill="none" stroke-width="${sw}"/>
-      <circle class="jh-viz-ring-fill${o.tone ? ` is-${o.tone}` : ""}" cx="${mid}" cy="${mid}" r="${r}" fill="none"
+      <circle class="rb-viz-ring-track" cx="${mid}" cy="${mid}" r="${r}" fill="none" stroke-width="${sw}"/>
+      <circle class="rb-viz-ring-fill${o.tone ? ` is-${o.tone}` : ""}" cx="${mid}" cy="${mid}" r="${r}" fill="none"
         stroke-width="${sw}" stroke-linecap="butt" transform="rotate(-90 ${mid} ${mid})"
         stroke-dasharray="${dash.toFixed(2)} ${(circ - dash).toFixed(2)}"/>
     </svg>`;
@@ -435,30 +435,30 @@
       if (v <= 0) return "";
       // A 2px surface gap between arcs, same job as the gap between stacked bars.
       const len = Math.max(0, (v / total) * circ - 2);
-      const seg = `<circle class="jh-viz-ring-fill" data-slot="${i + 1}" cx="${mid}" cy="${mid}" r="${r}" fill="none"
+      const seg = `<circle class="rb-viz-ring-fill" data-slot="${i + 1}" cx="${mid}" cy="${mid}" r="${r}" fill="none"
         stroke-width="${sw}" stroke-linecap="butt" transform="rotate(-90 ${mid} ${mid})"
         stroke-dasharray="${len.toFixed(2)} ${(circ - len).toFixed(2)}"
         stroke-dashoffset="${(-offset).toFixed(2)}" data-tip="${esc(p.label)}: ${v}"/>`;
       offset += (v / total) * circ;
       return seg;
     }).join("");
-    return `<svg class="jh-viz-ring" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" role="img" aria-label="${esc(o.label || "proportion")}">
-      <circle class="jh-viz-ring-track" cx="${mid}" cy="${mid}" r="${r}" fill="none" stroke-width="${sw}"/>${arcs}
+    return `<svg class="rb-viz-ring" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" role="img" aria-label="${esc(o.label || "proportion")}">
+      <circle class="rb-viz-ring-track" cx="${mid}" cy="${mid}" r="${r}" fill="none" stroke-width="${sw}"/>${arcs}
     </svg>`;
   }
 
   /** Keys for a multi-part mark. Colour never carries identity on its own. */
   function vizKeys(parts, stack) {
-    return `<div class="jh-viz-keys${stack ? " is-stacked" : ""}">${parts.map((p, i) => {
+    return `<div class="rb-viz-keys${stack ? " is-stacked" : ""}">${parts.map((p, i) => {
       const v = Number(p.value) || 0;
       if (v <= 0) return "";
-      return `<span class="jh-viz-key" data-slot="${i + 1}"><i></i>${esc(p.label)} ${esc(String(v))}</span>`;
+      return `<span class="rb-viz-key" data-slot="${i + 1}"><i></i>${esc(p.label)} ${esc(String(v))}</span>`;
     }).join("")}</div>`;
   }
 
   /** A ring beside its keys — round mark, legible identity, still compact. */
   function vizRingWithKeys(parts, opts) {
-    return `<div class="jh-viz-ring-row">${vizRingParts(parts, opts)}${vizKeys(parts, true)}</div>`;
+    return `<div class="rb-viz-ring-row">${vizRingParts(parts, opts)}${vizKeys(parts, true)}</div>`;
   }
 
   /**
@@ -503,32 +503,32 @@
     }).join("");
     // Direct labels beat a legend: the eye never leaves the tile to decode.
     const legend = (o.left || o.right)
-      ? `<div class="jh-units-legend"><span>${esc(o.left || "")}</span><span>${esc(o.right || "")}</span></div>`
+      ? `<div class="rb-units-legend"><span>${esc(o.left || "")}</span><span>${esc(o.right || "")}</span></div>`
       : "";
-    return `<div class="jh-viz-units" data-tip="${esc(o.tip || `${f} of ${n}`)}">${marks}</div>${legend}`;
+    return `<div class="rb-viz-units" data-tip="${esc(o.tip || `${f} of ${n}`)}">${marks}</div>${legend}`;
   }
 
   /** Small vertical columns — a distribution that stays compact. */
   function vizColumns(rows) {
     const max = Math.max(1, ...rows.map((r) => Number(r.value) || 0));
-    return `<div class="jh-viz-cols">${rows.map((r) => `
-      <div class="jh-viz-col" data-tip="${esc(r.tip || `${r.label}: ${r.value}`)}">
-        <div class="jh-viz-col-slot"><div class="jh-viz-col-bar${r.tone ? ` is-${r.tone}` : ""}"${r.step ? ` data-step="${r.step}"` : ""} style="height:${Math.max(4, ratioPct(r.value, max)).toFixed(1)}%"></div></div>
-        <span class="jh-viz-col-val">${esc(fmtInt(r.value))}</span>
-        <span class="jh-viz-col-label">${esc(r.label)}</span>
+    return `<div class="rb-viz-cols">${rows.map((r) => `
+      <div class="rb-viz-col" data-tip="${esc(r.tip || `${r.label}: ${r.value}`)}">
+        <div class="rb-viz-col-slot"><div class="rb-viz-col-bar${r.tone ? ` is-${r.tone}` : ""}"${r.step ? ` data-step="${r.step}"` : ""} style="height:${Math.max(4, ratioPct(r.value, max)).toFixed(1)}%"></div></div>
+        <span class="rb-viz-col-val">${esc(fmtInt(r.value))}</span>
+        <span class="rb-viz-col-label">${esc(r.label)}</span>
       </div>`).join("")}</div>`;
   }
 
   /** A compact column series — consistency over time at a glance. */
   function vizStrip(values, labels) {
     const max = Math.max(1, ...values.map((v) => Number(v) || 0));
-    return `<div class="jh-viz-strip">${values.map((v, i) => {
+    return `<div class="rb-viz-strip">${values.map((v, i) => {
       const n = Number(v) || 0;
       // Height is a percentage of its own track, not an absolute pixel run, so
       // the bar reads as a proportion of the slot it sits in.
       const h = n <= 0 ? 0 : Math.max(14, Math.round((n / max) * 100));
       const cls = n <= 0 ? "is-empty" : (i === values.length - 1 ? "is-current" : "");
-      return `<span class="jh-viz-strip-slot" data-tip="${esc((labels && labels[i]) || "")}${n}"><i class="${cls}" style="height:${h}%"></i></span>`;
+      return `<span class="rb-viz-strip-slot" data-tip="${esc((labels && labels[i]) || "")}${n}"><i class="${cls}" style="height:${h}%"></i></span>`;
     }).join("")}</div>`;
   }
 
@@ -539,18 +539,18 @@
     if (pace.first_interview_at_application != null) {
       const n = pace.first_interview_at_application;
       const faster = bm > 0 ? Math.round((1 - n / bm) * 100) : 0;
-      return `<article class="jh-bento-card jh-bento-hero jh-bento-area-pace">
-        <div class="jh-bento-label">Pace to first interview</div>
-        <div class="jh-bento-num" style="font-size:34px">First interview at ${esc(fmtInt(n))}</div>
-        <div class="jh-bento-sub">${faster > 0 ? `${faster}% faster than typical` : "Against the published median"}</div>
+      return `<article class="rb-bento-card rb-bento-hero rb-bento-area-pace">
+        <div class="rb-bento-label">Pace to first interview</div>
+        <div class="rb-bento-num" style="font-size:34px">First interview at ${esc(fmtInt(n))}</div>
+        <div class="rb-bento-sub">${faster > 0 ? `${faster}% faster than typical` : "Against the published median"}</div>
         ${bench(detail, source)}
       </article>`;
     }
     if (state === "S1" || !pace.has_data) {
-      return `<article class="jh-bento-card jh-bento-hero jh-bento-area-pace">
-        <div class="jh-bento-label">Ready to send</div>
-        <div class="jh-bento-num" style="font-size:28px">No applications sent yet</div>
-        <div class="jh-bento-sub">Typical searches see a first interview around ${esc(fmtInt(bm))}. Tailoring roughly halves that.</div>
+      return `<article class="rb-bento-card rb-bento-hero rb-bento-area-pace">
+        <div class="rb-bento-label">Ready to send</div>
+        <div class="rb-bento-num" style="font-size:28px">No applications sent yet</div>
+        <div class="rb-bento-sub">Typical searches see a first interview around ${esc(fmtInt(bm))}. Tailoring roughly halves that.</div>
         ${bench(detail, source)}
       </article>`;
     }
@@ -565,26 +565,26 @@
       tip: `${sent} sent against a typical first interview around ${bm}`,
     });
     if (bm > 0 && sent >= bm * 1.5) {
-      return `<article class="jh-bento-card jh-bento-hero jh-bento-area-pace">
-        <div class="jh-bento-label">Pace to first interview</div>
-        <div class="jh-bento-num" style="font-size:34px">${esc(fmtInt(sent))} of ~${esc(fmtInt(bm))}</div>
-        <div class="jh-bento-sub">Past typical without an interview. Check targeting and résumé match on the rail.</div>
-        <div class="jh-bento-viz">${paceDots}</div>
+      return `<article class="rb-bento-card rb-bento-hero rb-bento-area-pace">
+        <div class="rb-bento-label">Pace to first interview</div>
+        <div class="rb-bento-num" style="font-size:34px">${esc(fmtInt(sent))} of ~${esc(fmtInt(bm))}</div>
+        <div class="rb-bento-sub">Past typical without an interview. Check targeting and résumé match on the rail.</div>
+        <div class="rb-bento-viz">${paceDots}</div>
         ${bench(detail, source)}
       </article>`;
     }
-    return `<article class="jh-bento-card jh-bento-hero jh-bento-area-pace">
-      <div class="jh-bento-label">Pace to first interview</div>
-      <div class="jh-bento-num" style="font-size:34px">${esc(fmtInt(sent))} of ~${esc(fmtInt(bm))}</div>
-      <div class="jh-bento-sub">Applications toward a statistically expected first interview</div>
-      <div class="jh-bento-viz">${paceDots}</div>
+    return `<article class="rb-bento-card rb-bento-hero rb-bento-area-pace">
+      <div class="rb-bento-label">Pace to first interview</div>
+      <div class="rb-bento-num" style="font-size:34px">${esc(fmtInt(sent))} of ~${esc(fmtInt(bm))}</div>
+      <div class="rb-bento-sub">Applications toward a statistically expected first interview</div>
+      <div class="rb-bento-viz">${paceDots}</div>
       ${bench(detail, source)}
     </article>`;
   }
 
   function tileSilence(silence, state) {
     if (stateRank(state) < 2) {
-      return lockedTile("Silence clock", UNLOCK.S2, "jh-bento-area-silence", "jh-bento-large");
+      return lockedTile("Silence clock", UNLOCK.S2, "rb-bento-area-silence", "rb-bento-large");
     }
     const awaiting = silence.awaiting || 0;
     const follow = silence.follow_up_count || 0;
@@ -601,12 +601,12 @@
       mark: follow,
       tip: `${awaiting} awaiting a reply${follow ? `, ${follow} past 21 days` : ""}`,
     });
-    return `<article class="jh-bento-card jh-bento-large jh-bento-area-silence">
-      <div class="jh-bento-label">Silence clock</div>
-      <div class="jh-bento-figure">${esc(fmtInt(awaiting))}<span class="jh-bento-figure-unit">awaiting a reply</span></div>
-      <div class="jh-bento-subline">${follow ? `${esc(fmtInt(follow))} past 21 days, worth a follow-up` : "Nothing past 21 days yet"}</div>
-      <div class="jh-bento-viz">${units}</div>
-      <div class="jh-bento-bench">Between 48% and 75% of applications never get a response. Silence is the expected outcome, not a signal about you. · ${esc(silence.source || "Criteria Corp 2025; Human Capital Institute")}</div>
+    return `<article class="rb-bento-card rb-bento-large rb-bento-area-silence">
+      <div class="rb-bento-label">Silence clock</div>
+      <div class="rb-bento-figure">${esc(fmtInt(awaiting))}<span class="rb-bento-figure-unit">awaiting a reply</span></div>
+      <div class="rb-bento-subline">${follow ? `${esc(fmtInt(follow))} past 21 days, worth a follow-up` : "Nothing past 21 days yet"}</div>
+      <div class="rb-bento-viz">${units}</div>
+      <div class="rb-bento-bench">Between 48% and 75% of applications never get a response. Silence is the expected outcome, not a signal about you. · ${esc(silence.source || "Criteria Corp 2025; Human Capital Institute")}</div>
     </article>`;
   }
 
@@ -615,12 +615,12 @@
       return lockedTile(
         "ATS lift",
         ats.blocked_reason || UNLOCK.ats,
-        "jh-bento-area-ats",
-        "jh-bento-large"
+        "rb-bento-area-ats",
+        "rb-bento-large"
       );
     }
     if (stateRank(state) < 2) {
-      return lockedTile("ATS lift", UNLOCK.S2, "jh-bento-area-ats", "jh-bento-large");
+      return lockedTile("ATS lift", UNLOCK.S2, "rb-bento-area-ats", "rb-bento-large");
     }
     const before = ats.median_before;
     const after = ats.median_after;
@@ -628,35 +628,35 @@
     const thr = ats.threshold || 0.7;
     // The movement is the story here, so it gets drawn: two dots on one scale
     // with the gain between them, rather than an arrow between two numerals.
-    return `<article class="jh-bento-card jh-bento-large jh-bento-area-ats">
-      <div class="jh-bento-label">ATS lift</div>
-      <div class="jh-bento-figure">+${esc(fmtInt(delta))}<span class="jh-bento-figure-unit">points after tailoring</span></div>
-      <div class="jh-bento-subline">Median keyword match moved ${esc(fmtInt(before))} &rarr; ${esc(fmtInt(after))}</div>
-      <div class="jh-bento-viz is-wide">${vizSlope(Math.round(before), Math.round(after), 0, 100)}</div>
-      <div class="jh-bento-caption">${esc(fmtInt(ats.above_keyword_threshold))} of ${esc(fmtInt(ats.pair_count))} clear the ${esc(fmtPct(thr))} line</div>
+    return `<article class="rb-bento-card rb-bento-large rb-bento-area-ats">
+      <div class="rb-bento-label">ATS lift</div>
+      <div class="rb-bento-figure">+${esc(fmtInt(delta))}<span class="rb-bento-figure-unit">points after tailoring</span></div>
+      <div class="rb-bento-subline">Median keyword match moved ${esc(fmtInt(before))} &rarr; ${esc(fmtInt(after))}</div>
+      <div class="rb-bento-viz is-wide">${vizSlope(Math.round(before), Math.round(after), 0, 100)}</div>
+      <div class="rb-bento-caption">${esc(fmtInt(ats.above_keyword_threshold))} of ${esc(fmtInt(ats.pair_count))} clear the ${esc(fmtPct(thr))} line</div>
       ${bench(`ATS-optimized callback ${fmtPct(ats.callback_optimized)} vs ${fmtPct(ats.callback_generic)} generic · ≥70% keywords ~${ats.tailored_multiplier}× callbacks`, ats.source)}
     </article>`;
   }
 
   function tileRail(actions) {
     const rows = (actions || []).map((a) => `
-      <div class="jh-bento-rail-row">
-        <div class="jh-bento-rail-row-count">${esc(fmtInt(a.count))}</div>
-        <div class="jh-bento-rail-row-copy">
-          <div class="jh-bento-rail-row-why">${esc(a.why)}</div>
+      <div class="rb-bento-rail-row">
+        <div class="rb-bento-rail-row-count">${esc(fmtInt(a.count))}</div>
+        <div class="rb-bento-rail-row-copy">
+          <div class="rb-bento-rail-row-why">${esc(a.why)}</div>
         </div>
-        <button type="button" class="jh-bento-rail-btn" data-endpoint="${esc(a.action_endpoint)}" data-key="${esc(a.key)}">${esc(a.action_label)}</button>
+        <button type="button" class="rb-bento-rail-btn" data-endpoint="${esc(a.action_endpoint)}" data-key="${esc(a.key)}">${esc(a.action_label)}</button>
       </div>`).join("");
-    return `<aside class="jh-bento-card jh-bento-tall jh-bento-rail jh-bento-area-rail">
-      <div class="jh-bento-label">Next action</div>
-      <div class="jh-bento-sub" style="margin-bottom:10px">What do I do now?</div>
-      ${rows || `<div class="jh-bento-lock">Nothing queued. Run a search or queue a job.</div>`}
+    return `<aside class="rb-bento-card rb-bento-tall rb-bento-rail rb-bento-area-rail">
+      <div class="rb-bento-label">Next action</div>
+      <div class="rb-bento-sub" style="margin-bottom:10px">What do I do now?</div>
+      ${rows || `<div class="rb-bento-lock">Nothing queued. Run a search or queue a job.</div>`}
     </aside>`;
   }
 
   function tileTargeting(t) {
     if (!t.has_data) {
-      return lockedTile("Targeting accuracy", "Run your first search", "jh-bento-area-targeting", "jh-bento-medium");
+      return lockedTile("Targeting accuracy", "Run your first search", "rb-bento-area-targeting", "rb-bento-medium");
     }
     // "39 · 5 · 20" made the reader do the division. The split bar shows the
     // proportion directly and the keys carry identity, so colour never works
@@ -665,31 +665,31 @@
     const adj = Number(t.adjacent) || 0;
     const drop = Number(t.dropped) || 0;
     const onTarget = core + adj + drop > 0 ? Math.round((core / (core + adj + drop)) * 100) : 0;
-    return `<article class="jh-bento-card jh-bento-medium jh-bento-area-targeting">
-      <div class="jh-bento-label">Targeting accuracy</div>
-      <div class="jh-bento-head">
+    return `<article class="rb-bento-card rb-bento-medium rb-bento-area-targeting">
+      <div class="rb-bento-label">Targeting accuracy</div>
+      <div class="rb-bento-head">
         <div>
-          <div class="jh-bento-figure">${onTarget}%<span class="jh-bento-figure-unit">on target</span></div>
-          <div class="jh-bento-subline"><i class="jh-key-dot" data-slot="1"></i>${esc(fmtInt(core))} core · <i class="jh-key-dot" data-slot="2"></i>${esc(fmtInt(adj))} adjacent · <i class="jh-key-dot" data-slot="3"></i>${esc(fmtInt(drop))} dropped</div>
+          <div class="rb-bento-figure">${onTarget}%<span class="rb-bento-figure-unit">on target</span></div>
+          <div class="rb-bento-subline"><i class="rb-key-dot" data-slot="1"></i>${esc(fmtInt(core))} core · <i class="rb-key-dot" data-slot="2"></i>${esc(fmtInt(adj))} adjacent · <i class="rb-key-dot" data-slot="3"></i>${esc(fmtInt(drop))} dropped</div>
         </div>
-        <div class="jh-bento-aside">${vizSplit([
+        <div class="rb-bento-aside">${vizSplit([
           { label: "core", value: core },
           { label: "adjacent", value: adj },
           { label: "dropped", value: drop },
         ])}</div>
       </div>
-      <button type="button" class="jh-bento-badge" data-action="audit-dropped" data-ids="${esc((t.dropped_job_ids || []).join(","))}">Audit dropped</button>
+      <button type="button" class="rb-bento-badge" data-action="audit-dropped" data-ids="${esc((t.dropped_job_ids || []).join(","))}">Audit dropped</button>
     </article>`;
   }
 
   function tileRehearsal(funnel) {
     const submitted = funnel.applied != null ? funnel.applied : 0;
     const rehearsal = funnel.dry_run_applied != null ? funnel.dry_run_applied : 0;
-    return `<article class="jh-bento-card jh-bento-small jh-bento-area-rehearsal">
-      <div class="jh-bento-label">Real vs rehearsal</div>
-      <div class="jh-bento-figure">${esc(fmtInt(submitted))}<span class="jh-bento-figure-unit">really submitted</span></div>
-      <div class="jh-bento-subline">${esc(fmtInt(rehearsal))} rehearsal${rehearsal ? " — a dry run must never read as applied" : " — nothing was rehearsed"}</div>
-      <div class="jh-bento-viz">${vizUnits(submitted, submitted + rehearsal, {
+    return `<article class="rb-bento-card rb-bento-small rb-bento-area-rehearsal">
+      <div class="rb-bento-label">Real vs rehearsal</div>
+      <div class="rb-bento-figure">${esc(fmtInt(submitted))}<span class="rb-bento-figure-unit">really submitted</span></div>
+      <div class="rb-bento-subline">${esc(fmtInt(rehearsal))} rehearsal${rehearsal ? " — a dry run must never read as applied" : " — nothing was rehearsed"}</div>
+      <div class="rb-bento-viz">${vizUnits(submitted, submitted + rehearsal, {
         tip: `${submitted} submitted, ${rehearsal} dry-run rehearsals never sent`,
       })}</div>
     </article>`;
@@ -697,10 +697,10 @@
 
   function tileCadence(cadence, state) {
     if (stateRank(state) < 2) {
-      return lockedTile("Cadence", UNLOCK.S2, "jh-bento-area-cadence", "jh-bento-medium");
+      return lockedTile("Cadence", UNLOCK.S2, "rb-bento-area-cadence", "rb-bento-medium");
     }
     if (!cadence.has_data) {
-      return lockedTile("Cadence", UNLOCK.S2, "jh-bento-area-cadence", "jh-bento-medium");
+      return lockedTile("Cadence", UNLOCK.S2, "rb-bento-area-cadence", "rb-bento-medium");
     }
     const best = cadence.best_week || {};
     // Rate alone said nothing about consistency, which is the point of a
@@ -710,11 +710,11 @@
     const weekly = Array.isArray(cadence.weekly) ? cadence.weekly : null;
     // Streak leads, not the rate: consistency is the thing a cadence metric is
     // actually for, and an average hides whether it was steady or one big week.
-    return `<article class="jh-bento-card jh-bento-large jh-bento-area-cadence">
-      <div class="jh-bento-label">Cadence</div>
-      <div class="jh-bento-figure">${esc(fmtInt(cadence.current_streak_weeks))}<span class="jh-bento-figure-unit">week streak</span></div>
-      <div class="jh-bento-subline">${esc(fmtInt(cadence.per_week_avg))} per week on average · best week ${esc(fmtInt(best.count))}</div>
-      <div class="jh-bento-viz">${
+    return `<article class="rb-bento-card rb-bento-large rb-bento-area-cadence">
+      <div class="rb-bento-label">Cadence</div>
+      <div class="rb-bento-figure">${esc(fmtInt(cadence.current_streak_weeks))}<span class="rb-bento-figure-unit">week streak</span></div>
+      <div class="rb-bento-subline">${esc(fmtInt(cadence.per_week_avg))} per week on average · best week ${esc(fmtInt(best.count))}</div>
+      <div class="rb-bento-viz">${
         weekly && weekly.length
           ? vizStrip(weekly.map((w) => (typeof w === "object" ? w.count : w)))
           : vizMeter(cadence.per_week_avg, Math.max(1, best.count || cadence.per_week_avg), {
@@ -727,21 +727,21 @@
 
   function tilePipeline(pipe, state) {
     if (stateRank(state) < 2) {
-      return lockedTile("Live pipeline", UNLOCK.S2, "jh-bento-area-pipeline", "jh-bento-small");
+      return lockedTile("Live pipeline", UNLOCK.S2, "rb-bento-area-pipeline", "rb-bento-small");
     }
     const live = Number(pipe.live) || 0;
     const closed = Number(pipe.closed) || 0;
     // One mark per tracked application rather than a meter. The meter drew a
     // ratio the figure had already printed; the marks show the denominator, so
     // "12 still open" of 21 stops reading the same as "12 still open" of 200.
-    return `<article class="jh-bento-card jh-bento-small jh-bento-area-pipeline">
-      <div class="jh-bento-label">Live pipeline</div>
-      <div class="jh-bento-head">
+    return `<article class="rb-bento-card rb-bento-small rb-bento-area-pipeline">
+      <div class="rb-bento-label">Live pipeline</div>
+      <div class="rb-bento-head">
         <div>
-          <div class="jh-bento-figure">${esc(fmtInt(live))}<span class="jh-bento-figure-unit">still open</span></div>
-          <div class="jh-bento-subline">of ${esc(fmtInt(live + closed))} tracked · ${esc(fmtInt(closed))} closed</div>
+          <div class="rb-bento-figure">${esc(fmtInt(live))}<span class="rb-bento-figure-unit">still open</span></div>
+          <div class="rb-bento-subline">of ${esc(fmtInt(live + closed))} tracked · ${esc(fmtInt(closed))} closed</div>
         </div>
-        <div class="jh-bento-aside">${vizUnits(live, live + closed, {
+        <div class="rb-bento-aside">${vizUnits(live, live + closed, {
           tip: `${live} still open of ${live + closed} tracked`,
         })}</div>
       </div>
@@ -750,28 +750,28 @@
 
   function tileProof(pow) {
     if (!pow.has_data) {
-      return lockedTile("Proof of work", "Run your first search", "jh-bento-area-proof", "jh-bento-medium");
+      return lockedTile("Proof of work", "Run your first search", "rb-bento-area-proof", "rb-bento-medium");
     }
     // Was three counts on one line at the same size, so none of them read as
     // the answer. Each artifact is now a bar against the same denominator, so
     // coverage is visible rather than arithmetic the reader has to do.
     const total = Number(pow.total) || 0;
     const tailored = Number(pow.tailored) || 0;
-    return `<article class="jh-bento-card jh-bento-large jh-bento-area-proof">
-      <div class="jh-bento-label">Proof of work</div>
-      <div class="jh-bento-figure">${esc(fmtInt(tailored))}<span class="jh-bento-figure-unit">of ${esc(fmtInt(total))} tailored</span></div>
-${total > 60 ? `      <div class="jh-bento-subline">One mark stands for several, scaled to fit</div>
-` : ""}      <div class="jh-bento-viz">${vizUnits(tailored, total, { tip: `${tailored} of ${total} scored jobs got a tailored résumé` })}</div>
-      <div class="jh-bento-caption">${esc(fmtInt(pow.cover_letters))} cover letters · ${esc(fmtInt(pow.resume_pdfs))} PDFs built · the rest stayed gaps</div>
+    return `<article class="rb-bento-card rb-bento-large rb-bento-area-proof">
+      <div class="rb-bento-label">Proof of work</div>
+      <div class="rb-bento-figure">${esc(fmtInt(tailored))}<span class="rb-bento-figure-unit">of ${esc(fmtInt(total))} tailored</span></div>
+${total > 60 ? `      <div class="rb-bento-subline">One mark stands for several, scaled to fit</div>
+` : ""}      <div class="rb-bento-viz">${vizUnits(tailored, total, { tip: `${tailored} of ${total} scored jobs got a tailored résumé` })}</div>
+      <div class="rb-bento-caption">${esc(fmtInt(pow.cover_letters))} cover letters · ${esc(fmtInt(pow.resume_pdfs))} PDFs built · the rest stayed gaps</div>
     </article>`;
   }
 
   function tileFunnel(funnel, state) {
     if (stateRank(state) < 2) {
-      return lockedTile("Outcome funnel", UNLOCK.S2, "jh-bento-area-funnel", "jh-bento-large");
+      return lockedTile("Outcome funnel", UNLOCK.S2, "rb-bento-area-funnel", "rb-bento-large");
     }
     if (!funnel.has_data) {
-      return lockedTile("Outcome funnel", UNLOCK.S2, "jh-bento-area-funnel", "jh-bento-large");
+      return lockedTile("Outcome funnel", UNLOCK.S2, "rb-bento-area-funnel", "rb-bento-large");
     }
     const stages = funnel.stages || [];
     const counts = funnel.counts || {};
@@ -784,29 +784,29 @@ ${total > 60 ? `      <div class="jh-bento-subline">One mark stands for several,
       // Stage colour is a stylesheet concern, not a data concern. Emitting it
       // inline made the ramp unthemeable (no stylesheet could override it
       // without !important). Only the width -- the actual datum -- stays here;
-      // `.jh-bento-funnel-seg:nth-child(n)` owns the ramp.
+      // `.rb-bento-funnel-seg:nth-child(n)` owns the ramp.
       //
       // The segment carries the COUNT only. Stage names went to the legend
       // below: at this card width the late stages are a few percent wide and
       // their names collided into unreadable slivers.
-      return `<div class="jh-bento-funnel-seg" style="width:${pct}%" data-tip="${esc(s)}: ${n}">${n}</div>`;
+      return `<div class="rb-bento-funnel-seg" style="width:${pct}%" data-tip="${esc(s)}: ${n}">${n}</div>`;
     }).join("");
     const keys = stages.map((s, i) => {
       const n = Number(counts[s] || 0);
       if (n <= 0) return "";
-      return `<span class="jh-bento-funnel-key"><i class="jh-bento-funnel-dot" data-step="${i + 1}"></i>${esc(s)}</span>`;
+      return `<span class="rb-bento-funnel-key"><i class="rb-bento-funnel-dot" data-step="${i + 1}"></i>${esc(s)}</span>`;
     }).join("");
-    return `<article class="jh-bento-card jh-bento-large jh-bento-area-funnel">
-      <div class="jh-bento-label">Outcome funnel</div>
-      <div class="jh-bento-funnel-row">${segs || `<div class="jh-bento-lock">No stage transitions yet</div>`}</div>
-      <div class="jh-bento-funnel-legend">${keys}</div>
+    return `<article class="rb-bento-card rb-bento-large rb-bento-area-funnel">
+      <div class="rb-bento-label">Outcome funnel</div>
+      <div class="rb-bento-funnel-row">${segs || `<div class="rb-bento-lock">No stage transitions yet</div>`}</div>
+      <div class="rb-bento-funnel-legend">${keys}</div>
       ${bench("~3% reach interview · silence is common", "ResuTrack / PitchHired 2026")}
     </article>`;
   }
 
   function tileFit(quality) {
     if (!quality.has_data) {
-      return lockedTile("Fit distribution", "Score a job to unlock", "jh-bento-area-fit", "jh-bento-medium");
+      return lockedTile("Fit distribution", "Score a job to unlock", "rb-bento-area-fit", "rb-bento-medium");
     }
     const bins = quality.fit_score_histogram || [];
     const max = Math.max(1, ...bins.map((b) => b.count || 0));
@@ -817,19 +817,19 @@ ${total > 60 ? `      <div class="jh-bento-subline">One mark stands for several,
       // Above/below threshold is a semantic state, so it ships as a class the
       // stylesheet can theme -- not as a hardcoded hex. Height stays inline;
       // it is the datum.
-      return `<div class="jh-bento-hist-bar ${inThr ? "is-above" : "is-below"}" style="height:${Math.max(3, h)}px" data-tip="${b.bin_start}-${b.bin_end}: ${b.count}"></div>`;
+      return `<div class="rb-bento-hist-bar ${inThr ? "is-above" : "is-below"}" style="height:${Math.max(3, h)}px" data-tip="${b.bin_start}-${b.bin_end}: ${b.count}"></div>`;
     }).join("");
     const labels = bins.map((b) => `${b.bin_start}-${b.bin_end}`);
     const above = bins.filter((b) => b.bin_end > thr).reduce((a, b) => a + (b.count || 0), 0);
     const allN = bins.reduce((a, b) => a + (b.count || 0), 0) || 1;
-    return `<article class="jh-bento-card jh-bento-large jh-bento-area-fit">
-      <div class="jh-bento-label">Fit distribution</div>
-      <div class="jh-bento-figure">${esc(fmtInt(quality.median_fit_score))}<span class="jh-bento-figure-unit">median fit</span></div>
-      <div class="jh-bento-subline">${Math.round((above / allN) * 100)}% clear the threshold of ${esc(fmtInt(thr))}</div>
-      <div class="jh-bento-viz is-wide">
+    return `<article class="rb-bento-card rb-bento-large rb-bento-area-fit">
+      <div class="rb-bento-label">Fit distribution</div>
+      <div class="rb-bento-figure">${esc(fmtInt(quality.median_fit_score))}<span class="rb-bento-figure-unit">median fit</span></div>
+      <div class="rb-bento-subline">${Math.round((above / allN) * 100)}% clear the threshold of ${esc(fmtInt(thr))}</div>
+      <div class="rb-bento-viz is-wide">
         <div style="width:100%">
-          <div class="jh-bento-hist">${bars}</div>
-          <div class="jh-bento-hist-labels">${labels.map((l, i) => `<span>${i % 2 === 0 ? esc(l.split("-")[0]) : ""}</span>`).join("")}</div>
+          <div class="rb-bento-hist">${bars}</div>
+          <div class="rb-bento-hist-labels">${labels.map((l, i) => `<span>${i % 2 === 0 ? esc(l.split("-")[0]) : ""}</span>`).join("")}</div>
         </div>
       </div>
     </article>`;
@@ -840,7 +840,7 @@ ${total > 60 ? `      <div class="jh-bento-subline">One mark stands for several,
       const why = funnel.rate_hidden
         ? "Not enough applications yet for this to mean anything. Ask again around 10. At 4 applications a single reply would read as 25%."
         : (funnel.rate_suppressed_reason || UNLOCK.sample);
-      return lockedTile("Response rate", why, "jh-bento-area-response", "jh-bento-small");
+      return lockedTile("Response rate", why, "rb-bento-area-response", "rb-bento-small");
     }
     // A bare percentage has no reference point, and the meter that used to
     // supply one only redrew the percentage. Marks give the reference the
@@ -850,13 +850,13 @@ ${total > 60 ? `      <div class="jh-bento-subline">One mark stands for several,
     const ratePct = Math.round((Number(funnel.response_rate) || 0) * 100);
     const applied = Number(funnel.applied) || 0;
     const replied = Math.round((Number(funnel.response_rate) || 0) * applied);
-    return `<article class="jh-bento-card jh-bento-small jh-bento-area-response">
-      <div class="jh-bento-label">Response rate</div>
-      <div class="jh-bento-head">
+    return `<article class="rb-bento-card rb-bento-small rb-bento-area-response">
+      <div class="rb-bento-label">Response rate</div>
+      <div class="rb-bento-head">
         <div>
-          <div class="jh-bento-figure">${esc(fmtPct(funnel.response_rate))}<span class="jh-bento-figure-unit">replied</span></div>
+          <div class="rb-bento-figure">${esc(fmtPct(funnel.response_rate))}<span class="rb-bento-figure-unit">replied</span></div>
         </div>
-        <div class="jh-bento-aside">${vizUnits(replied, applied, {
+        <div class="rb-bento-aside">${vizUnits(replied, applied, {
           tip: `${replied} of ${applied} applications drew a reply — ${ratePct}% against a ~3% benchmark`,
         })}</div>
       </div>
@@ -866,26 +866,26 @@ ${total > 60 ? `      <div class="jh-bento-subline">One mark stands for several,
 
   function tileTimeSaved(ts, state) {
     if (stateRank(state) < 2) {
-      return lockedTile("Time saved", UNLOCK.S2, "jh-bento-area-timesaved", "jh-bento-small");
+      return lockedTile("Time saved", UNLOCK.S2, "rb-bento-area-timesaved", "rb-bento-small");
     }
     if (!ts.has_data) {
-      return `<article class="jh-bento-card jh-bento-small jh-bento-area-timesaved">
-        <div class="jh-bento-label">Time saved</div>
-        <div class="jh-bento-lock">Estimate waits until a real application is submitted</div>
-        <label class="jh-bento-sub">Manual min/app
-          <input type="number" min="1" class="jh-bento-input" id="metricsManualMinutes" value="${esc(ts.manual_minutes_per_application || 35)}" />
+      return `<article class="rb-bento-card rb-bento-small rb-bento-area-timesaved">
+        <div class="rb-bento-label">Time saved</div>
+        <div class="rb-bento-lock">Estimate waits until a real application is submitted</div>
+        <label class="rb-bento-sub">Manual min/app
+          <input type="number" min="1" class="rb-bento-input" id="metricsManualMinutes" value="${esc(ts.manual_minutes_per_application || 35)}" />
         </label>
       </article>`;
     }
-    return `<article class="jh-bento-card jh-bento-small jh-bento-area-timesaved">
-      <div class="jh-bento-label">Time saved</div>
-      <div class="jh-bento-figure">${esc(fmtHours(ts.time_saved_minutes))}</div>
-      <div class="jh-bento-subline">Estimate · editable assumption below</div>
-      <div class="jh-bento-viz">${vizMeter(ts.time_saved_minutes, 60 * 24, {
+    return `<article class="rb-bento-card rb-bento-small rb-bento-area-timesaved">
+      <div class="rb-bento-label">Time saved</div>
+      <div class="rb-bento-figure">${esc(fmtHours(ts.time_saved_minutes))}</div>
+      <div class="rb-bento-subline">Estimate · editable assumption below</div>
+      <div class="rb-bento-viz">${vizMeter(ts.time_saved_minutes, 60 * 24, {
         right: "of a 24 h day",
       })}</div>
-      <label class="jh-bento-caption">Manual min/app
-        <input type="number" min="1" class="jh-bento-input" id="metricsManualMinutes" value="${esc(ts.manual_minutes_per_application || 35)}" />
+      <label class="rb-bento-caption">Manual min/app
+        <input type="number" min="1" class="rb-bento-input" id="metricsManualMinutes" value="${esc(ts.manual_minutes_per_application || 35)}" />
       </label>
     </article>`;
   }
@@ -898,14 +898,14 @@ ${total > 60 ? `      <div class="jh-bento-subline">One mark stands for several,
       : null;
     const liveN = Number(live) || 0;
     const quarN = Number(quar) || 0;
-    return `<article class="jh-bento-card jh-bento-small jh-bento-area-coverage">
-      <div class="jh-bento-label">Coverage</div>
-      <div class="jh-bento-head">
+    return `<article class="rb-bento-card rb-bento-small rb-bento-area-coverage">
+      <div class="rb-bento-label">Coverage</div>
+      <div class="rb-bento-head">
         <div>
-          <div class="jh-bento-figure">${esc(fmtInt(liveN))}<span class="jh-bento-figure-unit">boards searching</span></div>
-          <div class="jh-bento-subline">${esc(fmtInt(quarN))} quarantined${dedupe != null ? ` · ${esc(fmtInt(dedupe))} duplicates collapsed` : ""}</div>
+          <div class="rb-bento-figure">${esc(fmtInt(liveN))}<span class="rb-bento-figure-unit">boards searching</span></div>
+          <div class="rb-bento-subline">${esc(fmtInt(quarN))} quarantined${dedupe != null ? ` · ${esc(fmtInt(dedupe))} duplicates collapsed` : ""}</div>
         </div>
-        <div class="jh-bento-aside">${vizMeter(liveN, liveN + quarN, {
+        <div class="rb-bento-aside">${vizMeter(liveN, liveN + quarN, {
         // The meter shows the HEALTHY portion, so it only wears a status tone
         // when coverage is genuinely degraded. Tinting it for any quarantine at
         // all made a working 42-board search read as a warning.
@@ -914,36 +914,36 @@ ${total > 60 ? `      <div class="jh-bento-subline">One mark stands for several,
         tip: `${liveN} of ${liveN + quarN} boards responding`,
         })}</div>
       </div>
-      <button type="button" class="jh-bento-badge" data-action="open-sources">Open Sources</button>
+      <button type="button" class="rb-bento-badge" data-action="open-sources">Open Sources</button>
     </article>`;
   }
 
   function tileAim(quality, state, funnel) {
     if (stateRank(state) < 3 || (funnel.applied || 0) < 10) {
-      return lockedTile("Aim calibration", UNLOCK.aim, "jh-bento-area-aim", "jh-bento-medium");
+      return lockedTile("Aim calibration", UNLOCK.aim, "rb-bento-area-aim", "rb-bento-medium");
     }
     const aim = quality.aim_calibration;
     if (!aim || !aim.has_data) {
-      return lockedTile("Aim calibration", UNLOCK.aim, "jh-bento-area-aim", "jh-bento-medium");
+      return lockedTile("Aim calibration", UNLOCK.aim, "rb-bento-area-aim", "rb-bento-medium");
     }
-    return `<article class="jh-bento-card jh-bento-medium jh-bento-area-aim">
-      <div class="jh-bento-label">Aim calibration</div>
-      <div class="jh-bento-sub">${esc(aim.summary || "Replies vs silence by fit score")}</div>
+    return `<article class="rb-bento-card rb-bento-medium rb-bento-area-aim">
+      <div class="rb-bento-label">Aim calibration</div>
+      <div class="rb-bento-sub">${esc(aim.summary || "Replies vs silence by fit score")}</div>
     </article>`;
   }
 
   function tileReply(funnel, state) {
     if (stateRank(state) < 3) {
-      return lockedTile("Time to first reply", UNLOCK.S3, "jh-bento-area-reply", "jh-bento-small");
+      return lockedTile("Time to first reply", UNLOCK.S3, "rb-bento-area-reply", "rb-bento-small");
     }
     const hours = funnel.time_to_first_reply_median_hours;
     if (hours == null) {
-      return lockedTile("Time to first reply", "No replies yet", "jh-bento-area-reply", "jh-bento-small");
+      return lockedTile("Time to first reply", "No replies yet", "rb-bento-area-reply", "rb-bento-small");
     }
     const days = hours / 24;
-    return `<article class="jh-bento-card jh-bento-small jh-bento-area-reply">
-      <div class="jh-bento-label">Time to first reply</div>
-      <div class="jh-bento-figure">${days < 1 ? esc(fmtInt(hours)) : days.toFixed(1)}<span class="jh-bento-figure-unit">${days < 1 ? "hours median" : "days median"}</span></div>
+    return `<article class="rb-bento-card rb-bento-small rb-bento-area-reply">
+      <div class="rb-bento-label">Time to first reply</div>
+      <div class="rb-bento-figure">${days < 1 ? esc(fmtInt(hours)) : days.toFixed(1)}<span class="rb-bento-figure-unit">${days < 1 ? "hours median" : "days median"}</span></div>
       ${bench("29% of North American candidates wait 1-2 months post-interview", "Pin Employer Ghosting Index")}
     </article>`;
   }
@@ -953,7 +953,7 @@ ${total > 60 ? `      <div class="jh-bento-subline">One mark stands for several,
     if (!root) return;
     const sources = reach.sources || [];
     if (!sources.length) {
-      root.innerHTML = `<div class="jh-bento-lock">No sources registered yet.</div>`;
+      root.innerHTML = `<div class="rb-bento-lock">No sources registered yet.</div>`;
       return;
     }
     const rows = sources.map((s) => {
@@ -967,14 +967,14 @@ ${total > 60 ? `      <div class="jh-bento-subline">One mark stands for several,
         <td>${s.avg_job_count != null ? Number(s.avg_job_count).toFixed(1) : "-"}</td>
       </tr>`;
     }).join("");
-    root.innerHTML = `<table class="jh-sources-table"><thead><tr>
+    root.innerHTML = `<table class="rb-sources-table"><thead><tr>
       <th>Source</th><th>Group</th><th>Enabled</th><th>Status</th><th>Fails</th><th>Avg jobs</th>
     </tr></thead><tbody>${rows}</tbody></table>`;
   }
 
   function countLiveLocked(html) {
-    const live = (html.match(/jh-bento-card(?! jh-bento-locked)/g) || []).length;
-    const locked = (html.match(/jh-bento-locked/g) || []).length;
+    const live = (html.match(/rb-bento-card(?! rb-bento-locked)/g) || []).length;
+    const locked = (html.match(/rb-bento-locked/g) || []).length;
     return { live, locked };
   }
 
@@ -984,17 +984,17 @@ ${total > 60 ? `      <div class="jh-bento-subline">One mark stands for several,
     lastPayload = payload;
     const state = payload.state || "S0";
     if (state === "S0") {
-      root.innerHTML = `<div class="jh-bento-card jh-bento-hero" style="max-width:520px;margin:40px auto;text-align:center">
-        <div class="jh-bento-num" style="font-size:28px">Run your first search</div>
-        <div class="jh-bento-sub">The dashboard lights up once jobs are discovered.</div>
-        <button type="button" class="jh-bento-rail-btn" data-action="open-browse" style="margin:16px auto">Open Browse</button>
+      root.innerHTML = `<div class="rb-bento-card rb-bento-hero" style="max-width:520px;margin:40px auto;text-align:center">
+        <div class="rb-bento-num" style="font-size:28px">Run your first search</div>
+        <div class="rb-bento-sub">The dashboard lights up once jobs are discovered.</div>
+        <button type="button" class="rb-bento-rail-btn" data-action="open-browse" style="margin:16px auto">Open Browse</button>
       </div>`;
       bindActions(root);
       return;
     }
 
     const html = `
-      <div class="jh-bento" id="jhBentoGrid">
+      <div class="rb-bento" id="jhBentoGrid">
         ${tilePace(payload.pace || {}, state)}
         ${tileSilence(payload.silence || {}, state)}
         ${tileAts(payload.ats_lift || {}, state)}
@@ -1082,17 +1082,17 @@ ${total > 60 ? `      <div class="jh-bento-subline">One mark stands for several,
   async function load() {
     const root = document.getElementById("metricsRoot");
     if (!root) return;
-    root.innerHTML = `<div class="jh-bento-lock" style="padding:24px">Loading metrics…</div>`;
+    root.innerHTML = `<div class="rb-bento-lock" style="padding:24px">Loading metrics…</div>`;
     try {
       const res = await fetch(`${API}/api/metrics?range=${encodeURIComponent(currentRange)}`);
       const data = await res.json();
       if (!res.ok || data.ok === false) {
-        root.innerHTML = `<div class="jh-bento-lock" style="padding:24px">${esc(data.error || "Failed to load metrics")}</div>`;
+        root.innerHTML = `<div class="rb-bento-lock" style="padding:24px">${esc(data.error || "Failed to load metrics")}</div>`;
         return;
       }
       render(data);
     } catch (_e) {
-      root.innerHTML = `<div class="jh-bento-lock" style="padding:24px">Metrics unavailable. Is the dashboard server running?</div>`;
+      root.innerHTML = `<div class="rb-bento-lock" style="padding:24px">Metrics unavailable. Is the dashboard server running?</div>`;
     }
   }
 
@@ -1125,11 +1125,11 @@ ${total > 60 ? `      <div class="jh-bento-subline">One mark stands for several,
     bindRange();
   }
 
-  window.__jhMetrics = { load, setRange: (r) => { currentRange = r; load(); } };
+  window.__rbMetrics = { load, setRange: (r) => { currentRange = r; load(); } };
 
   // This file loads after the inline boot script has already restored the
   // last screen from localStorage, so nav()'s "screenId==='dashboard'" hook
-  // fired before window.__jhMetrics existed and had nothing to call. Pick up
+  // fired before window.__rbMetrics existed and had nothing to call. Pick up
   // that case here: if we loaded straight into Dashboard or Sources, fetch now.
   function initIfVisible() {
     const dash = document.getElementById("s-dashboard");

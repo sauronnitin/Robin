@@ -1941,14 +1941,14 @@
       } else if (slide.type === "market") {
         if (!obKeySet) {
           const row = document.createElement("div");
-          row.className = "jh-need-row";
+          row.className = "rb-need-row";
           const note = document.createElement("p");
           note.className = "kg-tf-note";
           note.textContent = "Connect a SerpAPI key in Settings to enable live signals.";
           const needBtn = document.createElement("button");
           needBtn.type = "button";
-          needBtn.className = "jh-need";
-          needBtn.setAttribute("data-jh-need", "kg_pulse");
+          needBtn.className = "rb-need";
+          needBtn.setAttribute("data-rb-need", "kg_pulse");
           needBtn.setAttribute("aria-label", "What Market Pulse needs");
           row.appendChild(note);
           row.appendChild(needBtn);
@@ -3722,7 +3722,7 @@
     };
   })();
 
-  window.__jhKnowledgeGraph = KnowledgeGraph;
+  window.__rbKnowledgeGraph = KnowledgeGraph;
   window.parseResume = parseResume;
   window.extractGraphData = extractGraphData;
 })();

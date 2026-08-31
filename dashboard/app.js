@@ -5,15 +5,15 @@
 (function () {
   "use strict";
 
-  const EDIT_KEY = "jh-canvas-edits-v2";
-  const POS_KEY = "jh-canvas-pos-v7";
-  const VIEW_KEY = "jh-canvas-view-v2";
-  const GRAPH_KEY = "jh-canvas-graph-v1";
-  const PIPELINE_SIG_KEY = "jh-pipeline-sig-v1";
-  const PANEL_SIZE_KEY = "jh-panel-sizes-v3";
+  const EDIT_KEY = "rb-canvas-edits-v2";
+  const POS_KEY = "rb-canvas-pos-v7";
+  const VIEW_KEY = "rb-canvas-view-v2";
+  const GRAPH_KEY = "rb-canvas-graph-v1";
+  const PIPELINE_SIG_KEY = "rb-pipeline-sig-v1";
+  const PANEL_SIZE_KEY = "rb-panel-sizes-v3";
   const PANEL_SIZE_DEFAULTS = { dockH: 168, panelW: null, chatW: 320 }; // panelW null => half viewport
   const PANEL_SIZE_MIN = { dockH: 96, panelW: 200, chatW: 220 };
-  const CHAT_KEY = "jh-canvas-chat-v1";
+  const CHAT_KEY = "rb-canvas-chat-v1";
   const CARD_W = 400;
   const CARD_H = 560;
   const CARD_W_MIN = 340;
@@ -8219,7 +8219,7 @@
 
 
   /* Hooks for Task 1 section-scoped Start + verification */
-  window.__jhCanvas = {
+  window.__rbCanvas = {
     buildRunPlan,
     getSections: () => sections.map((s) => ({ ...s, memberIds: s.memberIds.slice() })),
     createSectionFromIds: (ids, name) => {

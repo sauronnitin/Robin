@@ -251,4 +251,4 @@ def ensure_gmail_watcher() -> None:
                 print(f"[gmail_verify] watcher error: {exc!r}")
             time.sleep(10)
 
-    threading.Thread(target=loop, name="jh-gmail-verify", daemon=True).start()
+    threading.Thread(target=loop, name="rb-gmail-verify", daemon=True).start()

@@ -175,9 +175,9 @@
 
   function paintButtons(root) {
     var scope = root || document;
-    scope.querySelectorAll("[data-jh-need]").forEach(function (btn) {
+    scope.querySelectorAll("[data-rb-need]").forEach(function (btn) {
       if (!btn.querySelector("svg")) btn.innerHTML = ICON_SVG;
-      var feature = FEATURES[btn.getAttribute("data-jh-need")];
+      var feature = FEATURES[btn.getAttribute("data-rb-need")];
       btn.classList.toggle("is-missing", featureMissing(feature));
       if (!btn.getAttribute("aria-label")) {
         btn.setAttribute("aria-label", feature ? "What " + feature.label + " needs" : "What this needs");
@@ -224,11 +224,11 @@
   }
 
   function renderPop(btn) {
-    var feature = FEATURES[btn.getAttribute("data-jh-need")];
+    var feature = FEATURES[btn.getAttribute("data-rb-need")];
     if (!feature) return;
     closePop();
     popEl = document.createElement("div");
-    popEl.className = "jh-need-pop";
+    popEl.className = "rb-need-pop";
     popEl.setAttribute("role", "dialog");
     popEl.setAttribute("aria-label", feature.label + " credentials");
     var items = feature.needs
@@ -244,34 +244,34 @@
           need.kind === "optional" ? "Optional" : need.kind === "later" ? "Later in the run" : "Required";
         var extra = need.note ? " · " + need.note : "";
         return (
-          '<li><button type="button" class="jh-need-pop-item' +
+          '<li><button type="button" class="rb-need-pop-item' +
           (missing ? " is-missing" : "") +
           '" data-settings="' +
           cred.settingsId +
           '">' +
-          '<span><span class="jh-need-pop-name">' +
+          '<span><span class="rb-need-pop-name">' +
           cred.label +
           "</span>" +
-          '<div class="jh-need-pop-meta">' +
+          '<div class="rb-need-pop-meta">' +
           kind +
           extra +
           "</div></span>" +
-          '<span class="jh-need-pop-state">' +
+          '<span class="rb-need-pop-state">' +
           stateLabel(need.id, state) +
           "</span></button></li>"
         );
       })
       .join("");
     popEl.innerHTML =
-      '<div class="jh-need-pop-kicker">Needs from Settings</div>' +
-      '<div class="jh-need-pop-title"></div>' +
-      '<p class="jh-need-pop-blurb"></p>' +
-      '<ul class="jh-need-pop-list">' +
+      '<div class="rb-need-pop-kicker">Needs from Settings</div>' +
+      '<div class="rb-need-pop-title"></div>' +
+      '<p class="rb-need-pop-blurb"></p>' +
+      '<ul class="rb-need-pop-list">' +
       items +
       "</ul>" +
-      '<div class="jh-need-pop-foot"><button type="button" class="st-btn-primary jh-need-open-settings">Open Settings</button></div>';
-    popEl.querySelector(".jh-need-pop-title").textContent = feature.label;
-    popEl.querySelector(".jh-need-pop-blurb").textContent = feature.blurb;
+      '<div class="rb-need-pop-foot"><button type="button" class="st-btn-primary rb-need-open-settings">Open Settings</button></div>';
+    popEl.querySelector(".rb-need-pop-title").textContent = feature.label;
+    popEl.querySelector(".rb-need-pop-blurb").textContent = feature.blurb;
     document.body.appendChild(popEl);
     openBtn = btn;
     btn.classList.add("is-open");
@@ -283,7 +283,7 @@
         openSettings(item.getAttribute("data-settings"));
         return;
       }
-      if (ev.target.closest(".jh-need-open-settings")) {
+      if (ev.target.closest(".rb-need-open-settings")) {
         ev.preventDefault();
         var first = feature.needs[0];
         var cred = first && CREDENTIALS[first.id];
@@ -293,7 +293,7 @@
   }
 
   function onDocClick(ev) {
-    var btn = ev.target.closest && ev.target.closest(".jh-need");
+    var btn = ev.target.closest && ev.target.closest(".rb-need");
     if (btn) {
       ev.preventDefault();
       ev.stopPropagation();
@@ -304,7 +304,7 @@
       renderPop(btn);
       return;
     }
-    if (popEl && !ev.target.closest(".jh-need-pop")) closePop();
+    if (popEl && !ev.target.closest(".rb-need-pop")) closePop();
   }
 
   function onKey(ev) {

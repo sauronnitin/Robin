@@ -211,41 +211,41 @@ tailwind.config = {
     color: var(--st-ink) !important;
     border-bottom: 1px solid var(--st-border);
   }
-  html.dark #jList .jh-job-card {
+  html.dark #jList .rb-job-card {
     background: var(--st-card) !important;
     border: 1px solid var(--st-border) !important;
     box-shadow:
       0 0 0 1px rgba(240,232,223,0.04),
       0 4px 12px rgba(0,0,0,0.28) !important;
   }
-  html.dark #jList .jh-job-card:hover {
+  html.dark #jList .rb-job-card:hover {
     box-shadow:
       0 0 0 1px rgba(240,232,223,0.10),
       0 8px 22px rgba(0,0,0,0.38),
       0 20px 36px -10px rgba(0,0,0,0.42) !important;
   }
-  html.dark #jList .jh-job-card.is-selected {
+  html.dark #jList .rb-job-card.is-selected {
     background: var(--st-peach) !important;
   }
-  html.dark #browseDetailFloat .jh-hf-kicker,
-  html.dark #browseDetailFloat .jh-hf-meta,
-  html.dark #browseDetailFloat .jh-hf-desc-label {
+  html.dark #browseDetailFloat .rb-hf-kicker,
+  html.dark #browseDetailFloat .rb-hf-meta,
+  html.dark #browseDetailFloat .rb-hf-desc-label {
     color: var(--st-slate) !important;
   }
-  html.dark #browseDetailFloat .jh-hf-title {
+  html.dark #browseDetailFloat .rb-hf-title {
     color: var(--st-ink) !important;
   }
-  html.dark #browseDetailFloat .jh-hf-company {
+  html.dark #browseDetailFloat .rb-hf-company {
     color: var(--st-sienna) !important;
   }
-  html.dark #browseDetailFloat .jh-hf-excerpt {
+  html.dark #browseDetailFloat .rb-hf-excerpt {
     color: rgba(240,232,223,0.78) !important;
   }
-  html.dark #browseDetailFloat .jh-hf-fact {
+  html.dark #browseDetailFloat .rb-hf-fact {
     background: var(--st-raised) !important;
     border-color: var(--st-border) !important;
   }
-  html.dark #browseDetailFloat .jh-hf-close:hover {
+  html.dark #browseDetailFloat .rb-hf-close:hover {
     background: var(--st-raised);
     color: var(--st-ink);
   }
@@ -307,8 +307,8 @@ tailwind.config = {
   html.dark .text-red-400,
   html.dark .text-red-500,
   html.dark .text-rose-400,
-  html.dark .jh-bento-sources-line .is-bad,
-  html.dark .jh-bento-card.is-critical .jh-bento-num {
+  html.dark .rb-bento-sources-line .is-bad,
+  html.dark .rb-bento-card.is-critical .rb-bento-num {
     color: #ef8f88 !important;
   }
   html.dark .text-amber-400,
@@ -323,8 +323,8 @@ tailwind.config = {
      muted text takes the panel's own dimmed amber. */
   html.dark .st-peach-panel .text-slate-500,
   html.dark .st-peach-panel .text-slate-400,
-  html.dark .jh-peri .text-slate-500,
-  html.dark .jh-peri .text-slate-400 { color: rgba(232,196,154,0.82) !important; }
+  html.dark .rb-peri .text-slate-500,
+  html.dark .rb-peri .text-slate-400 { color: rgba(232,196,154,0.82) !important; }
 
   /* Status reds written as INLINE styles by JS (apply.js / metrics.js emit
      `color:#d03b3b`). Inline can only be beaten by !important, so this is
@@ -818,11 +818,11 @@ html.dark #ob {
 
 
 /* Local wash (section hero) — richer peach + lilac */
-.st-wash, .jh-wash {
+.st-wash, .rb-wash {
   position: relative;
   isolation: isolate;
 }
-.st-wash::before, .jh-wash::before {
+.st-wash::before, .rb-wash::before {
   content: "";
   position: absolute;
   left: -12%; right: -12%;
@@ -836,10 +836,10 @@ html.dark #ob {
   pointer-events: none;
   z-index: 0;
 }
-.st-wash > *, .jh-wash > * { position: relative; z-index: 1; }
+.st-wash > *, .rb-wash > * { position: relative; z-index: 1; }
 
 /* Peach callout panel (attention / dry-run tips) */
-.st-peach-panel, .jh-peri {
+.st-peach-panel, .rb-peri {
   background: var(--st-peach) !important;
   border: none !important;
   border-radius: 20px !important;
@@ -848,15 +848,15 @@ html.dark #ob {
     0 4px 12px rgba(93,42,26,0.05) !important;
   color: var(--st-sienna) !important;
 }
-.st-peach-panel *, .jh-peri * { color: inherit; }
+.st-peach-panel *, .rb-peri * { color: inherit; }
 .st-peach-panel .text-slate-500,
 .st-peach-panel .text-slate-400,
-.jh-peri .text-slate-500,
-.jh-peri .text-slate-400 { color: rgba(93,42,26,0.70) !important; }
+.rb-peri .text-slate-500,
+.rb-peri .text-slate-400 { color: rgba(93,42,26,0.70) !important; }
 
 /* Legacy class bridges → Steep */
-.jh-h1, #ob h1, #s-profile h1, #s-browse .jh-h1, #s-dashboard .jh-h1,
-#s-settings .jh-h1, #s-linkedin .jh-h1, #emailVerifyModal h2 {
+.rb-h1, #ob h1, #s-profile h1, #s-browse .rb-h1, #s-dashboard .rb-h1,
+#s-settings .rb-h1, #s-linkedin .rb-h1, #emailVerifyModal h2 {
   font-family: var(--st-serif) !important;
   font-weight: 400 !important;
   font-size: clamp(24px, 2.5vw, 36px) !important;
@@ -864,8 +864,8 @@ html.dark #ob {
   letter-spacing: -0.02em;
   color: var(--st-ink) !important;
 }
-.jh-kicker { font-family: var(--st-sans); font-size: 14px; font-weight: 500; letter-spacing: 0.10em; text-transform: uppercase; color: var(--st-ash); }
-.jh-ink-bar {
+.rb-kicker { font-family: var(--st-sans); font-size: 14px; font-weight: 500; letter-spacing: 0.10em; text-transform: uppercase; color: var(--st-ash); }
+.rb-ink-bar {
   background: var(--st-ink);
   color: var(--st-canvas);
   font-family: var(--st-sans);
@@ -876,7 +876,7 @@ html.dark #ob {
   text-align: center;
   flex-shrink: 0;
 }
-.jh-mark {
+.rb-mark {
   width: 34px; height: 34px;
   border-radius: var(--radius-pill);
   border: 1px solid var(--st-border);
@@ -888,7 +888,7 @@ html.dark #ob {
   color: var(--st-ink);
   flex-shrink: 0;
 }
-.jh-btn-primary, .st-btn-primary {
+.rb-btn-primary, .st-btn-primary {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
   padding: 10px 22px;
   border-radius: var(--radius-pill) !important;
@@ -903,8 +903,8 @@ html.dark #ob {
   box-shadow: none !important;
   text-transform: none;
 }
-.jh-btn-primary::after { content: none !important; }
-.jh-btn-ghost, .jh-btn-secondary, .st-btn-ghost {
+.rb-btn-primary::after { content: none !important; }
+.rb-btn-ghost, .rb-btn-secondary, .st-btn-ghost {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
   padding: 10px 22px;
   border-radius: var(--radius-pill) !important;
@@ -918,7 +918,7 @@ html.dark #ob {
   box-shadow: none !important;
   text-transform: none;
 }
-.jh-btn-ghost:hover, .jh-btn-secondary:hover { border-color: var(--st-ink) !important; }
+.rb-btn-ghost:hover, .rb-btn-secondary:hover { border-color: var(--st-ink) !important; }
 
 /* Floating mist panels on all screens (profile/settings/linkedin cards) */
 .screen .rounded-2xl.border,
@@ -1065,7 +1065,7 @@ html.dark #ob {
   padding-left: 22px;
   padding-right: 22px;
 }
-#jList .jh-job-card {
+#jList .rb-job-card {
   background: rgba(255,255,255,0.92) !important;
   border: none !important;
   border-radius: 18px !important;
@@ -1079,7 +1079,7 @@ html.dark #ob {
     0 0 0 1px rgba(4,23,43,0.05),
     0 4px 12px rgba(0,0,0,0.05) !important;
 }
-#jList .jh-job-card:hover {
+#jList .rb-job-card:hover {
   transform: translateY(-2px) scale(1.01);
   z-index: 2;
   box-shadow:
@@ -1087,7 +1087,7 @@ html.dark #ob {
     0 6px 16px rgba(0,0,0,0.08),
     0 14px 24px -10px rgba(0,0,0,0.06) !important;
 }
-#jList .jh-job-card .jh-job-chev {
+#jList .rb-job-card .rb-job-chev {
   flex-shrink: 0;
   width: 16px;
   height: 16px;
@@ -1096,25 +1096,25 @@ html.dark #ob {
   opacity: 0.55;
   transition: transform 0.24s ease, opacity 0.2s ease, color 0.2s ease;
 }
-#jList .jh-job-card:hover .jh-job-chev {
+#jList .rb-job-card:hover .rb-job-chev {
   transform: translateX(3px);
   opacity: 1;
   color: var(--st-slate);
 }
-#jList .jh-job-card.is-selected,
-#jList .jh-job-card[class*="bg-indigo"] {
+#jList .rb-job-card.is-selected,
+#jList .rb-job-card[class*="bg-indigo"] {
   background: var(--st-peach) !important;
   box-shadow:
     0 0 0 1px rgba(93,42,26,0.10),
     0 4px 12px rgba(93,42,26,0.06) !important;
 }
 @media (prefers-reduced-motion: reduce) {
-  #jList .jh-job-card,
-  #jList .jh-job-card .jh-job-chev,
+  #jList .rb-job-card,
+  #jList .rb-job-card .rb-job-chev,
   #browseDetailFloat {
     transition: none !important;
   }
-  #jList .jh-job-card:hover {
+  #jList .rb-job-card:hover {
     transform: none !important;
   }
 }
@@ -1158,7 +1158,7 @@ html.dark #ob {
 #browseDetailFloat[hidden] {
   display: none !important;
 }
-#browseDetailFloat .jh-hf-head {
+#browseDetailFloat .rb-hf-head {
   padding: 14px 14px 10px;
   border-bottom: 1px solid var(--st-border);
   flex-shrink: 0;
@@ -1166,11 +1166,11 @@ html.dark #ob {
   align-items: flex-start;
   gap: 10px;
 }
-#browseDetailFloat .jh-hf-head-main {
+#browseDetailFloat .rb-hf-head-main {
   flex: 1;
   min-width: 0;
 }
-#browseDetailFloat .jh-hf-close {
+#browseDetailFloat .rb-hf-close {
   flex-shrink: 0;
   width: 28px;
   height: 28px;
@@ -1182,11 +1182,11 @@ html.dark #ob {
   font-size: 14px;
   line-height: 1;
 }
-#browseDetailFloat .jh-hf-close:hover {
+#browseDetailFloat .rb-hf-close:hover {
   background: var(--st-fog);
   color: var(--st-ink);
 }
-#browseDetailFloat .jh-hf-kicker {
+#browseDetailFloat .rb-hf-kicker {
   font-family: var(--st-sans);
   font-size: 12px;
   font-weight: 500;
@@ -1195,13 +1195,13 @@ html.dark #ob {
   color: var(--st-ash);
   margin-bottom: 8px;
 }
-#browseDetailFloat .jh-hf-company {
+#browseDetailFloat .rb-hf-company {
   font-family: var(--st-serif);
   font-size: 14px;
   color: var(--st-sienna);
   line-height: 1.25;
 }
-#browseDetailFloat .jh-hf-title {
+#browseDetailFloat .rb-hf-title {
   font-family: var(--st-serif);
   font-size: 20px;
   font-weight: 400;
@@ -1210,23 +1210,23 @@ html.dark #ob {
   line-height: 1.2;
   margin-top: 2px;
 }
-#browseDetailFloat .jh-hf-meta {
+#browseDetailFloat .rb-hf-meta {
   font-size: 12px;
   color: var(--st-slate);
   margin-top: 4px;
 }
-#browseDetailFloat .jh-hf-tags {
+#browseDetailFloat .rb-hf-tags {
   display: flex;
   flex-wrap: wrap;
   gap: 5px;
   margin-top: 8px;
 }
-#browseDetailFloat .jh-hf-tags .jh-wp-chip,
-#browseDetailFloat .jh-hf-tags .jh-src-chip {
+#browseDetailFloat .rb-hf-tags .rb-wp-chip,
+#browseDetailFloat .rb-hf-tags .rb-src-chip {
   font-size: 12px !important;
   padding: 2px 7px !important;
 }
-#browseDetailFloat .jh-hf-facts {
+#browseDetailFloat .rb-hf-facts {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
@@ -1234,7 +1234,7 @@ html.dark #ob {
   border-bottom: 1px solid var(--st-border);
   flex-shrink: 0;
 }
-#browseDetailFloat .jh-hf-fact {
+#browseDetailFloat .rb-hf-fact {
   border-radius: var(--radius-pill);
   background: var(--st-fog);
   border: 1px solid var(--st-border);
@@ -1244,14 +1244,14 @@ html.dark #ob {
   gap: 6px;
   max-width: 100%;
 }
-#browseDetailFloat .jh-hf-fact span {
+#browseDetailFloat .rb-hf-fact span {
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--st-ash);
   white-space: nowrap;
 }
-#browseDetailFloat .jh-hf-fact strong {
+#browseDetailFloat .rb-hf-fact strong {
   font-size: 14px;
   font-weight: 500;
   color: var(--st-ink);
@@ -1260,13 +1260,13 @@ html.dark #ob {
   text-overflow: ellipsis;
   max-width: 180px;
 }
-#browseDetailFloat .jh-hf-body {
+#browseDetailFloat .rb-hf-body {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
   padding: 12px 14px;
 }
-#browseDetailFloat .jh-hf-desc-label {
+#browseDetailFloat .rb-hf-desc-label {
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.1em;
@@ -1274,13 +1274,13 @@ html.dark #ob {
   color: var(--st-ash);
   margin-bottom: 8px;
 }
-#browseDetailFloat .jh-hf-excerpt {
+#browseDetailFloat .rb-hf-excerpt {
   font-size: 14px;
   line-height: 1.55;
   color: rgba(4,23,43,0.78);
 }
-#browseDetailFloat .jh-hf-excerpt p + p { margin-top: 0.65em; }
-#browseDetailFloat .jh-hf-actions {
+#browseDetailFloat .rb-hf-excerpt p + p { margin-top: 0.65em; }
+#browseDetailFloat .rb-hf-actions {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -1289,24 +1289,24 @@ html.dark #ob {
   border-top: 1px solid var(--st-border);
 }
 /* Steep hierarchy: one primary (ink), secondary ghosts outline */
-#browseDetailFloat .jh-hf-actions .st-btn-primary {
+#browseDetailFloat .rb-hf-actions .st-btn-primary {
   flex: 1 1 auto;
   min-width: 0;
   justify-content: center;
 }
-#browseDetailFloat .jh-hf-actions .st-btn-ghost {
+#browseDetailFloat .rb-hf-actions .st-btn-ghost {
   flex: 0 0 auto;
   justify-content: center;
   white-space: nowrap;
 }
-html.dark #browseDetailFloat .jh-hf-actions .st-btn-ghost {
+html.dark #browseDetailFloat .rb-hf-actions .st-btn-ghost {
   border-color: var(--st-border-hi) !important;
   color: var(--st-ink) !important;
 }
-html.dark #browseDetailFloat .jh-hf-actions .st-btn-ghost:hover {
+html.dark #browseDetailFloat .rb-hf-actions .st-btn-ghost:hover {
   border-color: var(--st-sienna) !important;
 }
-html.dark #browseDetailFloat .jh-hf-actions .st-btn-primary {
+html.dark #browseDetailFloat .rb-hf-actions .st-btn-primary {
   background: var(--st-ink) !important;
   color: var(--st-page) !important;
   border-color: var(--st-ink) !important;
@@ -1321,62 +1321,62 @@ html.dark #browseDetailFloat .jh-hf-actions .st-btn-primary {
 }
 
 /* Workplace activity rings (Browse header) */
-.jh-activity-rings {
+.rb-activity-rings {
   display: flex;
   align-items: center;
   gap: 8px;
   flex-shrink: 0;
   align-self: center;
 }
-.jh-rings-stage {
+.rb-rings-stage {
   position: relative;
   width: 88px;
   height: 88px;
   flex-shrink: 0;
 }
-.jh-rings-stage svg {
+.rb-rings-stage svg {
   width: 100%;
   height: 100%;
   display: block;
   overflow: visible;
 }
-.jh-rings-stage .jh-ring-track {
+.rb-rings-stage .rb-ring-track {
   stroke: rgba(4, 23, 43, 0.08);
   fill: none;
 }
-html.dark .jh-rings-stage .jh-ring-track {
+html.dark .rb-rings-stage .rb-ring-track {
   stroke: rgba(240, 232, 223, 0.10);
 }
-.jh-rings-stage .jh-ring-progress {
+.rb-rings-stage .rb-ring-progress {
   fill: none;
   stroke-linecap: round;
   transition: stroke-dashoffset 0.9s ease-in-out;
   filter: drop-shadow(0 0 4px rgba(0, 0, 0, 0.12));
 }
-.jh-rings-center-total {
+.rb-rings-center-total {
   fill: var(--st-ink);
   font-family: var(--st-sans);
   font-size: 22px;
   font-weight: 500;
 }
-.jh-rings-center-sub {
+.rb-rings-center-sub {
   fill: var(--st-ash);
   font-family: var(--st-sans);
   font-size: 12px;
 }
-.jh-rings-legend {
+.rb-rings-legend {
   display: flex;
   flex-direction: column;
   gap: 4px;
   min-width: 56px;
 }
-.jh-ring-stat {
+.rb-ring-stat {
   display: flex;
   flex-direction: column;
   gap: 0;
   line-height: 1.15;
 }
-.jh-ring-label {
+.rb-ring-label {
   font-family: var(--st-sans);
   font-size: 12px;
   font-weight: 500;
@@ -1384,22 +1384,22 @@ html.dark .jh-rings-stage .jh-ring-track {
   text-transform: uppercase;
   color: var(--st-ash);
 }
-.jh-ring-value {
+.rb-ring-value {
   font-family: var(--st-sans);
   font-size: 14px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
-.jh-ring-unit {
+.rb-ring-unit {
   margin-left: 3px;
   font-size: 12px;
   font-weight: 400;
   color: var(--st-ash);
 }
-.jh-ring-stat[data-key="remote"] .jh-ring-value { color: #FF2D55; }
-.jh-ring-stat[data-key="hybrid"] .jh-ring-value { color: #7AB800; }
-.jh-ring-stat[data-key="onsite"] .jh-ring-value { color: #04C7DD; }
-html.dark .jh-ring-stat[data-key="hybrid"] .jh-ring-value { color: #A3F900; }
+.rb-ring-stat[data-key="remote"] .rb-ring-value { color: #FF2D55; }
+.rb-ring-stat[data-key="hybrid"] .rb-ring-value { color: #7AB800; }
+.rb-ring-stat[data-key="onsite"] .rb-ring-value { color: #04C7DD; }
+html.dark .rb-ring-stat[data-key="hybrid"] .rb-ring-value { color: #A3F900; }
 
 /* Sidebar stays clean white (no mesh wash) */
 nav {
@@ -1509,12 +1509,12 @@ nav {
 .st-note.is-done { color: var(--st-ash); }
 
 /* ── Dashboard metrics (SPEC.md §5) ── */
-.jh-metrics-range {
+.rb-metrics-range {
   display: inline-flex;
   gap: 4px;
   align-items: center;
 }
-.jh-metrics-range-btn {
+.rb-metrics-range-btn {
   font-family: var(--st-sans);
   font-size: 14px;
   font-weight: 500;
@@ -1525,57 +1525,57 @@ nav {
   padding: 4px 10px;
   cursor: pointer;
 }
-.jh-metrics-range-btn.is-active {
+.rb-metrics-range-btn.is-active {
   color: var(--st-ink);
   border-color: #2a78d6;
   background: rgba(42, 120, 214, 0.08);
 }
-html.dark .jh-metrics-range-btn.is-active {
+html.dark .rb-metrics-range-btn.is-active {
   border-color: #3987e5;
   background: rgba(57, 135, 229, 0.15);
 }
-.jh-metrics-hero {
+.rb-metrics-hero {
   display: grid;
   grid-template-columns: minmax(180px, 1.2fr) repeat(4, minmax(110px, 1fr));
   gap: 12px;
 }
 @media (max-width: 1100px) {
-  .jh-metrics-hero { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .rb-metrics-hero { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
-.jh-metrics-card {
+.rb-metrics-card {
   background: rgba(255,255,255,0.78);
   border-radius: 20px;
   padding: 16px 18px;
   box-shadow: 0 0 0 1px rgba(4,23,43,0.04), var(--shadow-sm);
 }
-html.dark .jh-metrics-card {
+html.dark .rb-metrics-card {
   background: rgba(33,29,26,0.85);
   box-shadow: 0 0 0 1px rgba(255,255,255,0.06);
 }
-.jh-metrics-hero-value {
+.rb-metrics-hero-value {
   font-family: var(--st-serif, Georgia, serif);
   font-size: 48px;
   line-height: 1.05;
   color: var(--st-ink);
   letter-spacing: -0.02em;
 }
-.jh-metrics-stat-value {
+.rb-metrics-stat-value {
   font-family: var(--st-serif, Georgia, serif);
   font-size: 28px;
   line-height: 1.1;
   color: var(--st-ink);
 }
-.jh-metrics-label {
+.rb-metrics-label {
   font-size: 12px;
   color: #898781;
   margin-top: 4px;
 }
-.jh-metrics-hint {
+.rb-metrics-hint {
   font-size: 11.5px;
   color: #898781;
   margin-top: 6px;
 }
-.jh-metrics-empty {
+.rb-metrics-empty {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -1585,21 +1585,21 @@ html.dark .jh-metrics-card {
   color: #898781;
   font-size: 14px;
 }
-.jh-metrics-grid-2 {
+.rb-metrics-grid-2 {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
 }
 @media (max-width: 900px) {
-  .jh-metrics-grid-2 { grid-template-columns: 1fr; }
+  .rb-metrics-grid-2 { grid-template-columns: 1fr; }
 }
-.jh-metrics-chart-scroll {
+.rb-metrics-chart-scroll {
   overflow-x: auto;
   overflow-y: hidden;
   width: 100%;
 }
-.jh-metrics-chart-scroll svg { display: block; }
-.jh-metrics-tooltip {
+.rb-metrics-chart-scroll svg { display: block; }
+.rb-metrics-tooltip {
   position: fixed;
   z-index: 80;
   pointer-events: none;
@@ -1611,39 +1611,39 @@ html.dark .jh-metrics-card {
   max-width: 240px;
   box-shadow: 0 8px 24px rgba(0,0,0,0.25);
 }
-html:not(.dark) .jh-metrics-tooltip {
+html:not(.dark) .rb-metrics-tooltip {
   background: #211d1a;
   color: #fafafb;
 }
-.jh-metrics-table {
+.rb-metrics-table {
   width: 100%;
   border-collapse: collapse;
   font-size: 12.5px;
 }
-.jh-metrics-table th,
-.jh-metrics-table td {
+.rb-metrics-table th,
+.rb-metrics-table td {
   text-align: left;
   padding: 8px 10px;
   border-bottom: 1px solid var(--st-border);
   color: var(--st-ink);
   vertical-align: middle;
 }
-.jh-metrics-table th { color: #898781; font-weight: 500; }
-.jh-metrics-badge {
+.rb-metrics-table th { color: #898781; font-weight: 500; }
+.rb-metrics-badge {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   font-size: 12px;
   font-weight: 500;
 }
-.jh-metrics-badge .dot {
+.rb-metrics-badge .dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
   flex-shrink: 0;
 }
-.jh-metrics-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
-.jh-metrics-title {
+.rb-metrics-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.rb-metrics-title {
   font-family: var(--st-serif, Georgia, serif);
   font-size: 18px;
   color: var(--st-ink);
@@ -2063,8 +2063,8 @@ html.dark #s-profile .text-slate-600 { color: var(--st-slate) !important; }
 }
 /* Job card hover/shadow rules live with the stats-card spring block above */
 /* Workplace / quiet chips: mist outline (unchanged look, 14px floor) */
-#jList .jh-wp-chip,
-#jdTags .jh-wp-chip {
+#jList .rb-wp-chip,
+#jdTags .rb-wp-chip {
   background: var(--st-fog) !important;
   border: 1px solid var(--st-border) !important;
   color: var(--st-slate) !important;
@@ -2078,8 +2078,8 @@ html.dark #s-profile .text-slate-600 { color: var(--st-slate) !important; }
   padding: 4px 10px !important;
 }
 /* Source chips: Steep ink / canvas for readable contrast */
-#jList .jh-src-chip,
-#jdTags .jh-src-chip {
+#jList .rb-src-chip,
+#jdTags .rb-src-chip {
   background: var(--st-ink) !important;
   border: 1px solid var(--st-ink) !important;
   color: var(--st-canvas) !important;
@@ -2093,10 +2093,10 @@ html.dark #s-profile .text-slate-600 { color: var(--st-slate) !important; }
   padding: 4px 10px !important;
 }
 /* Job card type + logo aligned to company + title baselines */
-#jList .jh-job-card {
+#jList .rb-job-card {
   font-size: 14px;
 }
-#jList .jh-job-head {
+#jList .rb-job-head {
   display: grid;
   grid-template-columns: auto 1fr;
   grid-template-rows: auto auto;
@@ -2105,7 +2105,7 @@ html.dark #s-profile .text-slate-600 { color: var(--st-slate) !important; }
   align-items: center;
   margin-bottom: 8px;
 }
-#jList .jh-job-logo {
+#jList .rb-job-logo {
   grid-row: 1 / span 2;
   align-self: stretch;
   justify-self: start;
@@ -2123,7 +2123,7 @@ html.dark #s-profile .text-slate-600 { color: var(--st-slate) !important; }
   flex-shrink: 0;
   box-shadow: var(--shadow-sm);
 }
-#jList .jh-job-logo-img {
+#jList .rb-job-logo-img {
   position: absolute;
   inset: 0;
   width: 100% !important;
@@ -2132,8 +2132,8 @@ html.dark #s-profile .text-slate-600 { color: var(--st-slate) !important; }
   background: #fff;
   display: block;
 }
-html.dark #jList .jh-job-logo-img { background: var(--st-fog); }
-#jList .jh-job-initial {
+html.dark #jList .rb-job-logo-img { background: var(--st-fog); }
+#jList .rb-job-initial {
   color: #fff !important;
   font-family: var(--st-sans);
   font-weight: 500;
@@ -2141,7 +2141,7 @@ html.dark #jList .jh-job-logo-img { background: var(--st-fog); }
   line-height: 1;
   letter-spacing: 0;
 }
-#jList .jh-job-company {
+#jList .rb-job-company {
   grid-column: 2;
   font-family: var(--st-serif) !important;
   font-weight: 600 !important;
@@ -2153,7 +2153,7 @@ html.dark #jList .jh-job-logo-img { background: var(--st-fog); }
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-#jList .jh-job-title {
+#jList .rb-job-title {
   grid-column: 2;
   font-family: var(--st-sans) !important;
   font-weight: 600 !important;
@@ -2164,7 +2164,7 @@ html.dark #jList .jh-job-logo-img { background: var(--st-fog); }
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-#jList .jh-job-meta {
+#jList .rb-job-meta {
   font-family: var(--st-sans) !important;
   font-weight: 400 !important;
   font-size: 14px !important;
@@ -2177,13 +2177,13 @@ html.dark #jList .jh-job-logo-img { background: var(--st-fog); }
 }
 /* Adjacent roles — same field, different craft. Quieter than the main list on
    purpose: these are for the user to judge, not for Robin to act on. */
-#jList .jh-adj-wrap {
+#jList .rb-adj-wrap {
   margin-top: 18px;
   border-top: 1px solid var(--st-border);
   padding-top: 14px;
 }
 
-#jList .jh-adj-head {
+#jList .rb-adj-head {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -2195,11 +2195,11 @@ html.dark #jList .jh-job-logo-img { background: var(--st-fog); }
   color: var(--st-ink);
 }
 
-#jList .jh-adj-head::-webkit-details-marker { display: none; }
-#jList .jh-adj-head::before { content: '▸'; color: var(--st-ash); font-size: 12px; }
-#jList .jh-adj-wrap[open] .jh-adj-head::before { content: '▾'; }
+#jList .rb-adj-head::-webkit-details-marker { display: none; }
+#jList .rb-adj-head::before { content: '▸'; color: var(--st-ash); font-size: 12px; }
+#jList .rb-adj-wrap[open] .rb-adj-head::before { content: '▾'; }
 
-#jList .jh-adj-count {
+#jList .rb-adj-count {
   font-size: 11.5px;
   font-variant-numeric: tabular-nums;
   color: var(--st-slate);
@@ -2209,7 +2209,7 @@ html.dark #jList .jh-job-logo-img { background: var(--st-fog); }
   padding: 1px 8px;
 }
 
-#jList .jh-adj-note {
+#jList .rb-adj-note {
   font-family: var(--st-sans);
   font-size: 14px;
   color: var(--st-slate);
@@ -2218,10 +2218,10 @@ html.dark #jList .jh-job-logo-img { background: var(--st-fog); }
   max-width: 62ch;
 }
 
-#jList .jh-adj-list { display: flex; flex-direction: column; gap: 8px; }
-#jList .jh-job-card--adjacent { opacity: 0.92; }
+#jList .rb-adj-list { display: flex; flex-direction: column; gap: 8px; }
+#jList .rb-job-card--adjacent { opacity: 0.92; }
 
-#jList .jh-adj-tag {
+#jList .rb-adj-tag {
   flex-shrink: 0;
   font-family: var(--st-sans);
   font-size: 10.5px;
@@ -2235,7 +2235,7 @@ html.dark #jList .jh-job-logo-img { background: var(--st-fog); }
   align-self: flex-start;
 }
 
-#jList .jh-job-new {
+#jList .rb-job-new {
   font-size: 14px !important;
   font-weight: 500 !important;
   color: var(--st-sienna) !important;
@@ -2246,16 +2246,16 @@ html.dark #jList .jh-job-logo-img { background: var(--st-fog); }
   flex-shrink: 0;
   line-height: 1.3;
 }
-html.dark #jList .jh-job-new {
+html.dark #jList .rb-job-new {
   color: #e8c49a !important;
   background: var(--st-amber-dim) !important;
   border-color: rgba(196,128,80,0.25) !important;
 }
 
-#jList .jh-job-card.is-queued {
+#jList .rb-job-card.is-queued {
   border-color: rgba(42, 120, 214, 0.35) !important;
 }
-#jList .jh-job-queued {
+#jList .rb-job-queued {
   font-size: 14px !important;
   font-weight: 500 !important;
   color: var(--st-ink) !important;
@@ -2266,27 +2266,27 @@ html.dark #jList .jh-job-new {
   flex-shrink: 0;
   line-height: 1.3;
 }
-html.dark #jList .jh-job-queued {
+html.dark #jList .rb-job-queued {
   color: #c5d8ef !important;
   background: rgba(42, 120, 214, 0.18) !important;
   border-color: rgba(42, 120, 214, 0.35) !important;
 }
 
 /* JD preview header: same hierarchy + 14px floor */
-#jdPanel .jh-jd-company {
+#jdPanel .rb-jd-company {
   font-family: var(--st-serif) !important;
   font-weight: 600 !important;
   font-size: 16px !important;
   color: var(--st-ink) !important;
   letter-spacing: -0.015em;
 }
-#jdPanel .jh-jd-title {
+#jdPanel .rb-jd-title {
   font-family: var(--st-sans) !important;
   font-weight: 600 !important;
   font-size: 16px !important;
   color: var(--st-ink) !important;
 }
-#jdPanel .jh-jd-meta {
+#jdPanel .rb-jd-meta {
   font-size: 14px !important;
   color: var(--st-ash) !important;
   font-weight: 400 !important;
@@ -2313,7 +2313,7 @@ html.dark #jList .jh-job-queued {
   object-fit: contain;
   background: #fff;
 }
-#jdPanel #jdLogo .jh-job-initial {
+#jdPanel #jdLogo .rb-job-initial {
   color: #fff !important;
   font-weight: 500;
   font-size: 14px;
@@ -2407,7 +2407,7 @@ button.bg-indigo-600.st-btn-primary {
 }
 
 /* ── Apply pill in sidebar ── */
-.jh-btn-primary, [class*="bg-indigo-600"].text-white {
+.rb-btn-primary, [class*="bg-indigo-600"].text-white {
   background: var(--st-ink) !important;
   color: var(--st-canvas) !important;
   border: 1px solid var(--st-ink) !important;
@@ -2577,22 +2577,22 @@ button.bg-indigo-600.st-btn-primary {
 /* ── Animation ── */
 .pulse-dot { animation: stPulse 2s ease-in-out infinite; }
 @keyframes jhSkelPulse { 0%,100%{opacity:1} 50%{opacity:.55} }
-#jList[aria-busy="true"] .jh-skel-card {
+#jList[aria-busy="true"] .rb-skel-card {
   animation: jhSkelPulse 1.6s cubic-bezier(0.4,0,0.6,1) infinite;
   pointer-events: none;
   background: rgba(255,255,255,0.92) !important;
   border: 1px solid var(--st-border) !important;
   box-shadow: none !important;
 }
-html.dark #jList[aria-busy="true"] .jh-skel-card {
+html.dark #jList[aria-busy="true"] .rb-skel-card {
   background: var(--st-card) !important;
 }
-#jList .jh-skel {
+#jList .rb-skel {
   background-color: rgba(151, 151, 153, 0.20) !important;
   border: none !important;
   box-shadow: none !important;
 }
-html.dark #jList .jh-skel {
+html.dark #jList .rb-skel {
   background-color: rgba(155, 145, 137, 0.20) !important;
 }
 @keyframes toastUp { from{transform:translateY(8px);opacity:0} to{transform:translateY(0);opacity:1} }
@@ -3494,12 +3494,12 @@ html.dark #resumePreviewHint {
                     <div class="min-w-0">
                       <div class="flex items-center gap-1.5 mb-1">
                         <h1 class="st-h1 mb-0">Find jobs fast</h1>
-                        <button type="button" class="jh-need" data-jh-need="browse" aria-label="What Browse search needs"></button>
+                        <button type="button" class="rb-need" data-rb-need="browse" aria-label="What Browse search needs"></button>
                       </div>
                       <div class="text-[12px] text-slate-400 mb-3">Search by title, skill, or company, then use the tabs below to narrow it down.</div>
                     </div>
-                    <div id="browsePieMini" class="jh-activity-rings" title="Workplace mix for current filters">
-                      <div class="jh-rings-stage">
+                    <div id="browsePieMini" class="rb-activity-rings" title="Workplace mix for current filters">
+                      <div class="rb-rings-stage">
                         <svg id="workplaceRings" viewBox="0 0 200 200" aria-label="Workplace distribution activity rings">
                           <defs>
                             <linearGradient id="ringGradRemote" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -3516,22 +3516,22 @@ html.dark #resumePreviewHint {
                             </linearGradient>
                           </defs>
                           <g id="workplaceRingsDraw"></g>
-                          <text id="workplacePieTotal" class="jh-rings-center-total" x="100" y="98" text-anchor="middle">0</text>
-                          <text class="jh-rings-center-sub" x="100" y="114" text-anchor="middle">jobs</text>
+                          <text id="workplacePieTotal" class="rb-rings-center-total" x="100" y="98" text-anchor="middle">0</text>
+                          <text class="rb-rings-center-sub" x="100" y="114" text-anchor="middle">jobs</text>
                         </svg>
                       </div>
-                      <div class="jh-rings-legend">
-                        <div class="jh-ring-stat" data-key="remote">
-                          <span class="jh-ring-label">Remote</span>
-                          <span class="jh-ring-value"><span id="cntRemote">0</span><span class="jh-ring-unit">jobs</span></span>
+                      <div class="rb-rings-legend">
+                        <div class="rb-ring-stat" data-key="remote">
+                          <span class="rb-ring-label">Remote</span>
+                          <span class="rb-ring-value"><span id="cntRemote">0</span><span class="rb-ring-unit">jobs</span></span>
                         </div>
-                        <div class="jh-ring-stat" data-key="hybrid">
-                          <span class="jh-ring-label">Hybrid</span>
-                          <span class="jh-ring-value"><span id="cntHybrid">0</span><span class="jh-ring-unit">jobs</span></span>
+                        <div class="rb-ring-stat" data-key="hybrid">
+                          <span class="rb-ring-label">Hybrid</span>
+                          <span class="rb-ring-value"><span id="cntHybrid">0</span><span class="rb-ring-unit">jobs</span></span>
                         </div>
-                        <div class="jh-ring-stat" data-key="onsite">
-                          <span class="jh-ring-label">Onsite</span>
-                          <span class="jh-ring-value"><span id="cntOnsite">0</span><span class="jh-ring-unit">jobs</span></span>
+                        <div class="rb-ring-stat" data-key="onsite">
+                          <span class="rb-ring-label">Onsite</span>
+                          <span class="rb-ring-value"><span id="cntOnsite">0</span><span class="rb-ring-unit">jobs</span></span>
                         </div>
                       </div>
                     </div>
@@ -3655,32 +3655,32 @@ html.dark #resumePreviewHint {
               <div class="text-[14px] font-semibold text-slate-500 px-5 py-3" id="jobsListLabel">Recently posted jobs</div>
               <div id="jList" class="px-4 pb-6 space-y-1.5"></div>
             </div>
-            <aside id="browseDetailFloat" class="jh-job-detail-float" hidden aria-hidden="true">
-              <div class="jh-hf-head">
-                <div class="jh-hf-head-main">
-                  <div class="jh-hf-kicker">Preview</div>
+            <aside id="browseDetailFloat" class="rb-job-detail-float" hidden aria-hidden="true">
+              <div class="rb-hf-head">
+                <div class="rb-hf-head-main">
+                  <div class="rb-hf-kicker">Preview</div>
                   <div class="flex items-start gap-3">
                     <div id="hfLogo" class="flex-shrink-0"></div>
                     <div class="min-w-0 flex-1">
-                      <div id="hfCo" class="jh-hf-company truncate"></div>
-                      <div id="hfTitle" class="jh-hf-title"></div>
-                      <div id="hfMeta" class="jh-hf-meta"></div>
-                      <div id="hfTags" class="jh-hf-tags"></div>
+                      <div id="hfCo" class="rb-hf-company truncate"></div>
+                      <div id="hfTitle" class="rb-hf-title"></div>
+                      <div id="hfMeta" class="rb-hf-meta"></div>
+                      <div id="hfTags" class="rb-hf-tags"></div>
                     </div>
                   </div>
                 </div>
-                <button type="button" class="jh-hf-close" onclick="closeJD()" aria-label="Close preview">✕</button>
+                <button type="button" class="rb-hf-close" onclick="closeJD()" aria-label="Close preview">✕</button>
               </div>
-              <div class="jh-hf-facts">
-                <div class="jh-hf-fact"><span>Workplace</span><strong id="hfWorkplace">-</strong></div>
-                <div class="jh-hf-fact"><span>Source</span><strong id="hfSource">-</strong></div>
-                <div class="jh-hf-fact"><span>Location</span><strong id="hfLoc">-</strong></div>
+              <div class="rb-hf-facts">
+                <div class="rb-hf-fact"><span>Workplace</span><strong id="hfWorkplace">-</strong></div>
+                <div class="rb-hf-fact"><span>Source</span><strong id="hfSource">-</strong></div>
+                <div class="rb-hf-fact"><span>Location</span><strong id="hfLoc">-</strong></div>
               </div>
-              <div class="jh-hf-body">
-                <div class="jh-hf-desc-label">Description</div>
-                <div id="hfExcerpt" class="jh-hf-excerpt"></div>
+              <div class="rb-hf-body">
+                <div class="rb-hf-desc-label">Description</div>
+                <div id="hfExcerpt" class="rb-hf-excerpt"></div>
               </div>
-              <div class="jh-hf-actions">
+              <div class="rb-hf-actions">
                 <button type="button" onclick="qJob()" class="st-btn-primary">Queue for Apply</button>
                 <a id="hfOpenLink" href="#" target="_blank" rel="noopener" class="st-btn-ghost hidden">Open listing</a>
                 <button type="button" class="st-btn-ghost" onclick="showT('Saved locally for later')">Save</button>
@@ -3693,10 +3693,10 @@ html.dark #resumePreviewHint {
                     <div id="jdLogo" class="flex-shrink-0"></div>
                     <div class="min-w-0 flex-1">
                       <div class="flex items-baseline gap-2 min-w-0">
-                        <span id="jdCo" class="jh-jd-company truncate"></span>
-                        <span id="jdMeta" class="jh-jd-meta truncate"></span>
+                        <span id="jdCo" class="rb-jd-company truncate"></span>
+                        <span id="jdMeta" class="rb-jd-meta truncate"></span>
                       </div>
-                      <div id="jdTitle" class="jh-jd-title tracking-tight mt-0.5"></div>
+                      <div id="jdTitle" class="rb-jd-title tracking-tight mt-0.5"></div>
                     </div>
                   </div>
                   <div id="jdTags" class="flex gap-1.5 flex-wrap"></div>
@@ -3734,52 +3734,52 @@ html.dark #resumePreviewHint {
 
     <!-- ════ APPLY ════ -->
     <div class="screen hidden flex-1 flex flex-col overflow-hidden" id="s-apply">
-      <div class="jh-apply-runbar" id="applyRunBar">
-        <div class="jh-apply-runbar-lead">
+      <div class="rb-apply-runbar" id="applyRunBar">
+        <div class="rb-apply-runbar-lead">
           <span class="st-kicker">Apply</span>
-          <button type="button" class="jh-need" data-jh-need="apply_start" aria-label="What Apply Start needs"></button>
-          <span id="applyDryBadge" class="jh-apply-mode-badge is-dry">DRY_RUN: not submitting</span>
+          <button type="button" class="rb-need" data-rb-need="apply_start" aria-label="What Apply Start needs"></button>
+          <span id="applyDryBadge" class="rb-apply-mode-badge is-dry">DRY_RUN: not submitting</span>
         </div>
-        <div class="jh-apply-runbar-meta" aria-live="polite">
-          <span id="applyRunAgent" class="jh-apply-run-stat jh-apply-run-agent">Idle</span>
-          <span id="applyRunTokens" class="jh-apply-run-stat" title="0 tokens">0</span>
-          <span id="applyRunElapsed" class="jh-apply-run-stat">00:00</span>
+        <div class="rb-apply-runbar-meta" aria-live="polite">
+          <span id="applyRunAgent" class="rb-apply-run-stat rb-apply-run-agent">Idle</span>
+          <span id="applyRunTokens" class="rb-apply-run-stat" title="0 tokens">0</span>
+          <span id="applyRunElapsed" class="rb-apply-run-stat">00:00</span>
         </div>
-        <div class="jh-apply-runbar-dots" id="applyRunDots" aria-label="Tokens this run by agent"></div>
-        <div class="jh-apply-runbar-actions">
-          <button id="applyRunStartBtn" class="jh-apply-btn is-primary" type="button">Start</button>
-          <button id="applyRunPauseBtn" class="jh-apply-btn" type="button" disabled>Pause</button>
-          <button id="applyRunStopBtn" class="jh-apply-btn" type="button" disabled>Stop</button>
-          <button id="applyRefreshBtn" class="jh-apply-btn" type="button">Refresh</button>
-          <div class="jh-need-cluster">
-            <button id="applyScanBtn" class="jh-apply-btn" type="button">Check for replies</button>
-            <button type="button" class="jh-need" data-jh-need="apply_replies" aria-label="What Check for replies needs"></button>
+        <div class="rb-apply-runbar-dots" id="applyRunDots" aria-label="Tokens this run by agent"></div>
+        <div class="rb-apply-runbar-actions">
+          <button id="applyRunStartBtn" class="rb-apply-btn is-primary" type="button">Start</button>
+          <button id="applyRunPauseBtn" class="rb-apply-btn" type="button" disabled>Pause</button>
+          <button id="applyRunStopBtn" class="rb-apply-btn" type="button" disabled>Stop</button>
+          <button id="applyRefreshBtn" class="rb-apply-btn" type="button">Refresh</button>
+          <div class="rb-need-cluster">
+            <button id="applyScanBtn" class="rb-apply-btn" type="button">Check for replies</button>
+            <button type="button" class="rb-need" data-rb-need="apply_replies" aria-label="What Check for replies needs"></button>
           </div>
         </div>
-        <p id="applyLiveWarn" class="jh-apply-runbar-warn hidden">LIVE: can submit. Pause is available if you need to stop LLM calls.</p>
-        <p id="applyRunMsg" class="jh-apply-runbar-msg" hidden></p>
+        <p id="applyLiveWarn" class="rb-apply-runbar-warn hidden">LIVE: can submit. Pause is available if you need to stop LLM calls.</p>
+        <p id="applyRunMsg" class="rb-apply-runbar-msg" hidden></p>
       </div>
-      <div class="jh-apply-wrap">
-        <div class="jh-apply-main">
+      <div class="rb-apply-wrap">
+        <div class="rb-apply-main">
           <h1 class="st-h1 mb-1">Your application queue</h1>
           <div class="text-[12px] text-slate-500 mb-4">Start finds jobs and works the queue. Queue extras from Browse if you want those first. Click a stage tile to open it. Drag a card onto any stage.</div>
 
           <!-- The flow, stated once so the page explains itself. -->
-          <ol class="jh-apply-flow" aria-label="How a job reaches this page">
-            <li><span class="jh-apply-flow-n">1</span><span><b>Start</b> finds jobs and works the queue</span></li>
-            <li><span class="jh-apply-flow-n">2</span><span><b>Queue</b> from Browse is optional, not required</span></li>
-            <li><span class="jh-apply-flow-n">3</span><span><b>Track</b> progress and replies here</span></li>
+          <ol class="rb-apply-flow" aria-label="How a job reaches this page">
+            <li><span class="rb-apply-flow-n">1</span><span><b>Start</b> finds jobs and works the queue</span></li>
+            <li><span class="rb-apply-flow-n">2</span><span><b>Queue</b> from Browse is optional, not required</span></li>
+            <li><span class="rb-apply-flow-n">3</span><span><b>Track</b> progress and replies here</span></li>
           </ol>
 
-          <div id="applySampleBanner" class="jh-apply-sample-banner hidden">
-            <span class="jh-apply-sample-tag">Sample</span>
-            <span class="jh-apply-sample-copy">Nothing below is real. It is a preview of how a queued job moves through the board. Nothing was written to your database.</span>
-            <button class="jh-apply-btn" id="applySampleExit" type="button">Clear sample</button>
+          <div id="applySampleBanner" class="rb-apply-sample-banner hidden">
+            <span class="rb-apply-sample-tag">Sample</span>
+            <span class="rb-apply-sample-copy">Nothing below is real. It is a preview of how a queued job moves through the board. Nothing was written to your database.</span>
+            <button class="rb-apply-btn" id="applySampleExit" type="button">Clear sample</button>
           </div>
 
           <div id="applyBoard"></div>
         </div>
-        <aside id="applyDetail" class="jh-apply-detail hidden"></aside>
+        <aside id="applyDetail" class="rb-apply-detail hidden"></aside>
       </div>
     </div>
 
@@ -3788,15 +3788,15 @@ html.dark #resumePreviewHint {
       <div class="h-11 flex-shrink-0 border-b border-slate-800 flex items-center px-5 gap-2 bg-slate-900/70">
         <span class="st-kicker">Dashboard</span>
         <div class="flex-1"></div>
-        <div class="jh-metrics-range" id="metricsRange" role="group" aria-label="Date range">
-          <button type="button" class="jh-metrics-range-btn is-active" data-range="7d">7d</button>
-          <button type="button" class="jh-metrics-range-btn" data-range="30d">30d</button>
-          <button type="button" class="jh-metrics-range-btn" data-range="90d">90d</button>
-          <button type="button" class="jh-metrics-range-btn" data-range="all">All</button>
+        <div class="rb-metrics-range" id="metricsRange" role="group" aria-label="Date range">
+          <button type="button" class="rb-metrics-range-btn is-active" data-range="7d">7d</button>
+          <button type="button" class="rb-metrics-range-btn" data-range="30d">30d</button>
+          <button type="button" class="rb-metrics-range-btn" data-range="90d">90d</button>
+          <button type="button" class="rb-metrics-range-btn" data-range="all">All</button>
         </div>
       </div>
       <div class="flex-1 overflow-y-auto overflow-x-hidden p-5 space-y-5" id="metricsRoot">
-        <div class="jh-metrics-loading text-[13px] text-slate-500">Loading metrics…</div>
+        <div class="rb-metrics-loading text-[13px] text-slate-500">Loading metrics…</div>
       </div>
     </div>
 
@@ -3804,11 +3804,11 @@ html.dark #resumePreviewHint {
       <div class="h-11 flex-shrink-0 border-b border-slate-800 flex items-center px-5 gap-2 bg-slate-900/70">
         <span class="st-kicker">Sources</span>
         <div class="flex-1"></div>
-        <button type="button" class="st-btn-ghost text-[12px]" onclick="if(window.__jhMetrics)window.__jhMetrics.load()">Refresh health</button>
+        <button type="button" class="st-btn-ghost text-[12px]" onclick="if(window.__rbMetrics)window.__rbMetrics.load()">Refresh health</button>
       </div>
       <div class="flex-1 overflow-y-auto overflow-x-hidden p-5">
         <p class="text-[13px] text-slate-500 mb-4 max-w-3xl">Full source health, yield, and dedupe detail live here. The Dashboard keeps only a one-line coverage summary.</p>
-        <div id="sourcesHealthRoot" class="jh-sources-panel">
+        <div id="sourcesHealthRoot" class="rb-sources-panel">
           <div class="text-[13px] text-slate-500">Open Dashboard once to load source health, or click Refresh.</div>
         </div>
       </div>
@@ -4109,7 +4109,7 @@ html.dark #resumePreviewHint {
           <div class="st-mist-card space-y-3 lg:col-span-2">
             <div class="flex items-center gap-1.5">
               <div class="text-[13px] font-semibold text-slate-100">Test controls</div>
-              <button type="button" class="jh-need" data-jh-need="linkedin" aria-label="What LinkedIn Lab needs"></button>
+              <button type="button" class="rb-need" data-rb-need="linkedin" aria-label="What LinkedIn Lab needs"></button>
             </div>
             <p class="text-[12px] text-slate-500">Runs only the LinkedIn agent chain (Scout → Bot-check → Fit → Tailor → Cover → Compile → Easy / External → Log).</p>
             <div class="flex flex-wrap gap-2">
@@ -4167,7 +4167,7 @@ html.dark #resumePreviewHint {
     <div class="screen hidden flex-1 flex flex-col overflow-hidden" id="s-knowledge">
       <div class="h-11 flex-shrink-0 border-b border-slate-800 flex items-center px-5 gap-2 bg-slate-900/70">
         <span class="st-kicker">Knowledge Graph</span>
-        <button type="button" class="jh-need" data-jh-need="kg_pulse" aria-label="What Market Pulse needs"></button>
+        <button type="button" class="rb-need" data-rb-need="kg_pulse" aria-label="What Market Pulse needs"></button>
         <div class="flex-1"></div>
         <span class="text-[11px] text-slate-500">Individual · career reality check</span>
       </div>
@@ -4254,9 +4254,9 @@ html.dark #resumePreviewHint {
                   <span class="kg-insights-title">Career Intelligence</span>
                   <div class="kg-insights-actions">
                     <button type="button" class="st-btn-ghost text-[12px]" id="kgRedoOnboarding" title="Redo the career onboarding questions">Redo onboarding</button>
-                    <div class="jh-need-cluster">
+                    <div class="rb-need-cluster">
                       <button type="button" class="st-btn-ghost text-[12px]" id="kgAnalyzeBtn">Analyze</button>
-                      <button type="button" class="jh-need" data-jh-need="kg_analyze" aria-label="What Analyze needs"></button>
+                      <button type="button" class="rb-need" data-rb-need="kg_analyze" aria-label="What Analyze needs"></button>
                     </div>
                   </div>
                 </div>
@@ -4373,7 +4373,7 @@ html.dark #resumePreviewHint {
     <div class="screen hidden flex-1 flex flex-col overflow-hidden" id="s-canvas">
       <div class="h-11 flex-shrink-0 border-b border-slate-800 flex items-center px-5 gap-2 bg-slate-900/70">
         <span class="st-kicker">Canvas</span>
-        <button type="button" class="jh-need" data-jh-need="canvas" aria-label="What Canvas needs"></button>
+        <button type="button" class="rb-need" data-rb-need="canvas" aria-label="What Canvas needs"></button>
         <div class="flex-1"></div>
         <span class="text-[11px] text-slate-500">Live graph · keys live in Settings</span>
       </div>
@@ -4403,7 +4403,7 @@ html.dark #resumePreviewHint {
             <div>
               <div class="text-[12.5px] text-slate-300">AutoFix</div>
               <div id="setAutofixHint" class="text-[11px] text-slate-500">Always on while Robin is in use</div>
-              <span class="jh-need-usedby">Uses the Gemini API key for allowlisted patches. Paste Gemini under API keys below.</span>
+              <span class="rb-need-usedby">Uses the Gemini API key for allowlisted patches. Paste Gemini under API keys below.</span>
             </div>
             <span id="setAutofixBadge" class="text-[11px] font-semibold text-emerald-400 bg-emerald-950/40 border border-emerald-900/50 px-2 py-0.5 rounded">ON</span>
           </div>
@@ -4417,34 +4417,34 @@ html.dark #resumePreviewHint {
               <label class="st-field-label" for="setKeyGemini">Gemini API key</label>
               <input id="setKeyGemini" type="password" autocomplete="off" placeholder="Paste key or leave blank if set" class="st-field">
               <span id="setKeyGeminiStatus" class="text-[11px] text-slate-500">…</span>
-              <span class="jh-need-usedby">Used by Apply Start (Score, Tailor, Cover, Humanize, Compile), Knowledge Graph Analyze, Canvas chat, and AutoFix.</span>
+              <span class="rb-need-usedby">Used by Apply Start (Score, Tailor, Cover, Humanize, Compile), Knowledge Graph Analyze, Canvas chat, and AutoFix.</span>
             </div>
             <div class="st-field-wrap" id="set-groq">
               <label class="st-field-label" for="setKeyGroq">Groq API key</label>
               <input id="setKeyGroq" type="password" autocomplete="off" placeholder="Paste key or leave blank if set" class="st-field">
               <span id="setKeyGroqStatus" class="text-[11px] text-slate-500">…</span>
-              <span class="jh-need-usedby">Used by Apply Start (Scout, Screen, Apply, Log), LinkedIn Lab, and as Gemini fallback.</span>
+              <span class="rb-need-usedby">Used by Apply Start (Scout, Screen, Apply, Log), LinkedIn Lab, and as Gemini fallback.</span>
             </div>
             <div class="st-field-wrap" id="set-serp">
               <label class="st-field-label" for="setKeySerp">SerpAPI key</label>
               <input id="setKeySerp" type="password" autocomplete="off" placeholder="Optional Google Jobs + Market Pulse" class="st-field">
               <span id="setKeySerpStatus" class="text-[11px] text-slate-500">…</span>
-              <span class="jh-need-usedby">Used by Browse (Google Jobs, optional) and Knowledge Graph Market Pulse.</span>
+              <span class="rb-need-usedby">Used by Browse (Google Jobs, optional) and Knowledge Graph Market Pulse.</span>
             </div>
             <div class="st-field-wrap" id="set-sheet">
               <label class="st-field-label" for="setSheetId">Master Sheet ID</label>
               <input id="setSheetId" type="text" autocomplete="off" placeholder="Google Sheet ID" class="st-field">
-              <span class="jh-need-usedby">Used by Apply Log (and LinkedIn Lab Log) to write rows to Google Sheets.</span>
+              <span class="rb-need-usedby">Used by Apply Log (and LinkedIn Lab Log) to write rows to Google Sheets.</span>
             </div>
             <div class="st-field-wrap sm:col-span-2" id="set-drive">
               <label class="st-field-label" for="setDriveId">Google Drive folder ID</label>
               <input id="setDriveId" type="text" autocomplete="off" placeholder="Drive folder ID" class="st-field">
-              <span class="jh-need-usedby">Used by Apply Compile to upload tailored resume PDFs.</span>
+              <span class="rb-need-usedby">Used by Apply Compile to upload tailored resume PDFs.</span>
             </div>
           </div>
           <div class="pt-1 text-[12px]" id="set-oauth">
             <span id="setOauthStatus" class="text-slate-400">Google OAuth: …</span>
-            <span class="jh-need-usedby">Used by Drive PDF upload, Google Docs cover letters, Sheets Log, and Gmail. Place <code class="text-slate-400">google-oauth-client.json</code> (Desktop OAuth client) in the project folder, then Reload. Connect Gmail below for reply detection.</span>
+            <span class="rb-need-usedby">Used by Drive PDF upload, Google Docs cover letters, Sheets Log, and Gmail. Place <code class="text-slate-400">google-oauth-client.json</code> (Desktop OAuth client) in the project folder, then Reload. Connect Gmail below for reply detection.</span>
           </div>
         </div>
 
@@ -4457,20 +4457,20 @@ html.dark #resumePreviewHint {
                 Lets Apply read recruiter replies and move a card from Applied to Replied on its own.
                 Interviews, offers, and rejections still wait for you to confirm them.
               </p>
-              <span class="jh-need-usedby">Used by Apply Check for replies. Optional. The board works without it.</span>
+              <span class="rb-need-usedby">Used by Apply Check for replies. Optional. The board works without it.</span>
             </div>
-            <span id="setGmailStatus" class="jh-gmail-pill is-unknown">Gmail: …</span>
+            <span id="setGmailStatus" class="rb-gmail-pill is-unknown">Gmail: …</span>
           </div>
 
-          <ul class="jh-gmail-facts">
+          <ul class="rb-gmail-facts">
             <li><b>Read-only.</b> The scope is <code>gmail.readonly</code>. This app classifies replies. It cannot send, delete, or edit mail.</li>
             <li><b>Optional.</b> Reply detection is optional. The Apply board works without it. You just move cards by hand.</li>
             <li><b>Local.</b> The token is written to <code>gmail_token.json</code> in the project folder and is gitignored.</li>
           </ul>
 
           <div class="flex flex-wrap items-center gap-2">
-            <button type="button" id="setGmailConnectBtn" onclick="connectGmailFromSettings()" class="jh-apply-btn is-primary">Connect Gmail</button>
-            <button type="button" id="setGmailRecheckBtn" onclick="refreshGmailStatus(true)" class="jh-apply-btn">Re-check</button>
+            <button type="button" id="setGmailConnectBtn" onclick="connectGmailFromSettings()" class="rb-apply-btn is-primary">Connect Gmail</button>
+            <button type="button" id="setGmailRecheckBtn" onclick="refreshGmailStatus(true)" class="rb-apply-btn">Re-check</button>
             <span id="setGmailHint" class="text-[11.5px] text-slate-500"></span>
           </div>
         </div>
@@ -4548,7 +4548,7 @@ html.dark #resumePreviewHint {
             <input id="setLoginWait" type="number" min="60" max="3600" class="st-field" placeholder="600">
           </div>
           <div id="setBrowserHint" class="text-[12px] text-slate-500">browser-session/: …</div>
-          <span class="jh-need-usedby">Used by LinkedIn Lab and live Apply submits. Chrome stays open on a login wall so you can sign in.</span>
+          <span class="rb-need-usedby">Used by LinkedIn Lab and live Apply submits. Chrome stays open on a login wall so you can sign in.</span>
         </div>
 
       </div>
@@ -4832,7 +4832,7 @@ function jobLogoFallback(img){
     return;
   }
   img.remove();
-  const initial = wrap.querySelector('.jh-job-initial');
+  const initial = wrap.querySelector('.rb-job-initial');
   if(initial) initial.hidden = false;
   wrap.classList.add('is-initials');
 }
@@ -4850,9 +4850,9 @@ function isSourceTag(t, ats){
 }
 
 function jobChipClass(t, ats){
-  if(isWorkplaceTag(t)) return 'jh-wp-chip';
-  if(isSourceTag(t, ats)) return 'jh-src-chip';
-  return 'jh-wp-chip';
+  if(isWorkplaceTag(t)) return 'rb-wp-chip';
+  if(isSourceTag(t, ats)) return 'rb-src-chip';
+  return 'rb-wp-chip';
 }
 
 function jobLogoHtml(j){
@@ -4861,13 +4861,13 @@ function jobLogoHtml(j){
   const url = j.logo_url || resolveLogoUrl(j);
   const fallbacks = resolveLogoFallbacks(j).filter(u => u && u !== url);
   if(!url && !fallbacks.length){
-    return `<div class="jh-job-logo bg-gradient-to-br ${bg} is-initials" aria-hidden="true"><span class="jh-job-initial">${letter}</span></div>`;
+    return `<div class="rb-job-logo bg-gradient-to-br ${bg} is-initials" aria-hidden="true"><span class="rb-job-initial">${letter}</span></div>`;
   }
   const primary = url || fallbacks.shift();
   const rest = url ? fallbacks : fallbacks;
-  return `<div class="jh-job-logo bg-gradient-to-br ${bg}" aria-hidden="true">
-    <img class="jh-job-logo-img" src="${esc(primary)}" alt="" loading="lazy" referrerpolicy="no-referrer" data-fallbacks="${esc(JSON.stringify(rest))}" onerror="jobLogoFallback(this)"/>
-    <span class="jh-job-initial" hidden>${letter}</span>
+  return `<div class="rb-job-logo bg-gradient-to-br ${bg}" aria-hidden="true">
+    <img class="rb-job-logo-img" src="${esc(primary)}" alt="" loading="lazy" referrerpolicy="no-referrer" data-fallbacks="${esc(JSON.stringify(rest))}" onerror="jobLogoFallback(this)"/>
+    <span class="rb-job-initial" hidden>${letter}</span>
   </div>`;
 }
 
@@ -4877,15 +4877,15 @@ function paintJobLogoEl(el, j){
   const bg = j.bg || 'from-indigo-600 to-violet-600';
   const url = j.logo_url || resolveLogoUrl(j);
   const fallbacks = resolveLogoFallbacks(j).filter(u => u && u !== url);
-  el.className = `jh-job-logo bg-gradient-to-br ${bg} flex-shrink-0`;
+  el.className = `rb-job-logo bg-gradient-to-br ${bg} flex-shrink-0`;
   if(!url && !fallbacks.length){
     el.classList.add('is-initials');
-    el.innerHTML = `<span class="jh-job-initial">${esc(letter)}</span>`;
+    el.innerHTML = `<span class="rb-job-initial">${esc(letter)}</span>`;
     return;
   }
   const primary = url || fallbacks.shift();
   const rest = url ? fallbacks : fallbacks;
-  el.innerHTML = `<img class="jh-job-logo-img" src="${esc(primary)}" alt="" loading="lazy" referrerpolicy="no-referrer" data-fallbacks="${esc(JSON.stringify(rest))}" onerror="jobLogoFallback(this)"/><span class="jh-job-initial" hidden>${esc(letter)}</span>`;
+  el.innerHTML = `<img class="rb-job-logo-img" src="${esc(primary)}" alt="" loading="lazy" referrerpolicy="no-referrer" data-fallbacks="${esc(JSON.stringify(rest))}" onerror="jobLogoFallback(this)"/><span class="rb-job-initial" hidden>${esc(letter)}</span>`;
 }
 
 function postedAgeDays(j){
@@ -5200,9 +5200,9 @@ function renderWorkplaceRings(counts){
     const pct = total > 0 ? Math.min(100, (ring.n / total) * 100) : 0;
     const offset = ((100 - pct) / 100) * circumference;
     parts.push(
-      `<circle class="jh-ring-track" cx="${cx}" cy="${cy}" r="${radius}" stroke-width="${strokeWidth}"></circle>` +
+      `<circle class="rb-ring-track" cx="${cx}" cy="${cy}" r="${radius}" stroke-width="${strokeWidth}"></circle>` +
       `<g transform="rotate(-90 ${cx} ${cy})">` +
-      `<circle class="jh-ring-progress" data-key="${ring.key}" cx="${cx}" cy="${cy}" r="${radius}" ` +
+      `<circle class="rb-ring-progress" data-key="${ring.key}" cx="${cx}" cy="${cy}" r="${radius}" ` +
       `stroke="${ring.grad}" stroke-width="${strokeWidth}" stroke-dasharray="${circumference}" ` +
       `stroke-dashoffset="${circumference}" data-target-offset="${offset}" ` +
       `style="transition-delay:${index * 0.12}s"></circle>` +
@@ -5212,7 +5212,7 @@ function renderWorkplaceRings(counts){
   g.innerHTML = parts.join('');
   requestAnimationFrame(()=>{
     requestAnimationFrame(()=>{
-      g.querySelectorAll('.jh-ring-progress').forEach(el=>{
+      g.querySelectorAll('.rb-ring-progress').forEach(el=>{
         const target = el.getAttribute('data-target-offset');
         if(target != null) el.setAttribute('stroke-dashoffset', target);
       });
@@ -5667,17 +5667,17 @@ function renderJobSkeletons(n=8){
   const pad = 'p-3.5';
   const count = Math.max(1, Math.min(12, n|0));
   const cards = Array.from({length: count}, (_, i) => `
-    <div class="jh-skel-card animate-pulse flex items-start gap-3 ${pad} rounded-xl"${i===0?' role="status" aria-live="polite"':''}>
+    <div class="rb-skel-card animate-pulse flex items-start gap-3 ${pad} rounded-xl"${i===0?' role="status" aria-live="polite"':''}>
       <div class="flex-1 min-w-0">
-        <div class="jh-job-head" style="margin-bottom:10px">
-          <div class="jh-skel jh-job-logo rounded-xl" style="min-height:40px;min-width:40px"></div>
-          <div class="jh-skel h-3.5 rounded-full w-[42%]"></div>
-          <div class="jh-skel h-3.5 rounded-full w-[68%]"></div>
+        <div class="rb-job-head" style="margin-bottom:10px">
+          <div class="rb-skel rb-job-logo rounded-xl" style="min-height:40px;min-width:40px"></div>
+          <div class="rb-skel h-3.5 rounded-full w-[42%]"></div>
+          <div class="rb-skel h-3.5 rounded-full w-[68%]"></div>
         </div>
-        <div class="jh-skel h-3 rounded-full w-[55%] mb-2.5"></div>
+        <div class="rb-skel h-3 rounded-full w-[55%] mb-2.5"></div>
         <div class="flex gap-1.5 flex-wrap">
-          <div class="jh-skel h-6 w-20 rounded-full"></div>
-          <div class="jh-skel h-6 w-16 rounded-full"></div>
+          <div class="rb-skel h-6 w-20 rounded-full"></div>
+          <div class="rb-skel h-6 w-16 rounded-full"></div>
         </div>
       </div>
     </div>`).join('');
@@ -5746,7 +5746,7 @@ function jobReachMarker(j){
   if(!band && !(j.loc || j.location)) return '';
   const icon = icons[band] || ((String(j.loc||j.location||'').toLowerCase().includes('remote')) ? '⌂' : '✈');
   const label = j.location_label || band || (j.loc || j.location || 'Location');
-  return `<span class="jh-job-reach" title="${esc(label)}"><span aria-hidden="true">${icon}</span><span class="sr-only">${esc(label)}</span></span>`;
+  return `<span class="rb-job-reach" title="${esc(label)}"><span aria-hidden="true">${icon}</span><span class="sr-only">${esc(label)}</span></span>`;
 }
 
 function renderJobs(){
@@ -5770,22 +5770,22 @@ function renderJobs(){
       return `<span class="${cls}">${esc(t)}</span>`;
     }).join('');
     return `
-    <div class="jh-job-card group flex items-start gap-3 p-3.5 rounded-xl border cursor-pointer
+    <div class="rb-job-card group flex items-start gap-3 p-3.5 rounded-xl border cursor-pointer
       ${selected
         ? 'is-selected bg-indigo-950/25 border-indigo-500/50 ring-1 ring-indigo-500/20'
         : 'bg-slate-900 border-slate-800 hover:border-slate-700 hover:bg-slate-800/60'
       }${queued ? ' is-queued' : ''}" data-job-id="${esc(j.id)}" role="button" tabindex="0">
       <div class="flex-1 min-w-0">
-        <div class="jh-job-head">
+        <div class="rb-job-head">
           ${jobLogoHtml(j)}
-          <div class="jh-job-company">${esc(j.company)}</div>
-          <div class="jh-job-title">${esc(j.title)}</div>
+          <div class="rb-job-company">${esc(j.company)}</div>
+          <div class="rb-job-title">${esc(j.title)}</div>
         </div>
-        <div class="jh-job-meta">${esc(j.loc)} · ${esc(j.time)}${jobReachMarker(j)}</div>
+        <div class="rb-job-meta">${esc(j.loc)} · ${esc(j.time)}${jobReachMarker(j)}</div>
         <div class="flex gap-1.5 flex-wrap">${chips}</div>
       </div>
-      ${queued ? `<span class="jh-job-queued">Queued</span>` : (j.isNew ? `<span class="jh-job-new">New</span>` : '')}
-      <svg class="jh-job-chev" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M6 3.5 10.5 8 6 12.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      ${queued ? `<span class="rb-job-queued">Queued</span>` : (j.isNew ? `<span class="rb-job-new">New</span>` : '')}
+      <svg class="rb-job-chev" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M6 3.5 10.5 8 6 12.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </div>`;
   }).join('') + renderAdjacentJobs();
 }
@@ -5797,35 +5797,35 @@ function renderAdjacentJobs(){
   if(!ADJACENT_JOBS.length && !DROPPED_OFF_ROLE) return '';
   const roleName = (ROLE_INFO && ROLE_INFO.primary_title) || 'your role';
   const dropped = DROPPED_OFF_ROLE
-    ? `<div class="jh-adj-note">${DROPPED_OFF_ROLE} listing${DROPPED_OFF_ROLE===1?'':'s'} outside ${esc(roleName)} were hidden.</div>`
+    ? `<div class="rb-adj-note">${DROPPED_OFF_ROLE} listing${DROPPED_OFF_ROLE===1?'':'s'} outside ${esc(roleName)} were hidden.</div>`
     : '';
   if(!ADJACENT_JOBS.length){
-    return `<div class="jh-adj-wrap">${dropped}</div>`;
+    return `<div class="rb-adj-wrap">${dropped}</div>`;
   }
   const cards = ADJACENT_JOBS.map(j=>{
     const queued = isQueuedJob(j);
     return `
-    <div class="jh-job-card jh-job-card--adjacent group flex items-start gap-3 p-3.5 rounded-xl border cursor-pointer bg-slate-900 border-slate-800 hover:border-slate-700${queued ? ' is-queued' : ''}"
+    <div class="rb-job-card rb-job-card--adjacent group flex items-start gap-3 p-3.5 rounded-xl border cursor-pointer bg-slate-900 border-slate-800 hover:border-slate-700${queued ? ' is-queued' : ''}"
       data-job-id="${esc(j.id)}" role="button" tabindex="0">
       <div class="flex-1 min-w-0">
-        <div class="jh-job-head">
+        <div class="rb-job-head">
           ${jobLogoHtml(j)}
-          <div class="jh-job-company">${esc(j.company)}</div>
-          <div class="jh-job-title">${esc(j.title)}</div>
+          <div class="rb-job-company">${esc(j.company)}</div>
+          <div class="rb-job-title">${esc(j.title)}</div>
         </div>
-        <div class="jh-job-meta">${esc(j.loc)} · ${esc(j.time)}</div>
+        <div class="rb-job-meta">${esc(j.loc)} · ${esc(j.time)}</div>
       </div>
-      ${queued ? `<span class="jh-job-queued">Queued</span>` : `<span class="jh-adj-tag">Adjacent</span>`}
+      ${queued ? `<span class="rb-job-queued">Queued</span>` : `<span class="rb-adj-tag">Adjacent</span>`}
     </div>`;
   }).join('');
   return `
-    <details class="jh-adj-wrap">
-      <summary class="jh-adj-head">
+    <details class="rb-adj-wrap">
+      <summary class="rb-adj-head">
         Adjacent roles
-        <span class="jh-adj-count">${ADJACENT_JOBS.length}</span>
+        <span class="rb-adj-count">${ADJACENT_JOBS.length}</span>
       </summary>
-      <div class="jh-adj-note">Design work in a different craft to ${esc(roleName)} — brand, visual, motion, graphic. Robin never applies to these on its own; queue one if you want it.</div>
-      <div class="jh-adj-list">${cards}</div>
+      <div class="rb-adj-note">Design work in a different craft to ${esc(roleName)} — brand, visual, motion, graphic. Robin never applies to these on its own; queue one if you want it.</div>
+      <div class="rb-adj-list">${cards}</div>
       ${dropped}
     </details>`;
 }
@@ -6012,7 +6012,7 @@ async function qJob(){
   }
 
   nav('apply');
-  if(window.__jhApply) window.__jhApply.load();
+  if(window.__rbApply) window.__rbApply.load();
 }
 
 async function qFilteredJobs(){
@@ -6083,7 +6083,7 @@ syncFilterChips();
 // Nav
 let canvasLoaded=false;
 const SCREEN_IDS = ['browse','apply','dashboard','sources','profile','linkedin','knowledge','canvas','settings'];
-const SCREEN_STORAGE_KEY = 'jh-active-screen';
+const SCREEN_STORAGE_KEY = 'rb-active-screen';
 let currentScreen = 'browse';
 
 function readStoredScreen(){
@@ -6118,16 +6118,16 @@ function nav(s, opts){
     refreshLiLab();
     renderLiChain();
     loadLiReview();
-    const note = localStorage.getItem('jh-li-lab-url') || '';
+    const note = localStorage.getItem('rb-li-lab-url') || '';
     const noteEl = document.getElementById('liUrlNote');
     if(noteEl) noteEl.textContent = note ? `Saved: ${note}` : '';
     const inp = document.getElementById('liUrlIn');
     if(inp && note) inp.value = note;
   }
   if(screenId==='knowledge'){
-    if(window.__jhKnowledgeGraph) window.__jhKnowledgeGraph.show();
-  } else if(window.__jhKnowledgeGraph){
-    window.__jhKnowledgeGraph.pause();
+    if(window.__rbKnowledgeGraph) window.__rbKnowledgeGraph.show();
+  } else if(window.__rbKnowledgeGraph){
+    window.__rbKnowledgeGraph.pause();
   }
   if(screenId==='profile'){
     loadJobSources();
@@ -6145,10 +6145,10 @@ function nav(s, opts){
         const el = document.getElementById(focusId);
         if(!el) return;
         el.scrollIntoView({ block:'center', behavior:'smooth' });
-        el.classList.add('jh-need-flash');
-        const field = el.querySelector('input, select, textarea, button.jh-apply-btn, button.st-btn-primary') || el;
+        el.classList.add('rb-need-flash');
+        const field = el.querySelector('input, select, textarea, button.rb-apply-btn, button.st-btn-primary') || el;
         try { if(field && field.focus) field.focus({ preventScroll:true }); } catch(_e){}
-        setTimeout(function(){ el.classList.remove('jh-need-flash'); }, 1600);
+        setTimeout(function(){ el.classList.remove('rb-need-flash'); }, 1600);
       });
     }
   }
@@ -6159,17 +6159,17 @@ function nav(s, opts){
       if(selected) syncQueueActionButtons(selected);
     });
   }
-  if(screenId==='dashboard' && window.__jhMetrics){
-    window.__jhMetrics.load();
+  if(screenId==='dashboard' && window.__rbMetrics){
+    window.__rbMetrics.load();
   }
-  if(screenId==='sources' && window.__jhMetrics){
-    window.__jhMetrics.load();
+  if(screenId==='sources' && window.__rbMetrics){
+    window.__rbMetrics.load();
   }
-  if(screenId==='apply' && window.__jhApply){
-    window.__jhApply.load();
+  if(screenId==='apply' && window.__rbApply){
+    window.__rbApply.load();
   }
-  if(screenId==='apply' && window.__jhApplyRun && typeof window.__jhApplyRun.refresh === 'function'){
-    window.__jhApplyRun.refresh();
+  if(screenId==='apply' && window.__rbApplyRun && typeof window.__rbApplyRun.refresh === 'function'){
+    window.__rbApplyRun.refresh();
   }
   document.querySelectorAll('.nav-item[data-s]').forEach(b=>{
     const on=b.dataset.s===screenId;
@@ -6404,7 +6404,7 @@ async function liReviewAct(id, action){
 
 function saveLiUrlNote(){
   const v = (document.getElementById('liUrlIn')||{}).value || '';
-  localStorage.setItem('jh-li-lab-url', v.trim());
+  localStorage.setItem('rb-li-lab-url', v.trim());
   const noteEl = document.getElementById('liUrlNote');
   if(noteEl) noteEl.textContent = v.trim() ? `Saved: ${v.trim()}` : '';
   showT(v.trim() ? 'LinkedIn URL saved for lab notes' : 'Cleared');
@@ -6435,7 +6435,7 @@ function saveLiUrlNote(){
   const tagline = document.getElementById('obTagline');
   if(!flow) return;
 
-  const KG = () => window.__jhKnowledgeGraph;
+  const KG = () => window.__rbKnowledgeGraph;
   const answers = {};      // id -> value(s)
   let steps = [];
   let idx = 0;
@@ -6693,7 +6693,7 @@ function saveLiUrlNote(){
   elText.addEventListener('keydown', e => { if(e.key === 'Enter'){ e.preventDefault(); commit(); } });
 
   // start — knowledge-graph.js is a classic script loaded near the end of the
-  // document, so window.__jhKnowledgeGraph does NOT exist when this inline
+  // document, so window.__rbKnowledgeGraph does NOT exist when this inline
   // script runs. Building immediately silently used the fallback set, which
   // is what made the step count jump from 5 to 12 mid-flow. Wait for the
   // module (briefly, then give up and use the fallback for real).
@@ -7758,8 +7758,8 @@ async function enterApp(resume){
   // Knowledge Graph tab, which opens its own question flow automatically
   // via KnowledgeGraph.show() -> startOnboarding(). Returning users keep
   // the existing landing logic untouched.
-  const onboarded = window.__jhKnowledgeGraph
-    ? await window.__jhKnowledgeGraph.isOnboardingComplete().catch(() => true)
+  const onboarded = window.__rbKnowledgeGraph
+    ? await window.__rbKnowledgeGraph.isOnboardingComplete().catch(() => true)
     : true;
   const landing = !onboarded ? 'knowledge' : (resume ? 'profile' : readStoredScreen());
   nav(landing);
@@ -8129,7 +8129,7 @@ function paintGmailStatus(gm){
         a.href = gm.action_url;
         a.target = '_blank';
         a.rel = 'noopener';
-        a.className = 'jh-gmail-link';
+        a.className = 'rb-gmail-link';
         a.textContent = 'Open Google Cloud console';
         hint.appendChild(a);
       }
@@ -8335,7 +8335,7 @@ async function initLiveRunSSE(){
   }catch(e){ return; }
 
   function fanoutLive(etype, data){
-    document.dispatchEvent(new CustomEvent('jh-live-event', { detail: { type: etype, data: data } }));
+    document.dispatchEvent(new CustomEvent('rb-live-event', { detail: { type: etype, data: data } }));
   }
   const onEv = (etype, handler) => {
     _sse.addEventListener(etype, (ev)=>{

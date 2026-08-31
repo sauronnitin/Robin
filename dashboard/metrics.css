@@ -15,7 +15,7 @@
    funnel take extra span — the funnel's five segments plus legend genuinely
    need the run. Everything else is one column: at two columns a tile was ~670px
    wide holding a ~280px chart, so two-thirds of each card sat empty. */
-.jh-bento {
+.rb-bento {
   display: grid;
   width: 100%;
   gap: 8px;
@@ -29,7 +29,7 @@
 }
 
 @media (max-width: 900px) {
-  .jh-bento {
+  .rb-bento {
     grid-template-columns: minmax(0, 1fr);
     grid-template-areas:
       "rail"
@@ -52,66 +52,66 @@
 }
 
 /* Grid-area assignments */
-.jh-bento-area-pace { grid-area: pace; }
-.jh-bento-area-silence { grid-area: silence; }
-.jh-bento-area-ats { grid-area: ats; }
-.jh-bento-area-rail { grid-area: rail; }
-.jh-bento-area-targeting { grid-area: targeting; }
-.jh-bento-area-rehearsal { grid-area: rehearsal; }
-.jh-bento-area-cadence { grid-area: cadence; }
-.jh-bento-area-pipeline { grid-area: pipeline; }
-.jh-bento-area-proof { grid-area: proof; }
-.jh-bento-area-funnel { grid-area: funnel; }
-.jh-bento-area-fit { grid-area: fit; }
-.jh-bento-area-response { grid-area: response; }
-.jh-bento-area-timesaved { grid-area: timesaved; }
-.jh-bento-area-coverage { grid-area: coverage; }
-.jh-bento-area-aim { grid-area: aim; }
-.jh-bento-area-reply { grid-area: reply; }
+.rb-bento-area-pace { grid-area: pace; }
+.rb-bento-area-silence { grid-area: silence; }
+.rb-bento-area-ats { grid-area: ats; }
+.rb-bento-area-rail { grid-area: rail; }
+.rb-bento-area-targeting { grid-area: targeting; }
+.rb-bento-area-rehearsal { grid-area: rehearsal; }
+.rb-bento-area-cadence { grid-area: cadence; }
+.rb-bento-area-pipeline { grid-area: pipeline; }
+.rb-bento-area-proof { grid-area: proof; }
+.rb-bento-area-funnel { grid-area: funnel; }
+.rb-bento-area-fit { grid-area: fit; }
+.rb-bento-area-response { grid-area: response; }
+.rb-bento-area-timesaved { grid-area: timesaved; }
+.rb-bento-area-coverage { grid-area: coverage; }
+.rb-bento-area-aim { grid-area: aim; }
+.rb-bento-area-reply { grid-area: reply; }
 
 /* ── Size variants ──────────────────────────────────────────── */
 
-.jh-bento-hero {
+.rb-bento-hero {
   min-height: 104px;
 }
 
-.jh-bento-large {
+.rb-bento-large {
   min-height: 84px;
 }
 
-.jh-bento-medium {
+.rb-bento-medium {
   min-height: 76px;
 }
 
-.jh-bento-small {
+.rb-bento-small {
   min-height: 66px;
 }
 
-.jh-bento-tall {
+.rb-bento-tall {
   min-height: 100%;
 }
 
 /* Locked/sparse tiles carry one line of muted copy -- a wider column from the
    full-width grid makes the old min-heights read as empty space rather than
    a compact metric. Trim them further and drop the loose internal gap. */
-.jh-bento-locked.jh-bento-small { min-height: 68px; }
-.jh-bento-locked.jh-bento-medium { min-height: 80px; }
-.jh-bento-locked.jh-bento-large { min-height: 92px; }
-.jh-bento-locked { gap: 4px; padding: 12px 14px; }
+.rb-bento-locked.rb-bento-small { min-height: 68px; }
+.rb-bento-locked.rb-bento-medium { min-height: 80px; }
+.rb-bento-locked.rb-bento-large { min-height: 92px; }
+.rb-bento-locked { gap: 4px; padding: 12px 14px; }
 
 @media (max-width: 900px) {
-  .jh-bento-hero,
-  .jh-bento-large,
-  .jh-bento-medium,
-  .jh-bento-small,
-  .jh-bento-tall {
+  .rb-bento-hero,
+  .rb-bento-large,
+  .rb-bento-medium,
+  .rb-bento-small,
+  .rb-bento-tall {
     min-height: 0;
   }
 }
 
 /* ── Base card ──────────────────────────────────────────────── */
 
-.jh-bento-card {
+.rb-bento-card {
   border-radius: 18px;
   padding: 10px 12px;
   display: flex;
@@ -126,21 +126,21 @@
   box-shadow: 0 1px 8px rgba(0, 0, 0, 0.05);
 }
 
-html.dark .jh-bento-card {
+html.dark .rb-bento-card {
   background: var(--st-card, var(--st-mist));
   box-shadow: none;
 }
 
-.jh-bento-hero.jh-bento-card {
+.rb-bento-hero.rb-bento-card {
   justify-content: center;
   background: linear-gradient(145deg, var(--st-peach), var(--st-canvas, var(--st-mist)));
 }
 
-html.dark .jh-bento-hero.jh-bento-card {
+html.dark .rb-bento-hero.rb-bento-card {
   background: linear-gradient(145deg, var(--st-raised, var(--st-fog)), var(--st-card, var(--st-mist)));
 }
 
-.jh-bento-hero.jh-bento-card::before {
+.rb-bento-hero.rb-bento-card::before {
   content: "";
   position: absolute;
   top: 0;
@@ -153,18 +153,18 @@ html.dark .jh-bento-hero.jh-bento-card {
 
 /* ── Locked state ───────────────────────────────────────────── */
 
-.jh-bento-locked {
+.rb-bento-locked {
   background: var(--st-fog);
   border-style: dashed;
   justify-content: flex-start;
   gap: 10px;
 }
 
-html.dark .jh-bento-locked {
+html.dark .rb-bento-locked {
   background: var(--st-raised, var(--st-fog));
 }
 
-.jh-bento-lock {
+.rb-bento-lock {
   font-family: var(--st-sans);
   font-size: 12px;
   font-weight: 500;
@@ -174,7 +174,7 @@ html.dark .jh-bento-locked {
 
 /* ── Typography ───────────────────────────────────────────────── */
 
-.jh-bento-label {
+.rb-bento-label {
   font-family: var(--st-sans);
   font-size: 12px;
   font-weight: 600;
@@ -184,7 +184,7 @@ html.dark .jh-bento-locked {
   margin-bottom: 4px;
 }
 
-.jh-bento-num {
+.rb-bento-num {
   font-family: var(--st-serif);
   font-weight: 700;
   letter-spacing: -0.03em;
@@ -193,19 +193,19 @@ html.dark .jh-bento-locked {
   font-size: 36px;
 }
 
-.jh-bento-large .jh-bento-num {
+.rb-bento-large .rb-bento-num {
   font-size: 40px;
 }
 
-.jh-bento-medium .jh-bento-num {
+.rb-bento-medium .rb-bento-num {
   font-size: 32px;
 }
 
-.jh-bento-small .jh-bento-num {
+.rb-bento-small .rb-bento-num {
   font-size: 26px;
 }
 
-.jh-bento-sub {
+.rb-bento-sub {
   font-family: var(--st-sans);
   font-size: 12.5px;
   font-weight: 500;
@@ -216,7 +216,7 @@ html.dark .jh-bento-locked {
 
 /* An in-tile action sits top-right, out of the reading path of the figure and
    its caption, rather than sinking to the bottom and pushing the card taller. */
-.jh-bento-badge {
+.rb-bento-badge {
   position: absolute;
   top: 10px;
   right: 12px;
@@ -234,19 +234,19 @@ html.dark .jh-bento-locked {
   border: none;
 }
 
-html.dark .jh-bento-badge {
+html.dark .rb-bento-badge {
   background: var(--st-amber-dim);
   color: var(--st-sienna);
 }
 
 /* Reserve the top-right corner so the action never lands on the label. */
-.jh-bento-card:has(.jh-bento-badge) .jh-bento-label {
+.rb-bento-card:has(.rb-bento-badge) .rb-bento-label {
   padding-right: 104px;
 }
 
 /* Inline swatch for a value list that stands in for a legend — keeps identity
    on the colour without costing the extra line a real legend would. */
-.jh-key-dot {
+.rb-key-dot {
   display: inline-block;
   width: 7px;
   height: 7px;
@@ -255,13 +255,13 @@ html.dark .jh-bento-badge {
   vertical-align: 1px;
 }
 
-.jh-key-dot[data-slot="1"] { background: var(--dv-s1); }
-.jh-key-dot[data-slot="2"] { background: var(--dv-s2); }
-.jh-key-dot[data-slot="3"] { background: var(--dv-s3); }
+.rb-key-dot[data-slot="1"] { background: var(--dv-s1); }
+.rb-key-dot[data-slot="2"] { background: var(--dv-s2); }
+.rb-key-dot[data-slot="3"] { background: var(--dv-s3); }
 
 /* Marks a tile whose numbers are illustrative placeholders, not measurements.
    Rendered by lockedTile() when a metric has no real data yet. */
-.jh-bento-sample-chip {
+.rb-bento-sample-chip {
   display: inline-block;
   margin-left: 8px;
   font-family: var(--st-sans);
@@ -276,15 +276,15 @@ html.dark .jh-bento-badge {
   vertical-align: 1px;
 }
 
-html.dark .jh-bento-sample-chip {
+html.dark .rb-bento-sample-chip {
   background: var(--st-amber-dim);
   color: var(--st-sienna);
 }
 
-.jh-bento-delta { color: #0ca30c; }
-html.dark .jh-bento-delta { color: #199e70; }
+.rb-bento-delta { color: #0ca30c; }
+html.dark .rb-bento-delta { color: #199e70; }
 
-.jh-bento-bench {
+.rb-bento-bench {
   font-family: var(--st-sans);
   font-size: 12px;
   font-weight: 500;
@@ -295,18 +295,18 @@ html.dark .jh-bento-delta { color: #199e70; }
   border-top: 1px solid var(--st-border);
 }
 
-.jh-bento-bench cite {
+.rb-bento-bench cite {
   font-style: normal;
   color: #c3c2b7;
 }
 
-html.dark .jh-bento-bench cite {
+html.dark .rb-bento-bench cite {
   color: #383835;
 }
 
 /* ── Next-action rail ─────────────────────────────────────────── */
 
-.jh-bento-rail {
+.rb-bento-rail {
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -318,15 +318,15 @@ html.dark .jh-bento-bench cite {
   color: var(--st-ink);
 }
 
-html.dark .jh-bento-rail {
+html.dark .rb-bento-rail {
   background: var(--st-raised, var(--st-fog));
 }
 
-.jh-bento-rail > .jh-bento-label {
+.rb-bento-rail > .rb-bento-label {
   margin-bottom: 4px;
 }
 
-.jh-bento-rail-rows {
+.rb-bento-rail-rows {
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -336,7 +336,7 @@ html.dark .jh-bento-rail {
 /* Count, reason, action. The action sits on its own line rather than fighting
    the reason text for a ~264px rail — at three columns the button crowded the
    wrapped copy. */
-.jh-bento-rail-row {
+.rb-bento-rail-row {
   display: grid;
   grid-template-columns: 30px 1fr;
   gap: 4px 10px;
@@ -347,17 +347,17 @@ html.dark .jh-bento-rail {
   border: 1px solid var(--st-border);
 }
 
-.jh-bento-rail-row .jh-bento-rail-btn {
+.rb-bento-rail-row .rb-bento-rail-btn {
   grid-column: 2;
   justify-self: start;
   margin-top: 4px;
 }
 
-html.dark .jh-bento-rail-row {
+html.dark .rb-bento-rail-row {
   background: var(--st-card, var(--st-mist));
 }
 
-.jh-bento-rail-row-count {
+.rb-bento-rail-row-count {
   font-family: var(--st-serif);
   font-size: 18px;
   font-weight: 700;
@@ -366,11 +366,11 @@ html.dark .jh-bento-rail-row {
   font-variant-numeric: tabular-nums;
 }
 
-.jh-bento-rail-row-copy {
+.rb-bento-rail-row-copy {
   min-width: 0;
 }
 
-.jh-bento-rail-row-why {
+.rb-bento-rail-row-why {
   font-family: var(--st-sans);
   font-size: 14px;
   font-weight: 500;
@@ -378,14 +378,14 @@ html.dark .jh-bento-rail-row {
   color: var(--st-ink);
 }
 
-.jh-bento-rail-row-meta {
+.rb-bento-rail-row-meta {
   font-family: var(--st-sans);
   font-size: 12px;
   color: #898781;
   margin-top: 2px;
 }
 
-.jh-bento-rail-btn {
+.rb-bento-rail-btn {
   align-self: center;
   font-family: var(--st-sans);
   font-size: 14px;
@@ -400,17 +400,17 @@ html.dark .jh-bento-rail-row {
   white-space: nowrap;
 }
 
-.jh-bento-rail-btn:hover {
+.rb-bento-rail-btn:hover {
   background: var(--st-amber-dim);
 }
 
-html.dark .jh-bento-rail-btn {
+html.dark .rb-bento-rail-btn {
   background: var(--st-amber-dim);
 }
 
 /* ── Funnel ───────────────────────────────────────────────────── */
 
-.jh-bento-funnel-row {
+.rb-bento-funnel-row {
   display: flex;
   height: 36px;
   border-radius: 10px;
@@ -419,7 +419,7 @@ html.dark .jh-bento-rail-btn {
   border: 1px solid var(--st-border);
 }
 
-.jh-bento-funnel-seg {
+.rb-bento-funnel-seg {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -435,14 +435,14 @@ html.dark .jh-bento-rail-btn {
 
 /* Stage names live here rather than inside the segments — the late stages are
    only a few percent wide and their labels collided into unreadable slivers. */
-.jh-bento-funnel-legend {
+.rb-bento-funnel-legend {
   display: flex;
   flex-wrap: wrap;
   gap: 4px 12px;
   margin-top: 8px;
 }
 
-.jh-bento-funnel-key {
+.rb-bento-funnel-key {
   display: inline-flex;
   align-items: center;
   gap: 5px;
@@ -452,20 +452,20 @@ html.dark .jh-bento-rail-btn {
   white-space: nowrap;
 }
 
-.jh-bento-funnel-dot {
+.rb-bento-funnel-dot {
   width: 8px;
   height: 8px;
   border-radius: 2px;
   flex-shrink: 0;
 }
 
-.jh-bento-funnel-dot[data-step="1"] { background: var(--dv-o1); }
-.jh-bento-funnel-dot[data-step="2"] { background: var(--dv-o2); }
-.jh-bento-funnel-dot[data-step="3"] { background: var(--dv-o3); }
-.jh-bento-funnel-dot[data-step="4"] { background: var(--dv-o4); }
-.jh-bento-funnel-dot[data-step="5"] { background: var(--dv-good); }
+.rb-bento-funnel-dot[data-step="1"] { background: var(--dv-o1); }
+.rb-bento-funnel-dot[data-step="2"] { background: var(--dv-o2); }
+.rb-bento-funnel-dot[data-step="3"] { background: var(--dv-o3); }
+.rb-bento-funnel-dot[data-step="4"] { background: var(--dv-o4); }
+.rb-bento-funnel-dot[data-step="5"] { background: var(--dv-good); }
 
-.jh-bento-funnel-seg.is-deep {
+.rb-bento-funnel-seg.is-deep {
   color: #e1e0d9;
 }
 
@@ -474,15 +474,15 @@ html.dark .jh-bento-rail-btn {
    (monotone L, adjacent dL >= 0.06, single hue, light end clears the card).
    The final stage means "won", so it wears the status-good token rather than
    a deeper step: status is the right vocabulary for an outcome. */
-.jh-bento-funnel-seg:nth-child(1) { background: var(--dv-o1); }
-.jh-bento-funnel-seg:nth-child(2) { background: var(--dv-o2); }
-.jh-bento-funnel-seg:nth-child(3) { background: var(--dv-o3); }
-.jh-bento-funnel-seg:nth-child(4) { background: var(--dv-o4); }
-.jh-bento-funnel-seg:nth-child(5) { background: var(--dv-good); color: #fff; }
+.rb-bento-funnel-seg:nth-child(1) { background: var(--dv-o1); }
+.rb-bento-funnel-seg:nth-child(2) { background: var(--dv-o2); }
+.rb-bento-funnel-seg:nth-child(3) { background: var(--dv-o3); }
+.rb-bento-funnel-seg:nth-child(4) { background: var(--dv-o4); }
+.rb-bento-funnel-seg:nth-child(5) { background: var(--dv-good); color: #fff; }
 
 /* ── Histogram (fit distribution) ─────────────────────────────── */
 
-.jh-bento-hist {
+.rb-bento-hist {
   display: flex;
   align-items: flex-end;
   gap: 4px;
@@ -493,7 +493,7 @@ html.dark .jh-bento-rail-btn {
   border-bottom: 1px solid #e1e0d9;
 }
 
-html.dark .jh-bento-hist {
+html.dark .rb-bento-hist {
   border-bottom-color: #383835;
 }
 
@@ -501,7 +501,7 @@ html.dark .jh-bento-hist {
    and the old `html.dark` gradient outranked those single-class rules — so
    below-threshold bars kept rendering the legacy blue in dark mode. It was
    invisible to a `backgroundColor` check because a gradient is background-IMAGE. */
-.jh-bento-hist-bar {
+.rb-bento-hist-bar {
   flex: 1 1 0;
   min-width: 0;
   border-radius: 6px 6px 2px 2px;
@@ -514,16 +514,16 @@ html.dark .jh-bento-hist {
    defaults. */
 /* One series, two states. Emphasis is the semantic above/below-threshold
    split, never the bar's own value re-encoded as colour. */
-.jh-bento-hist-bar.is-below { background: var(--dv-o1); }
-.jh-bento-hist-bar.is-above { background: var(--dv-s1); }
+.rb-bento-hist-bar.is-below { background: var(--dv-o1); }
+.rb-bento-hist-bar.is-above { background: var(--dv-s1); }
 
-.jh-bento-hist-labels {
+.rb-bento-hist-labels {
   display: flex;
   gap: 4px;
   margin-top: 4px;
 }
 
-.jh-bento-hist-labels span {
+.rb-bento-hist-labels span {
   flex: 1 1 0;
   font-family: var(--st-sans);
   font-size: 12px;
@@ -534,14 +534,14 @@ html.dark .jh-bento-hist {
 
 /* ── Silence clock buckets ────────────────────────────────────── */
 
-.jh-bento-silence {
+.rb-bento-silence {
   display: flex;
   flex-direction: column;
   gap: 6px;
   margin-top: 8px;
 }
 
-.jh-bento-silence-row {
+.rb-bento-silence-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -550,39 +550,39 @@ html.dark .jh-bento-hist {
   font-size: 14px;
   color: #898781;
 }
-.jh-bento-silence-row strong {
+.rb-bento-silence-row strong {
   color: var(--st-ink);
   font-variant-numeric: tabular-nums;
 }
 
-.jh-bento-silence-label {
+.rb-bento-silence-label {
   font-weight: 600;
   color: var(--st-ink);
 }
 
-.jh-bento-silence-track {
+.rb-bento-silence-track {
   height: 8px;
   border-radius: var(--radius-pill);
   background: #e1e0d9;
   overflow: hidden;
 }
 
-html.dark .jh-bento-silence-track {
+html.dark .rb-bento-silence-track {
   background: #2c2c2a;
 }
 
-.jh-bento-silence-fill {
+.rb-bento-silence-fill {
   height: 100%;
   border-radius: var(--radius-pill);
   min-width: 2px;
 }
 
-.jh-bento-silence-row.is-fresh .jh-bento-silence-fill { background: #0ca30c; }
-.jh-bento-silence-row.is-waiting .jh-bento-silence-fill { background: #fab219; }
-.jh-bento-silence-row.is-fading .jh-bento-silence-fill { background: #ec835a; }
-.jh-bento-silence-row.is-dead .jh-bento-silence-fill { background: #d03b3b; }
+.rb-bento-silence-row.is-fresh .rb-bento-silence-fill { background: #0ca30c; }
+.rb-bento-silence-row.is-waiting .rb-bento-silence-fill { background: #fab219; }
+.rb-bento-silence-row.is-fading .rb-bento-silence-fill { background: #ec835a; }
+.rb-bento-silence-row.is-dead .rb-bento-silence-fill { background: #d03b3b; }
 
-.jh-bento-silence-count {
+.rb-bento-silence-count {
   font-variant-numeric: tabular-nums;
   font-weight: 600;
   color: #898781;
@@ -592,7 +592,7 @@ html.dark .jh-bento-silence-track {
 
 /* ── Coverage one-liner ───────────────────────────────────────── */
 
-.jh-bento-sources-line {
+.rb-bento-sources-line {
   font-family: var(--st-sans);
   font-size: 12.5px;
   font-weight: 500;
@@ -603,33 +603,33 @@ html.dark .jh-bento-silence-track {
   overflow-wrap: break-word;
 }
 
-html.dark .jh-bento-sources-line {
+html.dark .rb-bento-sources-line {
   background: var(--st-raised, var(--st-fog));
 }
 
-.jh-bento-sources-line b {
+.rb-bento-sources-line b {
   color: var(--st-ink);
   font-weight: 600;
 }
 
-.jh-bento-sources-line .is-good { color: #0ca30c; }
-.jh-bento-sources-line .is-warn { color: #fab219; }
-.jh-bento-sources-line .is-bad { color: #d03b3b; }
+.rb-bento-sources-line .is-good { color: #0ca30c; }
+.rb-bento-sources-line .is-warn { color: #fab219; }
+.rb-bento-sources-line .is-bad { color: #d03b3b; }
 
 /* ── Status accents (allowed SPEC status hexes) ───────────────── */
 
-.jh-bento-card.is-good .jh-bento-num { color: #0ca30c; }
-.jh-bento-card.is-warn .jh-bento-num { color: #fab219; }
-.jh-bento-card.is-serious .jh-bento-num { color: #ec835a; }
-.jh-bento-card.is-critical .jh-bento-num { color: #d03b3b; }
+.rb-bento-card.is-good .rb-bento-num { color: #0ca30c; }
+.rb-bento-card.is-warn .rb-bento-num { color: #fab219; }
+.rb-bento-card.is-serious .rb-bento-num { color: #ec835a; }
+.rb-bento-card.is-critical .rb-bento-num { color: #d03b3b; }
 
-html.dark .jh-bento-card.is-good .jh-bento-num { color: #199e70; }
-html.dark .jh-bento-card.is-warn .jh-bento-num { color: #c98500; }
-html.dark .jh-bento-card.is-serious .jh-bento-num { color: #d95926; }
-html.dark .jh-bento-card.is-critical .jh-bento-num { color: #d03b3b; }
+html.dark .rb-bento-card.is-good .rb-bento-num { color: #199e70; }
+html.dark .rb-bento-card.is-warn .rb-bento-num { color: #c98500; }
+html.dark .rb-bento-card.is-serious .rb-bento-num { color: #d95926; }
+html.dark .rb-bento-card.is-critical .rb-bento-num { color: #d03b3b; }
 
 /* Categorical dots for inline legend chips */
-.jh-bento-dot {
+.rb-bento-dot {
   display: inline-block;
   width: 8px;
   height: 8px;
@@ -638,23 +638,23 @@ html.dark .jh-bento-card.is-critical .jh-bento-num { color: #d03b3b; }
   vertical-align: middle;
 }
 
-.jh-bento-dot.cat-0 { background: #2a78d6; }
-.jh-bento-dot.cat-1 { background: #eb6834; }
-.jh-bento-dot.cat-2 { background: #1baf7a; }
-.jh-bento-dot.cat-3 { background: #eda100; }
-.jh-bento-dot.cat-4 { background: #e87ba4; }
-.jh-bento-dot.cat-5 { background: #008300; }
+.rb-bento-dot.cat-0 { background: #2a78d6; }
+.rb-bento-dot.cat-1 { background: #eb6834; }
+.rb-bento-dot.cat-2 { background: #1baf7a; }
+.rb-bento-dot.cat-3 { background: #eda100; }
+.rb-bento-dot.cat-4 { background: #e87ba4; }
+.rb-bento-dot.cat-5 { background: #008300; }
 
-html.dark .jh-bento-dot.cat-0 { background: #3987e5; }
-html.dark .jh-bento-dot.cat-1 { background: #d95926; }
-html.dark .jh-bento-dot.cat-2 { background: #199e70; }
-html.dark .jh-bento-dot.cat-3 { background: #c98500; }
-html.dark .jh-bento-dot.cat-4 { background: #d55181; }
-html.dark .jh-bento-dot.cat-5 { background: #008300; }
+html.dark .rb-bento-dot.cat-0 { background: #3987e5; }
+html.dark .rb-bento-dot.cat-1 { background: #d95926; }
+html.dark .rb-bento-dot.cat-2 { background: #199e70; }
+html.dark .rb-bento-dot.cat-3 { background: #c98500; }
+html.dark .rb-bento-dot.cat-4 { background: #d55181; }
+html.dark .rb-bento-dot.cat-5 { background: #008300; }
 
 /* ── Tooltip ──────────────────────────────────────────────────── */
 
-.jh-metrics-tooltip {
+.rb-metrics-tooltip {
   position: fixed;
   z-index: 9999;
   max-width: 260px;
@@ -671,21 +671,21 @@ html.dark .jh-bento-dot.cat-5 { background: #008300; }
   pointer-events: none;
 }
 
-html.dark .jh-metrics-tooltip {
+html.dark .rb-metrics-tooltip {
   background: var(--st-card, var(--st-mist));
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
 }
 
 /* ── Empty / loading helpers ──────────────────────────────────── */
 
-.jh-bento-empty {
+.rb-bento-empty {
   font-family: var(--st-sans);
   font-size: 12px;
   line-height: 1.45;
   color: #898781;
 }
 
-.jh-bento-input {
+.rb-bento-input {
   display: block;
   margin-top: 6px;
   width: 88px;
@@ -698,34 +698,34 @@ html.dark .jh-metrics-tooltip {
   font-size: 14px;
 }
 
-.jh-sources-panel,
-.jh-sources-table {
+.rb-sources-panel,
+.rb-sources-table {
   width: 100%;
   max-width: 1200px;
 }
 
-.jh-sources-table {
+.rb-sources-table {
   border-collapse: collapse;
   font-family: var(--st-sans);
   font-size: 12.5px;
 }
 
-.jh-sources-table th,
-.jh-sources-table td {
+.rb-sources-table th,
+.rb-sources-table td {
   text-align: left;
   padding: 8px 10px;
   border-bottom: 1px solid var(--st-border);
   color: var(--st-ink);
 }
 
-.jh-sources-table th {
+.rb-sources-table th {
   color: #898781;
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
 
-.jh-job-reach {
+.rb-job-reach {
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -799,7 +799,7 @@ html.dark {
 /* Block, not flex. Several viz helpers return more than one element (a meter
    plus its legend, a slope plus its scale); as flex children those laid out
    side by side and collapsed to nothing. Each helper owns its own layout. */
-.jh-bento-viz {
+.rb-bento-viz {
   display: block;
   min-height: 0;
   margin: 6px 0 0;
@@ -807,21 +807,21 @@ html.dark {
 }
 
 /* Only forms that genuinely need the width — funnel, distribution — opt in. */
-.jh-bento-viz.is-wide { max-width: 100%; }
+.rb-bento-viz.is-wide { max-width: 100%; }
 
-.jh-bento-viz > * { min-width: 0; }
+.rb-bento-viz > * { min-width: 0; }
 
 /* Three text tiers, so a tile is never a flat field of one size:
    caption (the figure) / support (secondary) / meta (tertiary). */
-.jh-bento-caption {
+.rb-bento-caption {
   font-family: var(--st-sans);
   font-size: 12px;
   line-height: 1.4;
   color: #898781;
 }
 
-.jh-bento-caption b,
-.jh-bento-caption strong {
+.rb-bento-caption b,
+.rb-bento-caption strong {
   color: var(--st-ink);
   font-weight: 600;
   font-size: 12px;
@@ -831,7 +831,7 @@ html.dark {
    the reference's serif-at-400 rule: at dashboard sizes the figure has to
    carry the tile on its own, and 400 read as merely large rather than
    emphatic. Everything else in the system stays at 400. */
-.jh-bento-figure {
+.rb-bento-figure {
   font-family: var(--st-serif);
   font-weight: 600;
   font-size: 40px;
@@ -840,23 +840,23 @@ html.dark {
   color: var(--st-ink);
 }
 
-.jh-bento-figure-sm { font-size: 26px; }
+.rb-bento-figure-sm { font-size: 26px; }
 
 /* Figure on the left, its mark on the right. Side by side the ring costs no
    extra height, which is what lets the figure grow AND the board still fit. */
-.jh-bento-head {
+.rb-bento-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
 }
 
-.jh-bento-head > :first-child { min-width: 0; }
+.rb-bento-head > :first-child { min-width: 0; }
 
 /* Charts sit on their own recessed, rounded panel rather than floating on the
    card — the inner-panel treatment from the reference. It gives the mark an
    edge to sit against and stops a lone ring reading as a stray graphic. */
-.jh-bento-aside {
+.rb-bento-aside {
   flex: none;
   display: flex;
   align-items: center;
@@ -867,7 +867,7 @@ html.dark {
 }
 
 /* A value pinned to the data, the way the reference tags points on a line. */
-.jh-viz-chip {
+.rb-viz-chip {
   display: inline-block;
   font-family: var(--st-sans);
   font-size: 12px;
@@ -880,13 +880,13 @@ html.dark {
   white-space: nowrap;
 }
 
-html.dark .jh-viz-chip {
+html.dark .rb-viz-chip {
   background: var(--st-raised, #2a2420);
   color: var(--st-ink);
 }
 
 /* The qualifier riding beside the figure — "per week", "of 52". */
-.jh-bento-figure-unit {
+.rb-bento-figure-unit {
   font-family: var(--st-sans);
   font-size: 14px;
   font-weight: 500;
@@ -895,7 +895,7 @@ html.dark .jh-viz-chip {
 }
 
 /* One line saying what the figure means, directly under it. */
-.jh-bento-subline {
+.rb-bento-subline {
   font-family: var(--st-sans);
   font-size: 12px;
   line-height: 1.4;
@@ -904,7 +904,7 @@ html.dark .jh-viz-chip {
 }
 
 /* Ratio: numerator carries the weight, denominator recedes. */
-.jh-bento-ratio {
+.rb-bento-ratio {
   display: flex;
   align-items: baseline;
   gap: 4px;
@@ -913,13 +913,13 @@ html.dark .jh-viz-chip {
   line-height: 1;
   color: var(--st-ink);
 }
-.jh-bento-ratio-n { font-size: 34px; }
-.jh-bento-ratio-slash { font-size: 22px; color: #a3a29b; }
-.jh-bento-ratio-d { font-size: 22px; color: #898781; }
+.rb-bento-ratio-n { font-size: 34px; }
+.rb-bento-ratio-slash { font-size: 22px; color: #a3a29b; }
+.rb-bento-ratio-d { font-size: 22px; color: #898781; }
 
 /* Two co-equal figures — for tiles where one number genuinely isn't the
    whole story (rate AND streak, live AND closed). */
-.jh-bento-pair {
+.rb-bento-pair {
   display: flex;
   align-items: stretch;
   gap: 16px;
@@ -927,21 +927,21 @@ html.dark .jh-viz-chip {
 
 /* Each figure stacks over its own label. Without this the figure and its
    caption sit on one line and read as "9per week". */
-.jh-bento-pair > *:not(.jh-bento-pair-div) {
+.rb-bento-pair > *:not(.rb-bento-pair-div) {
   display: flex;
   flex-direction: column;
   gap: 3px;
   min-width: 0;
 }
 
-.jh-bento-pair-div {
+.rb-bento-pair-div {
   width: 1px;
   background: var(--st-border);
   flex: none;
   align-self: stretch;
 }
 
-.jh-bento-pair-label {
+.rb-bento-pair-label {
   font-family: var(--st-sans);
   font-size: 12px;
   line-height: 1.2;
@@ -950,7 +950,7 @@ html.dark .jh-viz-chip {
 
 /* ── Meter: a proportion, with an optional benchmark tick ───── */
 
-.jh-viz-meter {
+.rb-viz-meter {
   position: relative;
   height: 10px;
   border-radius: 5px;
@@ -958,7 +958,7 @@ html.dark .jh-viz-chip {
   overflow: hidden;
 }
 
-.jh-viz-meter-fill {
+.rb-viz-meter-fill {
   position: absolute;
   inset: 0 auto 0 0;
   border-radius: 5px;
@@ -966,13 +966,13 @@ html.dark .jh-viz-chip {
   min-width: 3px;
 }
 
-.jh-viz-meter-fill.is-good     { background: var(--dv-good); }
-.jh-viz-meter-fill.is-warn     { background: var(--dv-warn); }
-.jh-viz-meter-fill.is-serious  { background: var(--dv-serious); }
-.jh-viz-meter-fill.is-critical { background: var(--dv-critical); }
+.rb-viz-meter-fill.is-good     { background: var(--dv-good); }
+.rb-viz-meter-fill.is-warn     { background: var(--dv-warn); }
+.rb-viz-meter-fill.is-serious  { background: var(--dv-serious); }
+.rb-viz-meter-fill.is-critical { background: var(--dv-critical); }
 
 /* Benchmark marker — sits above the fill, reads as a target line. */
-.jh-viz-meter-mark {
+.rb-viz-meter-mark {
   position: absolute;
   top: -3px;
   bottom: -3px;
@@ -981,7 +981,7 @@ html.dark .jh-viz-chip {
   opacity: 0.55;
 }
 
-.jh-viz-meter-legend {
+.rb-viz-meter-legend {
   display: flex;
   justify-content: space-between;
   gap: 8px;
@@ -993,13 +993,13 @@ html.dark .jh-viz-chip {
 
 /* ── Split: a stacked proportion with direct labels ─────────── */
 
-.jh-viz-split {
+.rb-viz-split {
   display: flex;
   gap: 2px;              /* surface gap separates touching marks */
   height: 22px;
 }
 
-.jh-viz-split-seg {
+.rb-viz-split-seg {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1013,19 +1013,19 @@ html.dark .jh-viz-chip {
   white-space: nowrap;
 }
 
-.jh-viz-split-seg[data-slot="1"] { background: var(--dv-s1); }
-.jh-viz-split-seg[data-slot="2"] { background: var(--dv-s2); }
-.jh-viz-split-seg[data-slot="3"] { background: var(--dv-s3); }
+.rb-viz-split-seg[data-slot="1"] { background: var(--dv-s1); }
+.rb-viz-split-seg[data-slot="2"] { background: var(--dv-s2); }
+.rb-viz-split-seg[data-slot="3"] { background: var(--dv-s3); }
 
 /* Keys carry identity so colour never works alone. */
-.jh-viz-keys {
+.rb-viz-keys {
   display: flex;
   flex-wrap: wrap;
   gap: 4px 12px;
   margin-top: 8px;
 }
 
-.jh-viz-key {
+.rb-viz-key {
   display: inline-flex;
   align-items: center;
   gap: 5px;
@@ -1035,32 +1035,32 @@ html.dark .jh-viz-chip {
   white-space: nowrap;
 }
 
-.jh-viz-key i {
+.rb-viz-key i {
   width: 8px;
   height: 8px;
   border-radius: 2px;
   flex-shrink: 0;
 }
-.jh-viz-key[data-slot="1"] i { background: var(--dv-s1); }
-.jh-viz-key[data-slot="2"] i { background: var(--dv-s2); }
-.jh-viz-key[data-slot="3"] i { background: var(--dv-s3); }
+.rb-viz-key[data-slot="1"] i { background: var(--dv-s1); }
+.rb-viz-key[data-slot="2"] i { background: var(--dv-s2); }
+.rb-viz-key[data-slot="3"] i { background: var(--dv-s3); }
 
 /* ── Rows: labelled horizontal bars (buckets, distributions) ── */
 
-.jh-viz-rows {
+.rb-viz-rows {
   display: flex;
   flex-direction: column;
   gap: 5px;
 }
 
-.jh-viz-row {
+.rb-viz-row {
   display: grid;
   grid-template-columns: 104px 1fr 30px;
   align-items: center;
   gap: 10px;
 }
 
-.jh-viz-row-label {
+.rb-viz-row-label {
   font-family: var(--st-sans);
   font-size: 12px;
   color: #898781;
@@ -1069,26 +1069,26 @@ html.dark .jh-viz-chip {
   text-overflow: ellipsis;
 }
 
-.jh-viz-row-track {
+.rb-viz-row-track {
   height: 8px;
   border-radius: 4px;
   background: var(--dv-track);
   overflow: hidden;
 }
 
-.jh-viz-row-fill {
+.rb-viz-row-fill {
   height: 100%;
   border-radius: 4px;
   background: var(--dv-s1);
   min-width: 2px;
 }
 
-.jh-viz-row-fill.is-good     { background: var(--dv-good); }
-.jh-viz-row-fill.is-warn     { background: var(--dv-warn); }
-.jh-viz-row-fill.is-serious  { background: var(--dv-serious); }
-.jh-viz-row-fill.is-critical { background: var(--dv-critical); }
+.rb-viz-row-fill.is-good     { background: var(--dv-good); }
+.rb-viz-row-fill.is-warn     { background: var(--dv-warn); }
+.rb-viz-row-fill.is-serious  { background: var(--dv-serious); }
+.rb-viz-row-fill.is-critical { background: var(--dv-critical); }
 
-.jh-viz-row-val {
+.rb-viz-row-val {
   font-family: var(--st-sans);
   font-size: 12px;
   font-weight: 600;
@@ -1099,14 +1099,14 @@ html.dark .jh-viz-chip {
 
 /* ── Slope: a before/after pair on one track ────────────────── */
 
-.jh-viz-slope {
+.rb-viz-slope {
   position: relative;
   height: 26px;
   display: flex;
   align-items: center;
 }
 
-.jh-viz-slope-track {
+.rb-viz-slope-track {
   position: relative;
   height: 8px;
   width: 100%;
@@ -1114,7 +1114,7 @@ html.dark .jh-viz-chip {
   background: var(--dv-track);
 }
 
-.jh-viz-slope-bar {
+.rb-viz-slope-bar {
   position: absolute;
   top: 0;
   bottom: 0;
@@ -1122,7 +1122,7 @@ html.dark .jh-viz-chip {
   background: var(--dv-s1);
 }
 
-.jh-viz-slope-dot {
+.rb-viz-slope-dot {
   position: absolute;
   top: 50%;
   width: 14px;
@@ -1132,12 +1132,12 @@ html.dark .jh-viz-chip {
   box-shadow: 0 0 0 2px var(--st-canvas, #fff);   /* surface ring */
 }
 
-html.dark .jh-viz-slope-dot { box-shadow: 0 0 0 2px var(--st-card, #211d1a); }
+html.dark .rb-viz-slope-dot { box-shadow: 0 0 0 2px var(--st-card, #211d1a); }
 
-.jh-viz-slope-dot.is-before { background: #a3a29b; }
-.jh-viz-slope-dot.is-after  { background: var(--dv-s1); }
+.rb-viz-slope-dot.is-before { background: #a3a29b; }
+.rb-viz-slope-dot.is-after  { background: var(--dv-s1); }
 
-.jh-viz-slope-scale {
+.rb-viz-slope-scale {
   display: flex;
   justify-content: space-between;
   font-family: var(--st-sans);
@@ -1150,7 +1150,7 @@ html.dark .jh-viz-slope-dot { box-shadow: 0 0 0 2px var(--st-card, #211d1a); }
 
 /* Needs an explicit width: its bars are `flex: 1 1 0`, so in a shrink-to-fit
    parent they collapsed to zero and the whole strip rendered invisible. */
-.jh-viz-strip {
+.rb-viz-strip {
   display: flex;
   align-items: flex-end;
   gap: 4px;
@@ -1161,7 +1161,7 @@ html.dark .jh-viz-slope-dot { box-shadow: 0 0 0 2px var(--st-card, #211d1a); }
 
 /* Same capsule-in-track treatment as the columns, so a run of weeks reads as
    filled slots rather than a ragged skyline. */
-.jh-viz-strip-slot {
+.rb-viz-strip-slot {
   flex: 1 1 0;
   min-width: 0;
   max-width: 18px;
@@ -1173,48 +1173,48 @@ html.dark .jh-viz-slope-dot { box-shadow: 0 0 0 2px var(--st-card, #211d1a); }
   padding: 2px;
 }
 
-.jh-viz-strip i {
+.rb-viz-strip i {
   width: 100%;
   border-radius: 999px;
   background: var(--dv-o2);
   min-height: 5px;
 }
 
-.jh-viz-strip i.is-current { background: var(--dv-s1); }
-.jh-viz-strip i.is-empty   { background: transparent; }
+.rb-viz-strip i.is-current { background: var(--dv-s1); }
+.rb-viz-strip i.is-empty   { background: transparent; }
 
 /* ── Ring: a proportion that isn't another horizontal bar ───── */
 
-.jh-viz-ring { display: block; flex: none; }
+.rb-viz-ring { display: block; flex: none; }
 
 /* Ring beside its keys — round mark, legible identity, still compact. */
-.jh-viz-ring-row {
+.rb-viz-ring-row {
   display: flex;
   align-items: center;
   gap: 14px;
 }
 
-.jh-viz-keys.is-stacked {
+.rb-viz-keys.is-stacked {
   flex-direction: column;
   gap: 4px;
   margin-top: 0;
   align-items: flex-start;
 }
-.jh-viz-ring-track { stroke: var(--dv-track); }
-.jh-viz-ring-fill { stroke: var(--dv-s1); }
+.rb-viz-ring-track { stroke: var(--dv-track); }
+.rb-viz-ring-fill { stroke: var(--dv-s1); }
 
-.jh-viz-ring-fill.is-good     { stroke: var(--dv-good); }
-.jh-viz-ring-fill.is-warn     { stroke: var(--dv-warn); }
-.jh-viz-ring-fill.is-serious  { stroke: var(--dv-serious); }
-.jh-viz-ring-fill.is-critical { stroke: var(--dv-critical); }
+.rb-viz-ring-fill.is-good     { stroke: var(--dv-good); }
+.rb-viz-ring-fill.is-warn     { stroke: var(--dv-warn); }
+.rb-viz-ring-fill.is-serious  { stroke: var(--dv-serious); }
+.rb-viz-ring-fill.is-critical { stroke: var(--dv-critical); }
 
-.jh-viz-ring-fill[data-slot="1"] { stroke: var(--dv-s1); }
-.jh-viz-ring-fill[data-slot="2"] { stroke: var(--dv-s2); }
-.jh-viz-ring-fill[data-slot="3"] { stroke: var(--dv-s3); }
+.rb-viz-ring-fill[data-slot="1"] { stroke: var(--dv-s1); }
+.rb-viz-ring-fill[data-slot="2"] { stroke: var(--dv-s2); }
+.rb-viz-ring-fill[data-slot="3"] { stroke: var(--dv-s3); }
 
 /* ── Dots: one mark per unit ─────────────────────────────────── */
 
-.jh-viz-dots {
+.rb-viz-dots {
   display: grid;
   grid-template-columns: repeat(13, 1fr);
   gap: 3px;
@@ -1222,23 +1222,23 @@ html.dark .jh-viz-slope-dot { box-shadow: 0 0 0 2px var(--st-card, #211d1a); }
   max-width: 160px;
 }
 
-.jh-viz-dots i {
+.rb-viz-dots i {
   aspect-ratio: 1;
   border-radius: 50%;
   background: var(--dv-track);
 }
 
-.jh-viz-dots i.is-on { background: var(--dv-s1); }
+.rb-viz-dots i.is-on { background: var(--dv-s1); }
 
 /* ── Columns: a compact distribution ─────────────────────────── */
 
-.jh-viz-cols {
+.rb-viz-cols {
   display: flex;
   align-items: flex-end;
   gap: 8px;
 }
 
-.jh-viz-col {
+.rb-viz-col {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1249,7 +1249,7 @@ html.dark .jh-viz-slope-dot { box-shadow: 0 0 0 2px var(--st-card, #211d1a); }
 /* Bar-in-track: the bar fills a visible rounded slot rather than floating on
    the card. The empty part of the track stays legible, so each column reads as
    "this much of the possible" instead of just a naked height. */
-.jh-viz-col-slot {
+.rb-viz-col-slot {
   height: 34px;
   width: 22px;
   display: flex;
@@ -1259,7 +1259,7 @@ html.dark .jh-viz-slope-dot { box-shadow: 0 0 0 2px var(--st-card, #211d1a); }
   padding: 2px;
 }
 
-.jh-viz-col-bar {
+.rb-viz-col-bar {
   width: 100%;
   border-radius: 999px;
   background: var(--dv-o2);
@@ -1268,18 +1268,18 @@ html.dark .jh-viz-slope-dot { box-shadow: 0 0 0 2px var(--st-card, #211d1a); }
 
 /* Ageing is ordinal, so buckets step through one ramp rather than wearing four
    independent status hues — those read muddy against the warm card. */
-.jh-viz-col-bar[data-step="1"] { background: var(--dv-o1); }
-.jh-viz-col-bar[data-step="2"] { background: var(--dv-o2); }
-.jh-viz-col-bar[data-step="3"] { background: var(--dv-o3); }
-.jh-viz-col-bar[data-step="4"] { background: var(--dv-o4); }
-.jh-viz-col-bar[data-step="5"] { background: var(--dv-o5); }
+.rb-viz-col-bar[data-step="1"] { background: var(--dv-o1); }
+.rb-viz-col-bar[data-step="2"] { background: var(--dv-o2); }
+.rb-viz-col-bar[data-step="3"] { background: var(--dv-o3); }
+.rb-viz-col-bar[data-step="4"] { background: var(--dv-o4); }
+.rb-viz-col-bar[data-step="5"] { background: var(--dv-o5); }
 
-.jh-viz-col-bar.is-good     { background: var(--dv-good); }
-.jh-viz-col-bar.is-warn     { background: var(--dv-warn); }
-.jh-viz-col-bar.is-serious  { background: var(--dv-serious); }
-.jh-viz-col-bar.is-critical { background: var(--dv-critical); }
+.rb-viz-col-bar.is-good     { background: var(--dv-good); }
+.rb-viz-col-bar.is-warn     { background: var(--dv-warn); }
+.rb-viz-col-bar.is-serious  { background: var(--dv-serious); }
+.rb-viz-col-bar.is-critical { background: var(--dv-critical); }
 
-.jh-viz-col-val {
+.rb-viz-col-val {
   font-family: var(--st-sans);
   font-size: 12px;
   font-weight: 600;
@@ -1287,7 +1287,7 @@ html.dark .jh-viz-slope-dot { box-shadow: 0 0 0 2px var(--st-card, #211d1a); }
   font-variant-numeric: tabular-nums;
 }
 
-.jh-viz-col-label {
+.rb-viz-col-label {
   font-family: var(--st-sans);
   font-size: 12px;
   color: #898781;

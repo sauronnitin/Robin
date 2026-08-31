@@ -6,7 +6,7 @@
 /* The page itself never scrolls. Everything is bounded to the viewport and the
    scrolling happens inside the region that owns the content. */
 /* Everyday Start lives here. Compact Steep bar; the kanban below is the result. */
-.jh-apply-runbar {
+.rb-apply-runbar {
   flex: 0 0 auto;
   display: flex;
   flex-wrap: wrap;
@@ -18,18 +18,18 @@
   backdrop-filter: blur(12px);
 }
 
-html.dark .jh-apply-runbar {
+html.dark .rb-apply-runbar {
   background: rgba(15, 13, 11, 0.90);
 }
 
-.jh-apply-runbar-lead {
+.rb-apply-runbar-lead {
   display: flex;
   align-items: center;
   gap: 10px;
   min-width: 0;
 }
 
-.jh-apply-runbar-meta {
+.rb-apply-runbar-meta {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -37,14 +37,14 @@ html.dark .jh-apply-runbar {
   min-width: 0;
 }
 
-.jh-apply-runbar-actions {
+.rb-apply-runbar-actions {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 6px;
 }
 
-.jh-apply-runbar-dots {
+.rb-apply-runbar-dots {
   display: flex;
   flex-wrap: wrap;
   align-items: flex-end;
@@ -53,7 +53,7 @@ html.dark .jh-apply-runbar {
   min-width: 0;
 }
 
-.jh-apply-dot {
+.rb-apply-dot {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -61,15 +61,15 @@ html.dark .jh-apply-runbar {
   min-width: 28px;
 }
 
-.jh-apply-dot-sq {
+.rb-apply-dot-sq {
   width: 14px;
   height: 14px;
   border-radius: 2px;
   background: var(--st-ash);
 }
 
-.jh-apply-dot-name,
-.jh-apply-dot-n {
+.rb-apply-dot-name,
+.rb-apply-dot-n {
   font-family: var(--st-sans);
   font-size: 9px;
   font-weight: 500;
@@ -79,12 +79,12 @@ html.dark .jh-apply-runbar {
   white-space: nowrap;
 }
 
-.jh-apply-dot-n {
+.rb-apply-dot-n {
   font-variant-numeric: tabular-nums;
   color: var(--st-slate);
 }
 
-.jh-apply-run-stat {
+.rb-apply-run-stat {
   font-family: var(--st-sans);
   font-size: 12px;
   font-weight: 500;
@@ -94,13 +94,13 @@ html.dark .jh-apply-runbar {
   text-align: right;
 }
 
-.jh-apply-run-agent {
+.rb-apply-run-agent {
   min-width: 5.5em;
   text-align: left;
   color: var(--st-ink);
 }
 
-.jh-apply-mode-badge {
+.rb-apply-mode-badge {
   flex-shrink: 0;
   font-family: var(--st-sans);
   font-size: 11px;
@@ -113,17 +113,17 @@ html.dark .jh-apply-runbar {
   padding: 2px 7px;
 }
 
-.jh-apply-mode-badge.is-dry {
+.rb-apply-mode-badge.is-dry {
   border-color: #fab219;
 }
 
-.jh-apply-mode-badge.is-live {
+.rb-apply-mode-badge.is-live {
   color: var(--st-sienna);
   border-color: var(--st-sienna);
 }
 
-.jh-apply-runbar-warn,
-.jh-apply-runbar-msg {
+.rb-apply-runbar-warn,
+.rb-apply-runbar-msg {
   flex: 1 1 100%;
   margin: 0;
   font-family: var(--st-sans);
@@ -131,27 +131,27 @@ html.dark .jh-apply-runbar {
   color: var(--st-sienna);
 }
 
-.jh-apply-runbar-msg {
+.rb-apply-runbar-msg {
   color: var(--st-slate);
 }
 
-.jh-apply-runbar-warn.hidden,
-.jh-apply-runbar-msg[hidden] {
+.rb-apply-runbar-warn.hidden,
+.rb-apply-runbar-msg[hidden] {
   display: none;
 }
 
-.jh-apply-runbar .jh-apply-btn[disabled] {
+.rb-apply-runbar .rb-apply-btn[disabled] {
   cursor: not-allowed;
 }
 
-.jh-apply-wrap {
+.rb-apply-wrap {
   display: flex;
   flex: 1;
   min-height: 0;
   overflow: hidden;
 }
 
-.jh-apply-main {
+.rb-apply-main {
   flex: 1;
   min-width: 0;
   display: flex;
@@ -162,7 +162,7 @@ html.dark .jh-apply-runbar {
 }
 
 /* Header block (title, flow strip, banner) stays put; the board scrolls. */
-.jh-apply-main > :not(#applyBoard) { flex: 0 0 auto; }
+.rb-apply-main > :not(#applyBoard) { flex: 0 0 auto; }
 
 #applyBoard {
   flex: 1;
@@ -172,13 +172,13 @@ html.dark .jh-apply-runbar {
 }
 
 /* Wide boards scroll inside their own container, never the page body. */
-.jh-apply-stagegrid {
+.rb-apply-stagegrid {
   display: flex;
   flex-direction: column;
   gap: 16px;
 }
 
-.jh-apply-band-label {
+.rb-apply-band-label {
   font-family: var(--st-sans);
   font-size: 11px;
   font-weight: 600;
@@ -188,7 +188,7 @@ html.dark .jh-apply-runbar {
   margin-bottom: 8px;
 }
 
-.jh-apply-band-row {
+.rb-apply-band-row {
   display: flex;
   gap: 10px;
   overflow-x: auto;
@@ -196,7 +196,7 @@ html.dark .jh-apply-runbar {
   padding: 4px 2px 10px;
 }
 
-.jh-apply-band-row > .jh-bento-card {
+.rb-apply-band-row > .rb-bento-card {
   flex: 0 0 132px;
   min-width: 132px;
   align-self: flex-start;
@@ -205,7 +205,7 @@ html.dark .jh-apply-runbar {
   overflow: visible;
 }
 
-.jh-apply-band-row > .jh-apply-col {
+.rb-apply-band-row > .rb-apply-col {
   flex: 0 0 248px;
   min-width: 248px;
   max-height: 420px;
@@ -213,33 +213,33 @@ html.dark .jh-apply-runbar {
   position: relative;
 }
 
-#s-apply .jh-apply-stagegrid .jh-bento-card.is-running,
-.jh-apply-col.is-running {
+#s-apply .rb-apply-stagegrid .rb-bento-card.is-running,
+.rb-apply-col.is-running {
   z-index: 1;
   border-color: var(--st-ink);
   border-style: solid;
 }
 
-#s-apply .jh-apply-stagegrid .jh-bento-card {
+#s-apply .rb-apply-stagegrid .rb-bento-card {
   overflow: visible;
   align-self: flex-start;
 }
 
-@property --jh-run-angle {
+@property --rb-run-angle {
   syntax: "<angle>";
   inherits: false;
   initial-value: 0deg;
 }
 
-#s-apply .jh-apply-stagegrid .jh-bento-card.is-running::before,
-.jh-apply-col.is-running::before {
+#s-apply .rb-apply-stagegrid .rb-bento-card.is-running::before,
+.rb-apply-col.is-running::before {
   content: "";
   position: absolute;
   inset: -3px;
   border-radius: 6px;
   padding: 2px;
   background: conic-gradient(
-    from var(--jh-run-angle),
+    from var(--rb-run-angle),
     var(--st-ink) 0 20%,
     var(--st-sienna) 26%,
     transparent 38% 100%
@@ -249,40 +249,40 @@ html.dark .jh-apply-runbar {
     linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
-  animation: jh-apply-run-spin 1.15s linear infinite;
+  animation: rb-apply-run-spin 1.15s linear infinite;
   pointer-events: none;
 }
 
-#s-apply .jh-apply-stagegrid .jh-bento-locked.is-running {
+#s-apply .rb-apply-stagegrid .rb-bento-locked.is-running {
   border-style: solid;
 }
 
-.jh-apply-dot {
+.rb-apply-dot {
   position: relative;
 }
 
-.jh-apply-dot.is-running .jh-apply-dot-sq {
+.rb-apply-dot.is-running .rb-apply-dot-sq {
   outline: 2px solid var(--st-ink);
   outline-offset: 2px;
 }
 
-.jh-apply-dot.is-running::before,
-.jh-apply-dot.is-running::after {
+.rb-apply-dot.is-running::before,
+.rb-apply-dot.is-running::after {
   content: none;
 }
 
-@keyframes jh-apply-run-spin {
-  to { --jh-run-angle: 360deg; }
+@keyframes rb-apply-run-spin {
+  to { --rb-run-angle: 360deg; }
 }
 
-#s-apply .jh-apply-stagegrid .jh-bento-card.is-drop,
-.jh-apply-col.is-drop,
-.jh-apply-col-body.is-drop {
+#s-apply .rb-apply-stagegrid .rb-bento-card.is-drop,
+.rb-apply-col.is-drop,
+.rb-apply-col-body.is-drop {
   outline: 2px solid var(--st-ink);
   outline-offset: 1px;
 }
 
-.jh-apply-cols {
+.rb-apply-cols {
   display: flex;
   gap: 12px;
   overflow-x: auto;
@@ -291,7 +291,7 @@ html.dark .jh-apply-runbar {
   min-height: 0;
 }
 
-.jh-apply-col {
+.rb-apply-col {
   flex: 1 1 0;
   min-width: 232px;
   background: var(--st-card, var(--st-mist));
@@ -303,12 +303,12 @@ html.dark .jh-apply-runbar {
 }
 
 /* A collapsed column keeps its header visible and gives its width back. */
-.jh-apply-col.is-collapsed {
+.rb-apply-col.is-collapsed {
   flex: 0 0 auto;
   min-width: 0;
 }
 
-.jh-apply-col-head {
+.rb-apply-col-head {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -327,11 +327,11 @@ html.dark .jh-apply-runbar {
   z-index: 2;
 }
 
-.jh-apply-col.is-collapsed .jh-apply-col-head { border-bottom: none; }
-.jh-apply-col-head:hover { background: var(--st-fog); }
-.jh-apply-col-caret { color: var(--st-ash); font-size: 12px; }
+.rb-apply-col.is-collapsed .rb-apply-col-head { border-bottom: none; }
+.rb-apply-col-head:hover { background: var(--st-fog); }
+.rb-apply-col-caret { color: var(--st-ash); font-size: 12px; }
 
-.jh-apply-col-icon {
+.rb-apply-col-icon {
   width: 18px;
   height: 18px;
   display: inline-flex;
@@ -344,9 +344,9 @@ html.dark .jh-apply-runbar {
   line-height: 1;
 }
 
-.jh-apply-col-label { flex: 1; }
+.rb-apply-col-label { flex: 1; }
 
-.jh-apply-col-count {
+.rb-apply-col-count {
   font-variant-numeric: tabular-nums;
   font-size: 11.5px;
   color: var(--st-slate);
@@ -356,7 +356,7 @@ html.dark .jh-apply-runbar {
   padding: 1px 8px;
 }
 
-.jh-apply-col-body {
+.rb-apply-col-body {
   padding: 10px;
   display: flex;
   flex-direction: column;
@@ -366,7 +366,7 @@ html.dark .jh-apply-runbar {
 
 /* ── The flow explainer ──────────────────────────────────────────────── */
 
-.jh-apply-flow {
+.rb-apply-flow {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -376,7 +376,7 @@ html.dark .jh-apply-runbar {
   padding: 0;
 }
 
-.jh-apply-flow li {
+.rb-apply-flow li {
   display: flex;
   align-items: center;
   gap: 7px;
@@ -389,16 +389,16 @@ html.dark .jh-apply-runbar {
   background: var(--st-card, var(--st-mist));
 }
 
-.jh-apply-flow li b { color: var(--st-ink); font-weight: 600; }
+.rb-apply-flow li b { color: var(--st-ink); font-weight: 600; }
 
-.jh-apply-flow li + li::before {
+.rb-apply-flow li + li::before {
   content: '→';
   color: var(--st-ash);
   margin-right: 2px;
   margin-left: -4px;
 }
 
-.jh-apply-flow-n {
+.rb-apply-flow-n {
   width: 18px;
   height: 18px;
   flex-shrink: 0;
@@ -414,7 +414,7 @@ html.dark .jh-apply-runbar {
 
 /* ── Sample mode ─────────────────────────────────────────────────────── */
 
-.jh-apply-sample-banner {
+.rb-apply-sample-banner {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -425,9 +425,9 @@ html.dark .jh-apply-runbar {
   margin-bottom: 14px;
 }
 
-.jh-apply-sample-banner.hidden { display: none; }
+.rb-apply-sample-banner.hidden { display: none; }
 
-.jh-apply-sample-copy {
+.rb-apply-sample-copy {
   flex: 1;
   font-family: var(--st-sans);
   font-size: 14px;
@@ -435,7 +435,7 @@ html.dark .jh-apply-runbar {
 }
 
 /* §5.3 warning - a rehearsal is not a sent application. */
-.jh-apply-dry-tag {
+.rb-apply-dry-tag {
   flex-shrink: 0;
   font-family: var(--st-sans);
   font-size: 12px;
@@ -449,7 +449,7 @@ html.dark .jh-apply-runbar {
   white-space: nowrap;
 }
 
-.jh-apply-sample-tag {
+.rb-apply-sample-tag {
   flex-shrink: 0;
   font-family: var(--st-sans);
   font-size: 12px;
@@ -464,7 +464,7 @@ html.dark .jh-apply-runbar {
 
 /* ── Cards ───────────────────────────────────────────────────────────── */
 
-.jh-apply-card {
+.rb-apply-card {
   border: 1px solid var(--st-border);
   border-left: 3px solid var(--apply-color);
   border-radius: 9px;
@@ -474,25 +474,25 @@ html.dark .jh-apply-runbar {
   transition: border-color 0.15s ease, transform 0.15s ease;
 }
 
-.jh-apply-card:active {
+.rb-apply-card:active {
   cursor: grabbing;
 }
 
-.jh-apply-card:hover,
-.jh-apply-card:focus-visible {
+.rb-apply-card:hover,
+.rb-apply-card:focus-visible {
   border-color: var(--apply-color);
   transform: translateY(-1px);
   outline: none;
 }
 
-.jh-apply-card-top {
+.rb-apply-card-top {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: 8px;
 }
 
-.jh-apply-company {
+.rb-apply-company {
   font-family: var(--st-serif);
   font-size: 14px;
   color: var(--st-ink);
@@ -501,7 +501,7 @@ html.dark .jh-apply-runbar {
   white-space: nowrap;
 }
 
-.jh-apply-score {
+.rb-apply-score {
   font-family: var(--st-sans);
   font-size: 11.5px;
   font-variant-numeric: tabular-nums;
@@ -512,7 +512,7 @@ html.dark .jh-apply-runbar {
   flex-shrink: 0;
 }
 
-.jh-apply-title {
+.rb-apply-title {
   font-family: var(--st-sans);
   font-size: 12.5px;
   color: var(--st-slate);
@@ -523,7 +523,7 @@ html.dark .jh-apply-runbar {
 /* Where the job is, against where the candidate is. §5.3 good for in-country,
    muted for everything else — with an icon and the place name, never colour
    carrying it alone. */
-.jh-apply-loc {
+.rb-apply-loc {
   display: flex;
   align-items: center;
   gap: 5px;
@@ -534,23 +534,23 @@ html.dark .jh-apply-runbar {
   min-width: 0;
 }
 
-.jh-apply-loc-icon { flex-shrink: 0; font-size: 12px; }
+.rb-apply-loc-icon { flex-shrink: 0; font-size: 12px; }
 
-.jh-apply-loc-text {
+.rb-apply-loc-text {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.jh-apply-loc.is-home .jh-apply-loc-icon { color: #0ca30c; }
-.jh-apply-loc.is-home .jh-apply-loc-text { color: var(--st-ink); }
-.jh-apply-loc.is-remote .jh-apply-loc-icon { color: #2a78d6; }
-.jh-apply-loc.is-elsewhere { opacity: 0.75; }
-.jh-apply-loc.is-elsewhere .jh-apply-loc-icon { color: #ec835a; }
-.jh-apply-loc.is-unknown { opacity: 0.7; }
+.rb-apply-loc.is-home .rb-apply-loc-icon { color: #0ca30c; }
+.rb-apply-loc.is-home .rb-apply-loc-text { color: var(--st-ink); }
+.rb-apply-loc.is-remote .rb-apply-loc-icon { color: #2a78d6; }
+.rb-apply-loc.is-elsewhere { opacity: 0.75; }
+.rb-apply-loc.is-elsewhere .rb-apply-loc-icon { color: #ec835a; }
+.rb-apply-loc.is-unknown { opacity: 0.7; }
 
 /* Every metric the pipeline holds for this job, in one row. */
-.jh-apply-metrics {
+.rb-apply-metrics {
   display: grid;
   /* Wraps to two rows when the column narrows — four fixed columns collided
      with the detail panel open. */
@@ -561,14 +561,14 @@ html.dark .jh-apply-runbar {
   border-top: 1px solid var(--st-border);
 }
 
-.jh-apply-metric {
+.rb-apply-metric {
   display: flex;
   flex-direction: column;
   gap: 1px;
   min-width: 0;
 }
 
-.jh-apply-metric-label {
+.rb-apply-metric-label {
   font-family: var(--st-sans);
   font-size: 9.5px;
   font-weight: 600;
@@ -580,17 +580,17 @@ html.dark .jh-apply-runbar {
   text-overflow: ellipsis;
 }
 
-.jh-apply-metric-value {
+.rb-apply-metric-value {
   font-family: var(--st-sans);
   font-size: 14px;
   font-variant-numeric: tabular-nums;
   color: var(--st-ink);
 }
 
-.jh-apply-metric-none { color: var(--st-ash); }
+.rb-apply-metric-none { color: var(--st-ash); }
 
 /* ATS match. §5.3 good / warning — always with the number beside it. */
-.jh-apply-ats {
+.rb-apply-ats {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -600,16 +600,16 @@ html.dark .jh-apply-runbar {
   color: var(--st-slate);
 }
 
-.jh-apply-ats-label {
+.rb-apply-ats-label {
   font-weight: 600;
   letter-spacing: 0.06em;
   color: var(--st-ash);
 }
 
-.jh-apply-ats-from { color: var(--st-ash); }
-.jh-apply-ats-value { font-variant-numeric: tabular-nums; color: var(--st-ink); font-weight: 600; }
+.rb-apply-ats-from { color: var(--st-ash); }
+.rb-apply-ats-value { font-variant-numeric: tabular-nums; color: var(--st-ink); font-weight: 600; }
 
-.jh-apply-ats-track {
+.rb-apply-ats-track {
   flex: 1;
   height: 3px;
   min-width: 32px;
@@ -618,17 +618,17 @@ html.dark .jh-apply-runbar {
   overflow: hidden;
 }
 
-.jh-apply-ats-track > span {
+.rb-apply-ats-track > span {
   display: block;
   height: 100%;
   border-radius: var(--radius-pill);
   background: var(--st-ash);
 }
 
-.jh-apply-ats.is-good .jh-apply-ats-track > span { background: #0ca30c; }
-.jh-apply-ats.is-low .jh-apply-ats-track > span { background: #fab219; }
+.rb-apply-ats.is-good .rb-apply-ats-track > span { background: #0ca30c; }
+.rb-apply-ats.is-low .rb-apply-ats-track > span { background: #fab219; }
 
-.jh-apply-meta {
+.rb-apply-meta {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -636,7 +636,7 @@ html.dark .jh-apply-runbar {
   margin-top: 8px;
 }
 
-.jh-apply-when {
+.rb-apply-when {
   font-size: 12px;
   color: var(--st-ash);
 }
@@ -646,7 +646,7 @@ html.dark .jh-apply-runbar {
  * below 3:1 on the light surface, which is fine for a border or an icon but
  * not for text you have to read.
  */
-.jh-apply-pill {
+.rb-apply-pill {
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -660,9 +660,9 @@ html.dark .jh-apply-runbar {
   white-space: nowrap;
 }
 
-.jh-apply-pill > [aria-hidden] { color: var(--apply-color); }
+.rb-apply-pill > [aria-hidden] { color: var(--apply-color); }
 
-.jh-apply-empty {
+.rb-apply-empty {
   font-family: var(--st-sans);
   font-size: 14px;
   color: var(--st-ash);
@@ -671,14 +671,14 @@ html.dark .jh-apply-runbar {
 
 /* ── Collapsed groups ────────────────────────────────────────────────── */
 
-.jh-apply-group {
+.rb-apply-group {
   border: 1px solid var(--st-border);
   border-radius: var(--radius-lg);
   background: var(--st-card, var(--st-mist));
   margin-bottom: 14px;
 }
 
-.jh-apply-group-head {
+.rb-apply-group-head {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -691,12 +691,12 @@ html.dark .jh-apply-runbar {
   list-style: none;
 }
 
-.jh-apply-group-head::-webkit-details-marker { display: none; }
-.jh-apply-group-head::before { content: '▸'; color: var(--st-ash); font-size: 12px; }
-.jh-apply-group[open] .jh-apply-group-head::before { content: '▾'; }
-.jh-apply-group-head .jh-apply-col-count { margin-left: auto; }
+.rb-apply-group-head::-webkit-details-marker { display: none; }
+.rb-apply-group-head::before { content: '▸'; color: var(--st-ash); font-size: 12px; }
+.rb-apply-group[open] .rb-apply-group-head::before { content: '▾'; }
+.rb-apply-group-head .rb-apply-col-count { margin-left: auto; }
 
-.jh-apply-group-body {
+.rb-apply-group-body {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(232px, 1fr));
   gap: 8px;
@@ -705,7 +705,7 @@ html.dark .jh-apply-runbar {
 
 /* ── Pending confirmations ───────────────────────────────────────────── */
 
-.jh-apply-pending-wrap {
+.rb-apply-pending-wrap {
   border: 1px solid var(--st-border);
   border-radius: var(--radius-lg);
   background: var(--st-card, var(--st-mist));
@@ -713,20 +713,20 @@ html.dark .jh-apply-runbar {
   margin-bottom: 14px;
 }
 
-.jh-apply-pending-title {
+.rb-apply-pending-title {
   font-family: var(--st-serif);
   font-size: 15px;
   color: var(--st-ink);
 }
 
-.jh-apply-pending-note {
+.rb-apply-pending-note {
   font-family: var(--st-sans);
   font-size: 14px;
   color: var(--st-slate);
   margin: 2px 0 10px;
 }
 
-.jh-apply-pending {
+.rb-apply-pending {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -734,9 +734,9 @@ html.dark .jh-apply-runbar {
   border-top: 1px solid var(--st-border);
 }
 
-.jh-apply-pending-copy { flex: 1; min-width: 0; }
+.rb-apply-pending-copy { flex: 1; min-width: 0; }
 
-.jh-apply-pending-subject {
+.rb-apply-pending-subject {
   font-family: var(--st-sans);
   font-size: 14px;
   color: var(--st-ink);
@@ -745,7 +745,7 @@ html.dark .jh-apply-runbar {
   white-space: nowrap;
 }
 
-.jh-apply-pending-meta {
+.rb-apply-pending-meta {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -756,9 +756,9 @@ html.dark .jh-apply-runbar {
   margin-top: 3px;
 }
 
-.jh-apply-pending-actions { display: flex; gap: 6px; flex-shrink: 0; }
+.rb-apply-pending-actions { display: flex; gap: 6px; flex-shrink: 0; }
 
-.jh-apply-unqueue-hint {
+.rb-apply-unqueue-hint {
   margin: 6px 0 0;
   font-size: 12px;
   color: var(--st-slate);
@@ -767,7 +767,7 @@ html.dark .jh-apply-runbar {
 
 /* ── Controls ────────────────────────────────────────────────────────── */
 
-.jh-apply-btn {
+.rb-apply-btn {
   font-family: var(--st-sans);
   font-size: 14px;
   color: var(--st-ink);
@@ -778,18 +778,18 @@ html.dark .jh-apply-runbar {
   cursor: pointer;
 }
 
-.jh-apply-btn:hover { border-color: var(--st-slate); }
-.jh-apply-btn[disabled] { opacity: 0.55; cursor: progress; }
+.rb-apply-btn:hover { border-color: var(--st-slate); }
+.rb-apply-btn[disabled] { opacity: 0.55; cursor: progress; }
 
-.jh-apply-btn.is-primary {
+.rb-apply-btn.is-primary {
   background: var(--st-sienna);
   border-color: var(--st-sienna);
   color: var(--st-canvas);
 }
 
-html.dark .jh-apply-btn.is-primary { color: var(--st-page); }
+html.dark .rb-apply-btn.is-primary { color: var(--st-page); }
 
-.jh-apply-select {
+.rb-apply-select {
   width: 100%;
   font-family: var(--st-sans);
   font-size: 12.5px;
@@ -804,7 +804,7 @@ html.dark .jh-apply-btn.is-primary { color: var(--st-page); }
 /* ── Gmail card (Settings) ───────────────────────────────────────────── */
 /* Status colors from SPEC.md §5.3, always with a word beside them. */
 
-.jh-gmail-pill {
+.rb-gmail-pill {
   flex-shrink: 0;
   font-family: var(--st-sans);
   font-size: 11.5px;
@@ -816,10 +816,10 @@ html.dark .jh-apply-btn.is-primary { color: var(--st-page); }
   white-space: nowrap;
 }
 
-.jh-gmail-pill.is-on { color: #0ca30c; border-color: #0ca30c; }
-.jh-gmail-pill.is-off { color: var(--st-slate); border-color: var(--st-border); }
+.rb-gmail-pill.is-on { color: #0ca30c; border-color: #0ca30c; }
+.rb-gmail-pill.is-off { color: var(--st-slate); border-color: var(--st-border); }
 
-.jh-gmail-facts {
+.rb-gmail-facts {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -828,7 +828,7 @@ html.dark .jh-apply-btn.is-primary { color: var(--st-page); }
   gap: 5px;
 }
 
-.jh-gmail-facts li {
+.rb-gmail-facts li {
   font-family: var(--st-sans);
   font-size: 14px;
   color: var(--st-slate);
@@ -837,16 +837,16 @@ html.dark .jh-apply-btn.is-primary { color: var(--st-page); }
   line-height: 1.45;
 }
 
-.jh-gmail-facts li::before {
+.rb-gmail-facts li::before {
   content: '·';
   position: absolute;
   left: 4px;
   color: var(--st-ash);
 }
 
-.jh-gmail-facts b { color: var(--st-ink); font-weight: 600; }
+.rb-gmail-facts b { color: var(--st-ink); font-weight: 600; }
 
-.jh-gmail-link {
+.rb-gmail-link {
   color: var(--st-sienna);
   text-decoration: underline;
   text-underline-offset: 2px;
@@ -859,7 +859,7 @@ html.dark .jh-apply-btn.is-primary { color: var(--st-page); }
   line-height: 1.45;
 }
 
-.jh-gmail-facts code {
+.rb-gmail-facts code {
   font-size: 11.5px;
   background: var(--st-fog);
   border-radius: var(--radius-chip);
@@ -868,7 +868,7 @@ html.dark .jh-apply-btn.is-primary { color: var(--st-page); }
 
 /* ── Detail panel ────────────────────────────────────────────────────── */
 
-.jh-apply-detail {
+.rb-apply-detail {
   width: 340px;
   flex-shrink: 0;
   border-left: 1px solid var(--st-border);
@@ -877,42 +877,42 @@ html.dark .jh-apply-btn.is-primary { color: var(--st-page); }
   overflow-y: auto;
 }
 
-.jh-apply-detail.hidden { display: none; }
+.rb-apply-detail.hidden { display: none; }
 
-.jh-apply-detail-head {
+.rb-apply-detail-head {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 10px;
 }
 
-.jh-apply-detail-company {
+.rb-apply-detail-company {
   font-family: var(--st-serif);
   font-size: 17px;
   color: var(--st-ink);
 }
 
-.jh-apply-detail-title {
+.rb-apply-detail-title {
   font-family: var(--st-sans);
   font-size: 12.5px;
   color: var(--st-slate);
 }
 
-.jh-apply-detail-row {
+.rb-apply-detail-row {
   display: flex;
   align-items: center;
   gap: 8px;
   margin: 10px 0;
 }
 
-.jh-apply-detail-links {
+.rb-apply-detail-links {
   display: flex;
   flex-direction: column;
   gap: 4px;
   margin-bottom: 14px;
 }
 
-.jh-apply-detail-links a {
+.rb-apply-detail-links a {
   font-family: var(--st-sans);
   font-size: 12.5px;
   color: var(--st-sienna);
@@ -920,7 +920,7 @@ html.dark .jh-apply-btn.is-primary { color: var(--st-page); }
   text-underline-offset: 2px;
 }
 
-.jh-apply-detail-label {
+.rb-apply-detail-label {
   display: block;
   font-family: var(--st-sans);
   font-size: 12px;
@@ -932,7 +932,7 @@ html.dark .jh-apply-btn.is-primary { color: var(--st-page); }
 
 /* Run phases — what Robin actually covered for this job. A pending row is
    dimmed rather than hidden: the shape of the whole pipeline stays visible. */
-.jh-apply-phase-count {
+.rb-apply-phase-count {
   font-size: 12px;
   font-variant-numeric: tabular-nums;
   color: var(--st-slate);
@@ -943,14 +943,14 @@ html.dark .jh-apply-btn.is-primary { color: var(--st-page); }
   letter-spacing: 0;
 }
 
-.jh-apply-phase-run {
+.rb-apply-phase-run {
   font-family: var(--st-sans);
   font-size: 12px;
   color: var(--st-ash);
   margin: -2px 0 8px;
 }
 
-.jh-apply-phases {
+.rb-apply-phases {
   list-style: none;
   margin: 0 0 16px;
   padding: 0;
@@ -959,7 +959,7 @@ html.dark .jh-apply-btn.is-primary { color: var(--st-page); }
   gap: 2px;
 }
 
-.jh-apply-phases li {
+.rb-apply-phases li {
   display: flex;
   align-items: baseline;
   gap: 7px;
@@ -969,36 +969,36 @@ html.dark .jh-apply-btn.is-primary { color: var(--st-page); }
   border-bottom: 1px solid var(--st-border);
 }
 
-.jh-apply-phases li:last-child { border-bottom: none; }
+.rb-apply-phases li:last-child { border-bottom: none; }
 
-.jh-apply-phase-dot {
+.rb-apply-phase-dot {
   width: 14px;
   flex-shrink: 0;
   text-align: center;
   font-size: 12px;
 }
 
-.jh-apply-phases li.is-done .jh-apply-phase-dot { color: #0ca30c; }
-.jh-apply-phases li.is-done .jh-apply-phase-label { color: var(--st-ink); }
-.jh-apply-phases li.is-pending { opacity: 0.55; }
-.jh-apply-phases li.is-pending .jh-apply-phase-dot { color: var(--st-ash); }
+.rb-apply-phases li.is-done .rb-apply-phase-dot { color: #0ca30c; }
+.rb-apply-phases li.is-done .rb-apply-phase-label { color: var(--st-ink); }
+.rb-apply-phases li.is-pending { opacity: 0.55; }
+.rb-apply-phases li.is-pending .rb-apply-phase-dot { color: var(--st-ash); }
 
-.jh-apply-phase-label { color: var(--st-slate); }
+.rb-apply-phase-label { color: var(--st-slate); }
 
-.jh-apply-phase-note {
+.rb-apply-phase-note {
   color: var(--st-ash);
   font-size: 14px;
   flex: 1;
   min-width: 0;
 }
 
-.jh-apply-phase-when {
+.rb-apply-phase-when {
   color: var(--st-ash);
   font-size: 12px;
   flex-shrink: 0;
 }
 
-.jh-apply-events {
+.rb-apply-events {
   list-style: none;
   margin: 0 0 16px;
   padding: 0;
@@ -1007,7 +1007,7 @@ html.dark .jh-apply-btn.is-primary { color: var(--st-page); }
   gap: 7px;
 }
 
-.jh-apply-events li {
+.rb-apply-events li {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
@@ -1017,26 +1017,26 @@ html.dark .jh-apply-btn.is-primary { color: var(--st-page); }
   color: var(--st-slate);
 }
 
-.jh-apply-ev-when { color: var(--st-ash); min-width: 62px; }
-.jh-apply-ev-src { color: var(--st-ash); }
-.jh-apply-ev-detail { width: 100%; color: var(--st-slate); }
+.rb-apply-ev-when { color: var(--st-ash); min-width: 62px; }
+.rb-apply-ev-src { color: var(--st-ash); }
+.rb-apply-ev-detail { width: 100%; color: var(--st-slate); }
 
 /* ── Empty state ─────────────────────────────────────────────────────── */
 
-.jh-apply-blank {
+.rb-apply-blank {
   border: 1px dashed var(--st-border);
   border-radius: var(--radius-lg);
   padding: 40px 24px;
   text-align: center;
 }
 
-.jh-apply-blank-title {
+.rb-apply-blank-title {
   font-family: var(--st-serif);
   font-size: 17px;
   color: var(--st-ink);
 }
 
-.jh-apply-blank-copy {
+.rb-apply-blank-copy {
   font-family: var(--st-sans);
   font-size: 14px;
   color: var(--st-slate);
@@ -1045,29 +1045,29 @@ html.dark .jh-apply-btn.is-primary { color: var(--st-page); }
   line-height: 1.5;
 }
 
-.jh-apply-blank-actions {
+.rb-apply-blank-actions {
   display: flex;
   justify-content: center;
   gap: 8px;
   margin-top: 16px;
 }
 
-.jh-apply-blank.is-compact {
+.rb-apply-blank.is-compact {
   padding: 18px 16px;
   margin-bottom: 16px;
   text-align: left;
 }
 
-.jh-apply-blank.is-compact .jh-apply-blank-copy {
+.rb-apply-blank.is-compact .rb-apply-blank-copy {
   margin-left: 0;
   max-width: 560px;
 }
 
-.jh-apply-blank.is-compact .jh-apply-blank-actions {
+.rb-apply-blank.is-compact .rb-apply-blank-actions {
   justify-content: flex-start;
 }
 
 @media (max-width: 900px) {
-  .jh-apply-detail { width: 280px; }
-  .jh-apply-col { min-width: 200px; }
+  .rb-apply-detail { width: 280px; }
+  .rb-apply-col { min-width: 200px; }
 }
