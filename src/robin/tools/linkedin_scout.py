@@ -373,7 +373,7 @@ class LinkedInScoutTool(BaseTool):
                     "status": "LOGIN_REQUIRED",
                     "message": (
                         "LinkedIn login wait timed out. Chrome was kept open for "
-                        "JH_LOGIN_WAIT_SECONDS (default 600). Sign in in browser-session/, "
+                        "ROBIN_LOGIN_WAIT_SECONDS (default 600). Sign in in browser-session/, "
                         "then re-run LinkedIn Scout."
                     ),
                     "jobs": [],

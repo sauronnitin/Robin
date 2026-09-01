@@ -141,7 +141,7 @@ should read.
   tailored resume PDF. External + main Apply use direct Playwright fill first,
   Simplify as fallback. ATS email-verify can use Gmail readonly OAuth
   (`gmail_token.json`). On LinkedIn login wall, Chrome stays open via
-  `browser_session.wait_for_linkedin_login()` (`JH_LOGIN_WAIT_SECONDS`,
+  `browser_session.wait_for_linkedin_login()` (`ROBIN_LOGIN_WAIT_SECONDS`,
   default 600).
 - Dashboard: `python dashboard/server.py` (http://localhost:5959). Live `/`
   serves `dashboard/mockup.html`. LinkedIn Lab starts the LI section plan via

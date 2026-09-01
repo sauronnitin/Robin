@@ -12,6 +12,11 @@ from dotenv import load_dotenv
 from robin import auto_fix
 from robin import gmail_verify
 from robin import profile as robin_profile
+from robin.browser_session import (
+    DEFAULT_LOGIN_WAIT_SECONDS,
+    LEGACY_LOGIN_WAIT_ENV,
+    LOGIN_WAIT_ENV,
+)
 from robin.model_catalog import upsert_env_key
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -32,7 +37,7 @@ NON_SECRET_ENV_KEYS: tuple[str, ...] = (
     "MASTER_SHEET_ID",
     "GOOGLE_DRIVE_FOLDER_ID",
     "DRY_RUN",
-    "JH_LOGIN_WAIT_SECONDS",
+    LOGIN_WAIT_ENV,
     "ROBIN_PROFILE",
     "APPLICANT_EMAIL",
     "APPLICANT_PHONE",
@@ -149,6 +154,21 @@ def _oauth_client_present() -> bool:
     return False
 
 
+def login_wait_setting() -> str:
+    """Resolved ROBIN_LOGIN_WAIT_SECONDS for the settings surface.
+
+    Falls back to the pre-Robin JH_ name so an existing .env shows its real
+    value instead of the default -- otherwise saving from the settings screen
+    would silently reset a customised timeout to 600. Writes always use the
+    ROBIN_ key; this is a read fallback, not a second supported setting.
+    """
+    return (
+        _env_get(LOGIN_WAIT_ENV)
+        or _env_get(LEGACY_LOGIN_WAIT_ENV)
+        or str(DEFAULT_LOGIN_WAIT_SECONDS)
+    )
+
+
 def get_settings() -> dict[str, Any]:
     """Masked settings payload. Never includes raw secret values."""
     _reload_env()
@@ -163,8 +183,7 @@ def get_settings() -> dict[str, Any]:
     # DRY_RUN default True when unset
     if not non_secret.get("DRY_RUN"):
         non_secret["DRY_RUN"] = "True"
-    if not non_secret.get("JH_LOGIN_WAIT_SECONDS"):
-        non_secret["JH_LOGIN_WAIT_SECONDS"] = "600"
+    non_secret[LOGIN_WAIT_ENV] = login_wait_setting()
 
     gmail = gmail_verify.gmail_status()
     try:
@@ -213,7 +232,7 @@ def get_settings() -> dict[str, Any]:
         "browser": {
             "session_dir": str(_BROWSER_SESSION),
             "session_present": _BROWSER_SESSION.is_dir(),
-            "JH_LOGIN_WAIT_SECONDS": non_secret.get("JH_LOGIN_WAIT_SECONDS") or "600",
+            LOGIN_WAIT_ENV: non_secret.get(LOGIN_WAIT_ENV) or str(DEFAULT_LOGIN_WAIT_SECONDS),
         },
         "paths": {
             "env": str(_ENV_PATH),

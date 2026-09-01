@@ -236,7 +236,7 @@ class LinkedInEasyApplyTool(BaseTool):
                     if not logged_in:
                         return (
                             "SKIPPED - LinkedIn login wait timed out "
-                            "(Chrome stayed open for JH_LOGIN_WAIT_SECONDS; sign in and retry)"
+                            "(Chrome stayed open for ROBIN_LOGIN_WAIT_SECONDS; sign in and retry)"
                         )
 
                 captcha_count = page.locator(

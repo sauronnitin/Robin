@@ -16,8 +16,14 @@ from robin import browser_preview
 
 SESSION_DIR = Path("browser-session")
 
-# Default 10 minutes; override with JH_LOGIN_WAIT_SECONDS.
-_DEFAULT_LOGIN_WAIT_S = 600
+# Default 10 minutes; override with ROBIN_LOGIN_WAIT_SECONDS.
+# JH_ was the pre-Robin name. It is still read, so an existing .env keeps
+# working untouched -- the same courtesy db.py extends to the pre-rename
+# database file. New writes always use the ROBIN_ name; this is a read
+# fallback, not a second supported setting.
+LOGIN_WAIT_ENV = "ROBIN_LOGIN_WAIT_SECONDS"
+LEGACY_LOGIN_WAIT_ENV = "JH_LOGIN_WAIT_SECONDS"
+DEFAULT_LOGIN_WAIT_SECONDS = 600
 _POLL_S = 2.5
 
 _LOGIN_MARKERS = (
@@ -30,13 +36,19 @@ _LOGIN_MARKERS = (
 
 
 def login_wait_seconds() -> float:
-    raw = os.environ.get("JH_LOGIN_WAIT_SECONDS", "").strip()
+    # strip each candidate BEFORE choosing, not after: ".env" ships this key,
+    # so `ROBIN_LOGIN_WAIT_SECONDS=` (blank) is a normal state, and a blank
+    # string is truthy -- stripping afterwards would let it short-circuit the
+    # `or` and silently shadow a real value under the legacy name.
+    raw = (os.environ.get(LOGIN_WAIT_ENV) or "").strip() or (
+        os.environ.get(LEGACY_LOGIN_WAIT_ENV) or ""
+    ).strip()
     if not raw:
-        return float(_DEFAULT_LOGIN_WAIT_S)
+        return float(DEFAULT_LOGIN_WAIT_SECONDS)
     try:
         return max(60.0, float(raw))
     except ValueError:
-        return float(_DEFAULT_LOGIN_WAIT_S)
+        return float(DEFAULT_LOGIN_WAIT_SECONDS)
 
 
 def detect_linkedin_login_wall(page: Any) -> bool:
