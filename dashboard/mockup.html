@@ -43,6 +43,7 @@ tailwind.config = {
 </script>
 <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,500;0,8..60,600;1,8..60,300&family=DM+Sans:wght@300;400;500;600&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="kg.css">
+<link rel="stylesheet" href="tokens.css">
 <link rel="stylesheet" href="apply.css">
 <link rel="stylesheet" href="metrics.css">
 <link rel="stylesheet" href="keys-hint.css">
@@ -51,107 +52,6 @@ tailwind.config = {
      direction -- the superseded Antimetal pilot has been removed. -->
 <link rel="stylesheet" href="veya-pilot.css">
 <style>
-:root {
-  --st-canvas:  #f6f4ef;
-  --st-mist:    #ece7dc;
-  --st-fog:     #f0ede4;
-  --st-ink:     #17191c;
-  --st-slate:   #777b86;
-  --st-ash:     #979799;
-  --st-smoke:   #a3a6af;
-  --st-peach:   #fbe1d1;
-  --st-sienna:  #5d2a1a;
-  --st-border:  rgba(4, 23, 43, 0.06);
-  /* These eight were defined on html.dark but never here, so in LIGHT mode —
-     the default theme — every var() referencing them was invalid at
-     computed-value time and the whole declaration dropped. CSS reports none of
-     this: no console error, no failed rule, just a property silently reverting
-     to its initial value. It cost .rb-need.is-missing its colour (a missing
-     API key rendered identical to a present one), .rb-need-pop-item:focus-visible
-     its border (invisible keyboard focus), .rb-need-flash its outline, and
-     .rb-bento-rail-btn:hover its background.
-     Values are not invented: the first six are lifted from the html.dark #ob
-     block below, which is this same light palette scoped to the onboarding
-     screen. Amber had no light value anywhere — the dark #c48050 measures only
-     2.92:1 on this canvas, below even the 3:1 non-text minimum, so it is
-     darkened to 5.17:1, matching the 5.22:1 the dark amber achieves against
-     its own surface.
-     --st-sidebar is deliberately absent: it is a dark-only surface with no
-     light-mode consumer, and a value here would be a guess. */
-  --st-page:      #f6f4ef;
-  --st-card:      #ffffff;
-  --st-raised:    #ffffff;
-  --st-border-hi: rgba(4, 23, 43, 0.12);
-  --st-btn-ink:   #17191c;
-  --st-btn-on:    #f6f4ef;
-  --st-amber:     #9a5520;
-  --st-amber-dim: rgba(154, 85, 32, 0.12);
-  --st-serif:   "Source Serif 4", Georgia, ui-serif, serif;
-  --st-sans:    "DM Sans", ui-sans-serif, system-ui, sans-serif;
-
-  /* Generic tokens: kg.css / apply.css / metrics.css reference these names
-     directly (not the --st- prefix above). They previously had no definition
-     anywhere mockup.html loads, so every var(--radius-*) / var(--shadow-*)
-     in those three files was silently resolving to nothing. Defined here to
-     match style.css's values so both pages (this one and /canvas) render
-     the same shapes and elevation. */
-  --font-display: var(--st-serif);
-  --font-body: var(--st-sans);
-  --font-mono: ui-monospace, "SF Mono", "Cascadia Code", "JetBrains Mono", Consolas, monospace;
-
-  --radius-sm: 6px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
-  --radius-xl: 16px;
-  --radius-chip: 4px;
-  --radius-card: 14px;
-  --radius-pill: 9999px;
-
-  --shadow-sm: 0 1px 2px rgba(23, 25, 28, 0.05), 0 2px 8px rgba(23, 25, 28, 0.06);
-  --shadow-md: 0 2px 6px rgba(23, 25, 28, 0.07), 0 8px 20px rgba(23, 25, 28, 0.09);
-  --shadow-lg: 0 4px 16px rgba(23, 25, 28, 0.10), 0 16px 40px rgba(23, 25, 28, 0.14);
-
-  --space-4: 4px;
-  --space-8: 8px;
-  --space-12: 12px;
-  --space-16: 16px;
-  --space-24: 24px;
-  --space-32: 32px;
-  --space-48: 48px;
-  --space-64: 64px;
-}
-
-  /* Steep Dark — same var names, inverted editorial palette */
-  html.dark {
-    --st-canvas:  #171411;
-    --st-mist:    #211d1a;
-    --st-fog:     #2a2420;
-    --st-ink:     #f0e8df;
-    --st-slate:   #9b9189;
-    /* Was #6b6460, which measured 2.64:1 on --st-raised and 2.88:1 on
-       --st-card — far under the 4.5 AA floor, and the single cause of ~336
-       failing text nodes across every screen (labels, captions, meta, empty
-       states). #958c84 clears it at 4.64:1 while staying dimmer than
-       --st-slate (4.96:1), so the quiet-text hierarchy is preserved. */
-    --st-ash:     #958c84;
-    --st-smoke:   #958c84;
-    --st-peach:   rgba(196,128,80,0.24);
-    --st-sienna:  #e8c49a;
-    --st-border:  rgba(240,232,223,0.07);
-    --st-border-hi: rgba(240,232,223,0.13);
-    --st-amber:   #c48050;
-    --st-amber-dim: rgba(196,128,80,0.14);
-    --st-page:    #171411;
-    --st-sidebar: #0f0d0b;
-    --st-card:    #211d1a;
-    --st-raised:  #2a2420;
-    --st-btn-ink: #f0e8df;
-    --st-btn-on:  #171411;
-
-    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35), 0 2px 10px rgba(0, 0, 0, 0.35);
-    --shadow-md: 0 2px 6px rgba(0, 0, 0, 0.4), 0 10px 28px rgba(0, 0, 0, 0.45);
-    --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.45), 0 16px 40px rgba(0, 0, 0, 0.55);
-  }
   html.dark body,
   html.dark .st-body {
     background: var(--st-page) !important;
@@ -7925,7 +7825,7 @@ function applySettingsPayload(data){
   const drive = document.getElementById('setDriveId');
   if(drive) drive.value = env.GOOGLE_DRIVE_FOLDER_ID || '';
   const wait = document.getElementById('setLoginWait');
-  if(wait) wait.value = env.JH_LOGIN_WAIT_SECONDS || '600';
+  if(wait) wait.value = env.ROBIN_LOGIN_WAIT_SECONDS || '600';
   const work = document.getElementById('setWorkAuth');
   if(work) work.value = env.APPLICANT_WORK_AUTH || '';
   const spons = document.getElementById('setSponsorship');
@@ -7965,8 +7865,8 @@ function applySettingsPayload(data){
   if(browser){
     const b = data.browser || {};
     browser.textContent = b.session_present
-      ? `browser-session/: present · login wait ${b.JH_LOGIN_WAIT_SECONDS||600}s`
-      : `browser-session/: not created yet · login wait ${b.JH_LOGIN_WAIT_SECONDS||600}s`;
+      ? `browser-session/: present · login wait ${b.ROBIN_LOGIN_WAIT_SECONDS||600}s`
+      : `browser-session/: not created yet · login wait ${b.ROBIN_LOGIN_WAIT_SECONDS||600}s`;
   }
   if(window.JhNeeds && typeof window.JhNeeds.setStatus === 'function'){
     window.JhNeeds.setStatus(data);
@@ -8018,7 +7918,7 @@ async function saveSettings(){
     DRY_RUN: dry && dry.checked ? 'True' : 'False',
     MASTER_SHEET_ID: (document.getElementById('setSheetId')||{}).value || '',
     GOOGLE_DRIVE_FOLDER_ID: (document.getElementById('setDriveId')||{}).value || '',
-    JH_LOGIN_WAIT_SECONDS: (document.getElementById('setLoginWait')||{}).value || '600',
+    ROBIN_LOGIN_WAIT_SECONDS: (document.getElementById('setLoginWait')||{}).value || '600',
     ROBIN_PROFILE: (document.getElementById('setProfilePack')||{}).value || '',
     APPLICANT_WORK_AUTH: (document.getElementById('setWorkAuth')||{}).value || '',
     APPLICANT_SPONSORSHIP: (document.getElementById('setSponsorship')||{}).value || '',
