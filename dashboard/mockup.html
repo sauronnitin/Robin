@@ -690,9 +690,15 @@ html.dark #ob {
 #obTagline.ob-pending {
   opacity: 0;
 }
+/* pointer-events, not just opacity: the intro block is translated down to
+   screen centre, which parks its Continue button directly over the (invisible)
+   subtitle. Opacity alone still hit-tests, so the subtitle swallowed the click
+   and the intro could never be advanced. Nothing faded out here is meant to be
+   clickable anyway. */
 #ob.ob-intro .ob-hero,
 #ob.ob-intro #obSubtitle {
   opacity: 0;
+  pointer-events: none;
 }
 .ob-hero, #obSubtitle {
   opacity: 1;
@@ -705,6 +711,71 @@ html.dark #ob {
   color: var(--st-smoke);
   text-align: center;
 }
+
+/* Volume prompt + Continue: the last beat of the intro. Continue is not
+   decoration -- browsers refuse to start an AudioContext without a user
+   gesture, so before this existed the bird's flight song and landing greeting
+   were muted by policy on every cold load. This click IS the gesture, which
+   is why the volume line can honestly promise sound. */
+.ob-volume-note {
+  margin: 14px 0 0;
+  font-family: var(--st-sans);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: var(--st-sienna);
+  text-align: center;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  transition: opacity 400ms ease;
+}
+.ob-volume-note svg { width: 15px; height: 15px; flex: none; fill: currentColor; }
+.ob-volume-note.ob-pending { opacity: 0; }
+
+#obIntroContinue {
+  margin-top: 16px;
+  transition: opacity 350ms ease, transform 350ms ease;
+}
+#obIntroContinue.ob-pending {
+  opacity: 0;
+  transform: translateY(6px);
+  pointer-events: none;
+}
+
+/* Screen-anchored, not hero-anchored: it has to be reachable before the bird
+   arrives, so someone who does not want sound can stop it happening at all.
+   Selected as `#ob > .ob-mute` for the same reason .ob-hero is: `#ob > *`
+   above sets position:relative/z-index:1 on every direct child, and an id
+   beats a class -- as a bare .ob-mute rule this element stayed in the flex
+   flow and landed top-CENTRE. Bare icon, no plate: it sits over the painting's
+   own paper, and a card behind it reads as a second UI layer. */
+#ob > .ob-mute {
+  position: fixed;
+  top: 18px;
+  right: 18px;
+  z-index: 60;
+  width: 38px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: none;
+  color: var(--st-slate);
+  cursor: pointer;
+  transition: color 160ms ease, opacity 160ms ease;
+  opacity: 0.72;
+}
+/* the two state rules carry `#ob >` for the same specificity reason as the
+   base rule -- as bare classes they lose the colour back to it */
+#ob > .ob-mute:hover { color: var(--st-ink); opacity: 1; }
+.ob-mute:focus-visible { outline: 2px solid var(--st-sienna); outline-offset: 3px; }
+.ob-mute svg { width: 18px; height: 18px; fill: currentColor; }
+.ob-mute .ob-mute-off { display: none; }
+#ob > .ob-mute.is-muted { color: var(--st-sienna); opacity: 1; }
+.ob-mute.is-muted .ob-mute-on { display: none; }
+.ob-mute.is-muted .ob-mute-off { display: block; }
 
 /* The bird's own layer: same box as the artwork (see the shared rule above)
    plus the plate's aspect ratio, so its height always equals the rendered
@@ -2681,6 +2752,13 @@ html.dark #resumePreviewHint {
 
 <!-- ═══════════ ONBOARDING ═══════════ -->
 <div id="ob" class="ob-bg fixed inset-0 z-50 flex flex-col items-center justify-start gap-3">
+  <!-- Mutes the bird only. Deliberately available from first paint, before the
+       intro finishes, so it can be used to prevent sound rather than only to
+       stop it once it has already played. -->
+  <button type="button" class="ob-mute" id="obMute" aria-label="Mute bird sounds" aria-pressed="false" title="Mute bird sounds">
+    <svg class="ob-mute-on" viewBox="0 0 16 16" aria-hidden="true"><path d="M8.5 2.2a.6.6 0 0 0-.98-.46L4.6 4.2H2.6a.9.9 0 0 0-.9.9v3.8a.9.9 0 0 0 .9.9h2l2.92 2.46a.6.6 0 0 0 .98-.46V2.2Zm2.6 1.9a.6.6 0 0 1 .84.05 5.3 5.3 0 0 1 0 6.9.6.6 0 1 1-.9-.79 4.1 4.1 0 0 0 0-5.32.6.6 0 0 1 .06-.84Zm-1.7 1.9a.6.6 0 0 1 .85.04 2.7 2.7 0 0 1 0 3.42.6.6 0 1 1-.9-.79 1.5 1.5 0 0 0 0-1.84.6.6 0 0 1 .05-.83Z"/></svg>
+    <svg class="ob-mute-off" viewBox="0 0 16 16" aria-hidden="true"><path d="M8.5 2.2a.6.6 0 0 0-.98-.46L4.6 4.2H2.6a.9.9 0 0 0-.9.9v3.8a.9.9 0 0 0 .9.9h2l2.92 2.46a.6.6 0 0 0 .98-.46V2.2Zm2.28 3.08a.6.6 0 0 1 .85 0L12.8 6.45l1.17-1.17a.6.6 0 1 1 .85.85L13.65 7.3l1.17 1.17a.6.6 0 1 1-.85.85L12.8 8.15l-1.17 1.17a.6.6 0 0 1-.85-.85l1.17-1.17-1.17-1.17a.6.6 0 0 1 0-.85Z"/></svg>
+  </button>
   <!-- Full-bleed hero illustration — a live, reactive bird over a static ink-wash branch -->
   <div class="ob-hero" id="obHero">
     <!-- paper is never masked: it always spans the full hero, so only the ink
@@ -2718,6 +2796,11 @@ html.dark #resumePreviewHint {
   <div id="obIntroBlock">
     <h1 class="st-h1" id="obTitle" style="margin-top:-28px">Welcome to Robin</h1>
     <p class="ob-tagline" id="obTagline">An AI swarm that finds, tailors, and applies to jobs for you.</p>
+    <p class="ob-volume-note" id="obVolumeNote" hidden>
+      <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8.5 2.2a.6.6 0 0 0-.98-.46L4.6 4.2H2.6a.9.9 0 0 0-.9.9v3.8a.9.9 0 0 0 .9.9h2l2.92 2.46a.6.6 0 0 0 .98-.46V2.2Zm2.6 1.9a.6.6 0 0 1 .84.05 5.3 5.3 0 0 1 0 6.9.6.6 0 1 1-.9-.79 4.1 4.1 0 0 0 0-5.32.6.6 0 0 1 .06-.84Zm-1.7 1.9a.6.6 0 0 1 .85.04 2.7 2.7 0 0 1 0 3.42.6.6 0 1 1-.9-.79 1.5 1.5 0 0 0 0-1.84.6.6 0 0 1 .05-.83Z"/></svg>
+      Volume up for a better experience
+    </p>
+    <button type="button" class="ob-btn ob-btn-primary" id="obIntroContinue" hidden>Continue</button>
   </div>
   <p class="text-smoke text-sm mb-3" id="obSubtitle">How would you like to get started?</p>
 
@@ -2789,23 +2872,58 @@ html.dark #resumePreviewHint {
     block.style.setProperty('--ob-intro-shift', `${(window.innerHeight / 2) - naturalCenterY}px`);
 
     // Fully sequential, each stage waiting for the last to actually finish:
-    // title grows in -> tagline grows in right after -> both HOLD together,
-    // stationary and readable -> block moves up to its original position ->
-    // only once that's done does the rest of the UI slowly fade in.
-    // These four MUST match the CSS transition durations on #obTitle,
-    // #obTagline and #obIntroBlock above — the sequence below waits them out
-    // by the clock, so changing one side alone desyncs the stages.
+    // title grows in -> tagline grows in right after -> the volume prompt and
+    // Continue appear -> and there the intro STOPS until the user clicks.
+    //
+    // The wait for that click replaced a fixed 450ms hold, and it is doing real
+    // work, not pacing: no browser will start an AudioContext without a user
+    // gesture, so on a cold load the bird's flight song and landing greeting
+    // were silenced by policy no matter what the audio code did. Gating the
+    // reveal on a click means the gesture has always happened before the bird
+    // moves — which is the only reason the volume line can promise anything.
+    //
+    // Both consumers of __obIntroReveal (the bird's entrance and the question
+    // flow's init) already await this one promise, so neither needed changing:
+    // resolving it later moves both.
+    //
+    // These MUST match the CSS transition durations on #obTitle, #obTagline,
+    // .ob-volume-note, #obIntroContinue and #obIntroBlock above — the sequence
+    // waits them out by the clock, so changing one side alone desyncs it.
     const TITLE_TRANSITION = 600;
     const TAGLINE_TRANSITION = 500;
-    const HOLD = 450;              // both visible together, stationary
+    const NOTE_TRANSITION = 400;
+    const CTA_TRANSITION = 350;
     const MOVE_TRANSITION = 600;
+    const note = document.getElementById('obVolumeNote');
+    const cta  = document.getElementById('obIntroContinue');
     (async function sequence(){
       await wait(50);                              // let the pending state paint first
       title.classList.remove('ob-pending');         // title grows in, centered
       await wait(TITLE_TRANSITION);
       if(tagline) tagline.classList.remove('ob-pending'); // tagline grows in, right after
       await wait(TAGLINE_TRANSITION);
-      await wait(HOLD);                             // both held, readable
+
+      // unhide first, THEN drop .ob-pending on the next frame — going straight
+      // from [hidden] to visible skips the transition entirely, because there
+      // is no previous rendered state to interpolate from
+      if(note){ note.hidden = false; note.classList.add('ob-pending'); }
+      if(cta){ cta.hidden = false; cta.classList.add('ob-pending'); }
+      await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+      if(note) note.classList.remove('ob-pending');
+      await wait(NOTE_TRANSITION);
+      if(cta) cta.classList.remove('ob-pending');
+      await wait(CTA_TRANSITION);
+
+      if(cta){
+        await new Promise(res => cta.addEventListener('click', res, { once: true }));
+      }
+      // the prompt has been answered; retire it with the rest of the intro
+      if(note) note.classList.add('ob-pending');
+      if(cta)  cta.classList.add('ob-pending');
+      await wait(200);
+      if(note) note.hidden = true;
+      if(cta)  cta.hidden = true;
+
       block.style.setProperty('--ob-intro-shift', '0px'); // move up to original position
       await wait(MOVE_TRANSITION);
       ob.classList.remove('ob-intro');              // THEN the rest of the UI slowly appears
@@ -2972,10 +3090,14 @@ html.dark #resumePreviewHint {
   }
 
   // --- synthesized sounds, no audio files needed ---
+  const MUTE_KEY = 'robin-bird-muted';
   let actx;
   function ensureAudio(){
     if(!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
-    if(actx.state === 'suspended') actx.resume();
+    // don't undo a mute: robinSetMuted() suspends the context, and this runs
+    // on every chirp attempt, so an unguarded resume here would quietly
+    // re-enable audio the user just switched off
+    if(!muted && actx.state === 'suspended') actx.resume();
     return actx;
   }
   // Browsers refuse to start an AudioContext without a user gesture, and the
@@ -2987,7 +3109,15 @@ html.dark #resumePreviewHint {
   ['pointerdown', 'keydown'].forEach(evt =>
     window.addEventListener(evt, () => { try{ ensureAudio(); }catch(e){} }, { once: true, passive: true })
   );
+  // Mute is enforced here, at the single point where sound is actually made,
+  // rather than in each caller. The callers still run and still return their
+  // phrase lengths, so the beak, the chirp mark and the head turns keep their
+  // timing — muting silences the bird, it does not freeze it.
+  let muted = false;
+  try{ muted = localStorage.getItem(MUTE_KEY) === '1'; }catch(e){}
+
   function tone(ctx, now, startOffset, freqStart, freqEnd, dur, peak){
+    if(muted) return;
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.type = 'sine';
@@ -3276,6 +3406,34 @@ html.dark #resumePreviewHint {
   };
 
   bird.addEventListener('click', doChirp);
+
+  // Mute toggle. Persisted, so someone who does not want a chirping bird is
+  // not asked again on every reload.
+  const muteBtn = document.getElementById('obMute');
+  function paintMute(){
+    if(!muteBtn) return;
+    muteBtn.classList.toggle('is-muted', muted);
+    muteBtn.setAttribute('aria-pressed', muted ? 'true' : 'false');
+    const label = muted ? 'Unmute bird sounds' : 'Mute bird sounds';
+    muteBtn.setAttribute('aria-label', label);
+    muteBtn.setAttribute('title', label);
+  }
+  window.robinSetMuted = function(next){
+    muted = !!next;
+    try{ localStorage.setItem(MUTE_KEY, muted ? '1' : '0'); }catch(e){}
+    // cut anything already sounding, rather than letting the current phrase
+    // finish after the user has explicitly asked for silence
+    if(muted){
+      stopFlightSong();
+      if(actx && actx.state === 'running') actx.suspend().catch(() => {});
+    }else if(actx && actx.state === 'suspended'){
+      actx.resume().catch(() => {});
+    }
+    paintMute();
+    return muted;
+  };
+  if(muteBtn) muteBtn.addEventListener('click', () => window.robinSetMuted(!muted));
+  paintMute();
 
   // Branch-as-progress-bar: the branch is one continuous painting, revealed
   // left-to-right via clip-path as the onboarding flow advances. Revealing
