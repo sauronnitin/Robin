@@ -1,8 +1,9 @@
 [project]
 name = "robin"
 version = "0.2.0"
-description = "Local-first AI job application swarm — scout, fit, tailor, cover, apply. Bring your own keys and profile. Dry-run by default."
-authors = [{ name = "Robin contributors" }]
+description = "Local-first AI job application swarm. Scout, fit, tailor, cover, apply. Bring your own keys and profile. Dry-run by default."
+authors = [{ name = "Nitin Sauran" }]
+license = { file = "LICENSE" }
 requires-python = ">=3.10,<3.14"
 dependencies = [
     "crewai[tools,google-genai]>=1.15.4,<2.0.0",

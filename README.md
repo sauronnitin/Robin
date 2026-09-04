@@ -1,6 +1,6 @@
 # Robin
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![License: Proprietary](https://img.shields.io/badge/License-Proprietary-red.svg)](LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](pyproject.toml)
 [![Dependabot](https://img.shields.io/badge/Dependabot-enabled-025E8C?logo=dependabot)](https://github.com/sauronnitin/Robin/security/dependabot)
 [![CodeQL](https://github.com/sauronnitin/Robin/actions/workflows/codeql.yml/badge.svg)](https://github.com/sauronnitin/Robin/actions/workflows/codeql.yml)
@@ -10,11 +10,11 @@ Local-first AI **job application swarm**. Answer a few questions about the roles
 
 Dry-run is the default. Real applications are opt-in.
 
-## 🚀 [**Try the live demo — click here**](https://sauronnitin.github.io/Robin/dashboard/mockup.html)
+## 🚀 [**Try the live demo: click here**](https://sauronnitin.github.io/Robin/dashboard/mockup.html)
 
 **No install, no signup, no API key.** Walk through the real onboarding
-(with the animated bird) and every screen of the app — Browse, Apply board,
-Knowledge Graph, Metrics — pre-filled with sample data. Nothing here is a
+(with the animated bird) and every screen of the app (Browse, Apply board,
+Knowledge Graph, Metrics), pre-filled with sample data. Nothing here is a
 real job search; it's a static walkthrough hosted on GitHub Pages.
 
 ---
@@ -22,7 +22,7 @@ real job search; it's a static walkthrough hosted on GitHub Pages.
 [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/sauronnitin/Robin?quickstart=1)
 
 Want the *real, running* app instead of the static demo? Click the badge
-above for a live instance with zero local install — Python, Node,
+above for a live instance with zero local install: Python, Node,
 Playwright, and the dashboard server are all set up automatically and the
 onboarding screen opens in a preview tab (~30-90s to spin up, then it's a
 real running copy of the app). Dry-run stays on and the shipped fictional
@@ -114,7 +114,7 @@ Open [http://localhost:5959](http://localhost:5959).
 
 Never commit `.env`, OAuth tokens, `browser-session/`, or `user/` uploads.
 
-Found a vulnerability? See [`SECURITY.md`](SECURITY.md) — please don't file
+Found a vulnerability? See [`SECURITY.md`](SECURITY.md). Please don't file
 it as a public issue.
 
 ---
@@ -139,7 +139,7 @@ Onboarding choices map to `swarm.modules` and `swarm.optional` (LinkedIn loop, c
 
 ## Stack
 
-- Python 3.10–3.13, an AI agent framework, Playwright
+- Python 3.10-3.13, an AI agent framework, Playwright
 - Dashboard: static HTML/JS + `dashboard/server.py`
 - Auth for Drive: Google Desktop OAuth (not service accounts)
 
@@ -152,7 +152,7 @@ on a fork or a new template split-out:
 
 1. Create public GitHub repo named `Robin`.
 2. Push this tree (secrets already gitignored).
-3. Settings → Pages → Deploy from branch → `main`, folder **`/ (root)`** —
+3. Settings → Pages → Deploy from branch → `main`, folder **`/ (root)`**,
    not `/docs`, since `dashboard/` needs to be reachable too.
 4. Replace `sauronnitin` in `README.md` and `docs/*.html` with your own
    GitHub username.
@@ -167,4 +167,16 @@ on a fork or a new template split-out:
 
 ## License
 
-MIT (add `LICENSE` when you publish). Built as a generalization of a personal job-search pipeline; example candidate data is fictional.
+Copyright (c) 2026 Nitin Sauran. All rights reserved.
+
+Robin is **not** open source. You may view this repo and run the Software on
+your own machine for your own personal, non-commercial job search. You may
+**not** copy it for others, sell it, republish it, or use it commercially
+without prior written permission. Terms are in [LICENSE](LICENSE).
+Third-party packages keep their own licenses ([NOTICE](NOTICE)).
+
+Copies obtained under the previous MIT grant keep those MIT terms. This
+proprietary license applies to this version and later.
+
+Built as a generalization of a personal job-search pipeline. Example
+candidate data is fictional.

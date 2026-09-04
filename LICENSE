@@ -1,21 +1,70 @@
-MIT License
+Robin Proprietary License
+Copyright (c) 2026 Nitin Sauran. All rights reserved.
 
-Copyright (c) 2026 Robin contributors
+This repository, including all source code, documentation, designs, prompts,
+configuration, dashboards, and other files (the "Software"), is the exclusive
+property of Nitin Sauran.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+No license is granted except the limited permission below. All other rights
+are reserved.
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+------------------------------------------------
+Limited permission to use
+------------------------------------------------
+
+You may, at no charge:
+
+  1. View this repository and the public demo.
+  2. Download or clone the Software solely to run it on your own machine
+     for your own personal, non-commercial job search.
+  3. Change local copies as needed to run the Software for yourself
+     (for example API keys, your profile, and your own job data).
+
+That permission is personal, revocable, non-exclusive, and non-transferable.
+It is not a sale, not a transfer of ownership, and not an open-source license.
+
+------------------------------------------------
+What you may not do without prior written permission
+------------------------------------------------
+
+You may not:
+
+  - Copy, reproduce, or redistribute the Software, in whole or in part,
+    except as needed to run it for yourself as described above
+  - Sell, rent, lease, sublicense, or commercially exploit the Software
+  - Publish, host, or offer the Software (or a substantial portion of it)
+    as a product, service, template, or competing system
+  - Share your clone, a fork, or a derivative with others
+  - Remove, alter, or obscure copyright, license, or proprietary notices
+  - Use the Software's source, prompts, or designs to train a public or
+    commercial model, except as incidental to running the Software for yourself
+  - Claim ownership of the Software or imply that Nitin Sauran endorses
+    your use
+
+Any right not expressly granted here is withheld.
+
+------------------------------------------------
+Third-party components
+------------------------------------------------
+
+Bundled or linked third-party code stays under its own licenses (see NOTICE).
+Those licenses are not changed by this file and do not grant extra rights
+in Nitin Sauran's original work.
+
+------------------------------------------------
+No warranty
+------------------------------------------------
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT. IN NO EVENT SHALL
+THE COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY
+ARISING FROM THE SOFTWARE OR ITS USE.
+
+------------------------------------------------
+Permission requests
+------------------------------------------------
+
+To copy, sell, redistribute, host, or otherwise use the Software beyond
+this limited grant, you need prior written permission from Nitin Sauran.
+Contact: https://github.com/sauronnitin

@@ -11,7 +11,7 @@ regular issue asking for a private contact channel and no other detail.
 
 Include what you'd normally include in a report: affected file/version,
 reproduction steps, and impact. There's no bug bounty — this is a
-personal/open-source project — but every report gets a response.
+personal project — but every report gets a response.
 
 ## Supported versions
 

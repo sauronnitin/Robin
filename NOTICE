@@ -1,0 +1,13 @@
+Robin
+Copyright (c) 2026 Nitin Sauran. All rights reserved.
+See LICENSE for the proprietary terms that apply to original Robin work.
+
+Third-party software included or used by this project remains under its own
+licenses. Those licenses are not replaced by LICENSE. Examples:
+
+  tools/open-resume-parser    AGPL-3.0-only (upstream Open Resume parser)
+  Python and Node dependencies  as declared by each package
+  dashboard activity-rings snippet  kokonutui Apple Activity Card (MIT)
+
+Do not treat dependency licenses as permission to copy, sell, or republish
+Robin itself.
